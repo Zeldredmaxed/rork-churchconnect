@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,114 +7,294 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useRouter } from 'expo-router';
-import { MessageSquare } from 'lucide-react-native';
+import { ArrowLeft, Video, SquarePen, Search } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { theme } from '@/constants/theme';
 import { api } from '@/utils/api';
-import EmptyState from '@/components/EmptyState';
-import type { Conversation } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import FollowButton from '@/components/FollowButton';
+import type { Conversation, FlockUser } from '@/types';
 
 function formatTimeAgo(date: string): string {
   const now = new Date();
   const d = new Date(date);
   const diff = Math.floor((now.getTime() - d.getTime()) / 1000);
-  if (diff < 60) return 'now';
-  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
-  return `${Math.floor(diff / 86400)}d`;
+  if (diff < 60) return 'Just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
 function ConversationRow({ convo, onPress }: { convo: Conversation; onPress: () => void }) {
   const displayName = convo.name || convo.participants.map((p) => p.name).join(', ');
-  const initials = displayName.charAt(0).toUpperCase();
+  const initials = displayName
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
-    <TouchableOpacity style={styles.convoRow} onPress={onPress} activeOpacity={0.6}>
-      <View style={[styles.avatar, convo.unread_count > 0 && styles.avatarUnread]}>
-        <Text style={styles.avatarText}>{initials}</Text>
+    <TouchableOpacity style={styles.convoRow} onPress={onPress} activeOpacity={0.6} testID="conversation-row">
+      <View style={[styles.convoAvatar, convo.unread_count > 0 && styles.convoAvatarUnread]}>
+        <Text style={styles.convoAvatarText}>{initials}</Text>
       </View>
       <View style={styles.convoContent}>
-        <View style={styles.convoTop}>
-          <Text style={[styles.convoName, convo.unread_count > 0 && styles.convoNameBold]} numberOfLines={1}>
-            {displayName}
-          </Text>
-          {convo.last_message_at && (
-            <Text style={styles.convoTime}>{formatTimeAgo(convo.last_message_at)}</Text>
-          )}
-        </View>
-        <View style={styles.convoBottom}>
-          <Text style={styles.convoLastMsg} numberOfLines={1}>
-            {convo.last_message || 'No messages yet'}
-          </Text>
-          {convo.unread_count > 0 && (
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadText}>{convo.unread_count}</Text>
-            </View>
-          )}
-        </View>
+        <Text style={[styles.convoName, convo.unread_count > 0 && styles.convoNameBold]} numberOfLines={1}>
+          {displayName}
+        </Text>
+        <Text style={[styles.convoLastMsg, convo.unread_count > 0 && styles.convoLastMsgBold]} numberOfLines={1}>
+          {convo.last_message
+            ? `${convo.last_message}${convo.last_message_at ? ' · ' + formatTimeAgo(convo.last_message_at) : ''}`
+            : 'Sent just now'}
+        </Text>
       </View>
+      {convo.unread_count > 0 && <View style={styles.unreadDot} />}
     </TouchableOpacity>
+  );
+}
+
+function FollowerSuggestionRow({ user }: { user: FlockUser }) {
+  const router = useRouter();
+  const [isFollowing, setIsFollowing] = useState(user.is_following ?? false);
+
+  const initials = user.full_name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+
+  return (
+    <View style={styles.followerRow}>
+      <TouchableOpacity
+        style={styles.followerInfo}
+        onPress={() => router.push(`/user-profile?id=${user.id}` as never)}
+        activeOpacity={0.6}
+      >
+        <View style={styles.followerAvatar}>
+          <Text style={styles.followerAvatarText}>{initials}</Text>
+        </View>
+        <View style={styles.followerText}>
+          <Text style={styles.followerName} numberOfLines={1}>{user.full_name}</Text>
+          <Text style={styles.followerUsername} numberOfLines={1}>{user.username ?? user.church_name ?? ''}</Text>
+        </View>
+      </TouchableOpacity>
+      <FollowButton
+        userId={user.id}
+        isFollowing={isFollowing}
+        size="medium"
+        onToggle={(s) => setIsFollowing(s)}
+      />
+    </View>
   );
 }
 
 export default function ChatScreen() {
   const queryClient = useQueryClient();
   const router = useRouter();
+  const { user } = useAuth();
+  const [searchQuery, setSearchQuery] = useState('');
 
   const convosQuery = useQuery({
     queryKey: ['conversations'],
     queryFn: () => api.get<{ data: Conversation[] }>('/chat/conversations'),
   });
 
+  const followersQuery = useQuery({
+    queryKey: ['followers-suggestions'],
+    queryFn: async () => {
+      try {
+        const data = await api.get<{ data: FlockUser[] }>('/social/flock/suggestions');
+        return data;
+      } catch {
+        return { data: [] as FlockUser[] };
+      }
+    },
+  });
+
   const handleRefresh = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    void queryClient.invalidateQueries({ queryKey: ['followers-suggestions'] });
   }, [queryClient]);
 
   const conversations = convosQuery.data?.data ?? [];
+  const followers = followersQuery.data?.data ?? [];
+
+  const filteredConvos = searchQuery.trim()
+    ? conversations.filter((c) => {
+        const name = c.name || c.participants.map((p) => p.name).join(', ');
+        return name.toLowerCase().includes(searchQuery.toLowerCase());
+      })
+    : conversations;
+
+  const userName = user?.full_name ?? 'You';
+  const userInitials = userName
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+
+  const renderHeader = () => (
+    <View>
+      <View style={styles.noteSection}>
+        <View style={styles.noteAvatarWrap}>
+          <View style={styles.noteBubble}>
+            <Text style={styles.noteBubbleText}>Note...</Text>
+          </View>
+          <View style={styles.noteAvatar}>
+            <Text style={styles.noteAvatarText}>{userInitials}</Text>
+          </View>
+          <Text style={styles.noteLabel}>Your note</Text>
+        </View>
+      </View>
+
+      <View style={styles.messagesHeader}>
+        <Text style={styles.messagesTitle}>Messages</Text>
+        <TouchableOpacity
+          onPress={() => {
+            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            console.log('[Chat] Navigate to requests');
+          }}
+          activeOpacity={0.6}
+        >
+          <Text style={styles.requestsLink}>Requests</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderEmpty = () => {
+    if (convosQuery.isLoading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.accent} />
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>
+          Chats will appear here after you've sent or received a message.{' '}
+          <Text
+            style={styles.getStartedLink}
+            onPress={() => {
+              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push('/new-message' as never);
+            }}
+          >
+            Get started
+          </Text>
+        </Text>
+      </View>
+    );
+  };
+
+  const renderFooter = () => {
+    if (followers.length === 0) return null;
+
+    return (
+      <View style={styles.followersSection}>
+        <View style={styles.followersSectionHeader}>
+          <Text style={styles.followersSectionTitle}>Accounts that follow you</Text>
+          <TouchableOpacity activeOpacity={0.6}>
+            <Text style={styles.seeAllLink}>See all</Text>
+          </TouchableOpacity>
+        </View>
+        {followers.slice(0, 5).map((f) => (
+          <FollowerSuggestionRow key={f.id} user={f} />
+        ))}
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
       <Stack.Screen
         options={{
-          title: 'Chat',
+          headerShown: true,
+          headerShadowVisible: false,
           headerStyle: { backgroundColor: theme.colors.background },
           headerTintColor: theme.colors.text,
-          headerShadowVisible: false,
+          headerTitle: () => (
+            <Text style={styles.headerTitle}>{userName}</Text>
+          ),
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.headerBtn}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <ArrowLeft size={24} color={theme.colors.text} />
+            </TouchableOpacity>
+          ),
+          headerRight: () => (
+            <View style={styles.headerRight}>
+              <TouchableOpacity style={styles.headerBtn} activeOpacity={0.6}>
+                <Video size={24} color={theme.colors.text} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.headerBtn}
+                onPress={() => {
+                  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.push('/new-message' as never);
+                }}
+                activeOpacity={0.6}
+                testID="new-message-btn"
+              >
+                <SquarePen size={24} color={theme.colors.text} />
+              </TouchableOpacity>
+            </View>
+          ),
         }}
       />
 
+      <View style={styles.searchBarWrap}>
+        <View style={styles.searchBar}>
+          <Search size={16} color={theme.colors.textTertiary} />
+          <TextInput
+            style={styles.searchInput}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search"
+            placeholderTextColor={theme.colors.textTertiary}
+            autoCapitalize="none"
+            autoCorrect={false}
+            testID="chat-search"
+          />
+        </View>
+      </View>
+
       <FlatList
-        data={conversations}
+        data={filteredConvos}
         keyExtractor={(item) => item.id}
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={renderEmpty}
+        ListFooterComponent={renderFooter}
         renderItem={({ item }) => (
           <ConversationRow
             convo={item}
-            onPress={() => router.push(`/chat-room?id=${item.id}` as never)}
+            onPress={() => {
+              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push(`/chat-room?id=${item.id}` as never);
+            }}
           />
         )}
         contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={convosQuery.isRefetching}
             onRefresh={handleRefresh}
             tintColor={theme.colors.accent}
           />
-        }
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-        ListEmptyComponent={
-          convosQuery.isLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={theme.colors.accent} />
-            </View>
-          ) : (
-            <EmptyState
-              icon={<MessageSquare size={28} color={theme.colors.textTertiary} />}
-              title="No conversations"
-              description="Start a conversation with someone in your church"
-            />
-          )
         }
       />
     </View>
@@ -126,6 +306,146 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700' as const,
+    color: theme.colors.text,
+  },
+  headerBtn: {
+    padding: 4,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  searchBarWrap: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    gap: 8,
+    height: 36,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: theme.colors.text,
+    paddingVertical: 0,
+  },
+  noteSection: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 16,
+  },
+  noteAvatarWrap: {
+    alignItems: 'center',
+    width: 68,
+  },
+  noteBubble: {
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  noteBubbleText: {
+    fontSize: 11,
+    color: theme.colors.textTertiary,
+  },
+  noteAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: theme.colors.surfaceElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: theme.colors.border,
+  },
+  noteAvatarText: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: theme.colors.textSecondary,
+  },
+  noteLabel: {
+    fontSize: 11,
+    color: theme.colors.textSecondary,
+    marginTop: 4,
+  },
+  messagesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  messagesTitle: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: theme.colors.text,
+  },
+  requestsLink: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: '#0095F6',
+  },
+  convoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 14,
+  },
+  convoAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: theme.colors.surfaceElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  convoAvatarUnread: {
+    borderWidth: 2,
+    borderColor: theme.colors.accent,
+  },
+  convoAvatarText: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: theme.colors.accent,
+  },
+  convoContent: {
+    flex: 1,
+    gap: 3,
+  },
+  convoName: {
+    fontSize: 15,
+    fontWeight: '400' as const,
+    color: theme.colors.text,
+  },
+  convoNameBold: {
+    fontWeight: '700' as const,
+  },
+  convoLastMsg: {
+    fontSize: 13,
+    color: theme.colors.textTertiary,
+  },
+  convoLastMsgBold: {
+    color: theme.colors.textSecondary,
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#0095F6',
+  },
   listContent: {
     paddingBottom: 40,
   },
@@ -133,80 +453,79 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     alignItems: 'center',
   },
-  convoRow: {
+  emptyContainer: {
+    paddingHorizontal: 24,
+    paddingTop: 8,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: theme.colors.textTertiary,
+    lineHeight: 20,
+  },
+  getStartedLink: {
+    color: '#0095F6',
+    fontWeight: '600' as const,
+  },
+  followersSection: {
+    marginTop: 16,
+    borderTopWidth: 0.5,
+    borderTopColor: theme.colors.borderLight,
+    paddingTop: 16,
+  },
+  followersSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+  followersSectionTitle: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: theme.colors.text,
+  },
+  seeAllLink: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: '#0095F6',
+  },
+  followerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 12,
+    paddingVertical: 10,
   },
-  avatar: {
+  followerInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginRight: 12,
+  },
+  followerAvatar: {
     width: 48,
     height: 48,
-    borderRadius: 16,
-    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: 24,
+    backgroundColor: theme.colors.accentMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarUnread: {
-    backgroundColor: theme.colors.accentMuted,
-  },
-  avatarText: {
-    fontSize: 18,
+  followerAvatarText: {
+    fontSize: 16,
     fontWeight: '700' as const,
     color: theme.colors.accent,
   },
-  convoContent: {
+  followerText: {
     flex: 1,
-    gap: 4,
   },
-  convoTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  convoName: {
-    fontSize: 15,
-    fontWeight: '500' as const,
+  followerName: {
+    fontSize: 14,
+    fontWeight: '600' as const,
     color: theme.colors.text,
-    flex: 1,
-    marginRight: 8,
   },
-  convoNameBold: {
-    fontWeight: '700' as const,
-  },
-  convoTime: {
-    fontSize: 12,
-    color: theme.colors.textTertiary,
-  },
-  convoBottom: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  convoLastMsg: {
+  followerUsername: {
     fontSize: 13,
-    color: theme.colors.textSecondary,
-    flex: 1,
-    marginRight: 8,
-  },
-  unreadBadge: {
-    backgroundColor: theme.colors.accent,
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  unreadText: {
-    fontSize: 11,
-    fontWeight: '700' as const,
-    color: theme.colors.background,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: theme.colors.borderLight,
-    marginLeft: 76,
+    color: theme.colors.textTertiary,
+    marginTop: 1,
   },
 });

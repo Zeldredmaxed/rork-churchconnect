@@ -198,7 +198,7 @@ export default function UserProfileScreen() {
                 style={styles.messageButton}
                 onPress={() => {
                   void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  router.push('/chat');
+                  router.push(`/chat-room?userId=${id}&userName=${encodeURIComponent(profile?.full_name ?? '')}&isNew=true` as never);
                 }}
                 activeOpacity={0.7}
               >
