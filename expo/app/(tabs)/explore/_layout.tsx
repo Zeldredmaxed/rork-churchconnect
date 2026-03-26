@@ -9,6 +9,14 @@ export default function ExploreLayout() {
         headerShown: false,
         contentStyle: { backgroundColor: theme.colors.background },
       }}
-    />
+    >
+      <Stack.Screen name="index" />
+      <Stack.Screen
+        name="search"
+        options={{
+          animation: 'fade',
+        }}
+      />
+    </Stack>
   );
 }

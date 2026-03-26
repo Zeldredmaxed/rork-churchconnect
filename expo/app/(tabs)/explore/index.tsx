@@ -1,9 +1,8 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   FlatList,
   TouchableOpacity,
   RefreshControl,
@@ -12,13 +11,13 @@ import {
 } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { Search, X } from 'lucide-react-native';
+import { Search } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { theme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import EmptyState from '@/components/EmptyState';
-import type { Event, Sermon, Prayer, FlockUser } from '@/types';
+import type { Event, Sermon, Prayer } from '@/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TILE_GAP = 2;
@@ -30,16 +29,12 @@ interface DiscoverItem {
   title: string;
   subtitle: string;
   color: string;
-  icon: string;
 }
 
 export default function ExploreScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isFocused, setIsFocused] = useState(false);
-  const inputRef = useRef<TextInput>(null);
 
   const eventsQuery = useQuery({
     queryKey: ['events'],
@@ -64,12 +59,6 @@ export default function ExploreScreen() {
     },
   });
 
-  const searchMembersQuery = useQuery({
-    queryKey: ['search-members', searchQuery],
-    queryFn: () => api.get<{ data: FlockUser[] }>(`/seek?q=${encodeURIComponent(searchQuery)}`),
-    enabled: searchQuery.trim().length > 1,
-  });
-
   const handleRefresh = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['events'] });
     void queryClient.invalidateQueries({ queryKey: ['sermons'] });
@@ -79,45 +68,38 @@ export default function ExploreScreen() {
   const events = (eventsQuery.data?.data ?? []) as Event[];
   const sermons = (sermonsQuery.data?.data ?? []) as Sermon[];
   const prayers = (prayersQuery.data?.data ?? []) as Prayer[];
-  const searchResults = searchMembersQuery.data?.data ?? [];
 
   const isLoading = eventsQuery.isLoading && sermonsQuery.isLoading;
   const isRefreshing = eventsQuery.isRefetching || sermonsQuery.isRefetching;
 
+  const tileColors = [
+    '#1E3A5F', '#3D2B1F', '#3D1F2B', '#1F3D2B', '#2B1F3D',
+    '#3D3A1F', '#1F2B3D', '#2B3D1F', '#3D1F3A', '#1F3D3A',
+  ];
+
   const discoverItems: DiscoverItem[] = [
-    ...events.slice(0, 6).map((e) => ({
+    ...events.slice(0, 6).map((e, i) => ({
       id: `event-${e.id}`,
       type: 'event' as const,
       title: e.title,
       subtitle: new Date(e.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      color: '#1E3A5F',
-      icon: 'calendar',
+      color: tileColors[i % tileColors.length],
     })),
-    ...sermons.slice(0, 6).map((s) => ({
+    ...sermons.slice(0, 6).map((s, i) => ({
       id: `sermon-${s.id}`,
       type: 'sermon' as const,
       title: s.title,
       subtitle: s.speaker,
-      color: '#3D2B1F',
-      icon: 'play',
+      color: tileColors[(i + 3) % tileColors.length],
     })),
-    ...prayers.slice(0, 6).map((p: Prayer) => ({
+    ...prayers.slice(0, 6).map((p: Prayer, i) => ({
       id: `prayer-${p.id}`,
       type: 'prayer' as const,
       title: p.title,
       subtitle: p.is_urgent ? 'Urgent' : p.category,
-      color: '#3D1F2B',
-      icon: 'heart',
+      color: tileColors[(i + 6) % tileColors.length],
     })),
   ];
-
-  const filteredItems = searchQuery.trim() && !isFocused
-    ? discoverItems.filter(
-        (item) =>
-          item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.subtitle.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : discoverItems;
 
   const handleItemPress = (item: DiscoverItem) => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -131,17 +113,16 @@ export default function ExploreScreen() {
     }
   };
 
-  const handleUserPress = (user: FlockUser) => {
+  const handleSearchPress = useCallback(() => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSearchQuery('');
-    setIsFocused(false);
-    inputRef.current?.blur();
-    router.push(`/user-profile?id=${user.id}` as never);
-  };
+    router.push('/(tabs)/explore/search' as never);
+  }, [router]);
 
   const renderGridItem = ({ item, index }: { item: DiscoverItem; index: number }) => {
-    const isLargeLeft = index % 15 === 0;
-    const isLargeRight = index % 15 === 9;
+    const row = Math.floor(index / 3);
+    const col = index % 3;
+    const isLargeLeft = row % 5 === 0 && col === 0;
+    const isLargeRight = row % 5 === 3 && col === 2;
     const isLarge = isLargeLeft || isLargeRight;
     const itemWidth = isLarge ? TILE_SIZE * 2 + TILE_GAP : TILE_SIZE;
     const itemHeight = isLarge ? TILE_SIZE * 2 + TILE_GAP : TILE_SIZE;
@@ -156,8 +137,9 @@ export default function ExploreScreen() {
         activeOpacity={0.7}
         testID={`explore-item-${item.id}`}
       >
+        <View style={styles.gridItemOverlay} />
         <View style={styles.gridItemContent}>
-          <View style={[styles.typeBadge, styles[`typeBadge${item.type.charAt(0).toUpperCase() + item.type.slice(1)}` as keyof typeof styles] as object]}>
+          <View style={[styles.typeBadge, item.type === 'event' && styles.typeBadgeEvent, item.type === 'sermon' && styles.typeBadgeSermon, item.type === 'prayer' && styles.typeBadgePrayer]}>
             <Text style={styles.typeBadgeText}>{item.type}</Text>
           </View>
           <Text style={[styles.gridItemTitle, isLarge && styles.gridItemTitleLarge]} numberOfLines={2}>
@@ -171,100 +153,25 @@ export default function ExploreScreen() {
     );
   };
 
-  const renderSearchResult = ({ item }: { item: FlockUser }) => {
-    const initials = item.full_name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-
-    return (
-      <TouchableOpacity
-        style={styles.searchResultRow}
-        onPress={() => handleUserPress(item)}
-        activeOpacity={0.6}
-      >
-        <View style={styles.searchResultAvatar}>
-          <Text style={styles.searchResultAvatarText}>{initials}</Text>
-        </View>
-        <View style={styles.searchResultInfo}>
-          <Text style={styles.searchResultName}>{item.full_name}</Text>
-          {item.username ? (
-            <Text style={styles.searchResultUsername}>@{item.username}</Text>
-          ) : item.church_name ? (
-            <Text style={styles.searchResultUsername}>{item.church_name}</Text>
-          ) : null}
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
-  const showSearchResults = isFocused && searchQuery.trim().length > 0;
-
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.searchContainer}>
-        <View style={[styles.searchBar, isFocused && styles.searchBarFocused]}>
-          <Search size={18} color={theme.colors.textTertiary} />
-          <TextInput
-            ref={inputRef}
-            style={styles.searchInput}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search"
-            placeholderTextColor={theme.colors.textTertiary}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => {
-              setTimeout(() => setIsFocused(false), 200);
-            }}
-            returnKeyType="search"
-            testID="explore-search-input"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <X size={16} color={theme.colors.textTertiary} />
-            </TouchableOpacity>
-          )}
+      <TouchableOpacity
+        style={styles.searchBarTouchable}
+        onPress={handleSearchPress}
+        activeOpacity={0.7}
+        testID="explore-search-trigger"
+      >
+        <View style={styles.searchBar}>
+          <Search size={16} color={theme.colors.textTertiary} />
+          <Text style={styles.searchPlaceholder}>Search</Text>
         </View>
-        {isFocused && (
-          <TouchableOpacity
-            onPress={() => {
-              setSearchQuery('');
-              setIsFocused(false);
-              inputRef.current?.blur();
-            }}
-            style={styles.cancelBtn}
-          >
-            <Text style={styles.cancelText}>Cancel</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      </TouchableOpacity>
 
-      {showSearchResults ? (
-        <FlatList
-          data={searchResults}
-          keyExtractor={(item) => item.id}
-          renderItem={renderSearchResult}
-          contentContainerStyle={styles.searchResultsList}
-          ListEmptyComponent={
-            searchMembersQuery.isLoading ? (
-              <View style={styles.searchLoadingContainer}>
-                <ActivityIndicator size="small" color={theme.colors.accent} />
-              </View>
-            ) : searchQuery.trim().length > 1 ? (
-              <View style={styles.noResultsContainer}>
-                <Text style={styles.noResultsText}>No results found</Text>
-              </View>
-            ) : null
-          }
-          keyboardShouldPersistTaps="handled"
-        />
-      ) : isLoading ? (
+      {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.accent} />
         </View>
-      ) : filteredItems.length === 0 ? (
+      ) : discoverItems.length === 0 ? (
         <View style={styles.emptyContainer}>
           <EmptyState
             icon={<Search size={28} color={theme.colors.textTertiary} />}
@@ -274,7 +181,7 @@ export default function ExploreScreen() {
         </View>
       ) : (
         <FlatList
-          data={filteredItems}
+          data={discoverItems}
           keyExtractor={(item) => item.id}
           renderItem={renderGridItem}
           numColumns={3}
@@ -299,91 +206,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  searchBarTouchable: {
     paddingHorizontal: 12,
     paddingVertical: 8,
-    gap: 10,
   },
   searchBar: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: theme.colors.surfaceElevated,
     borderRadius: 10,
-    paddingHorizontal: 12,
-    height: 36,
+    paddingHorizontal: 14,
+    height: 38,
     gap: 8,
   },
-  searchBarFocused: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  searchInput: {
-    flex: 1,
+  searchPlaceholder: {
     fontSize: 16,
-    color: theme.colors.text,
-    paddingVertical: 0,
-  },
-  cancelBtn: {
-    paddingVertical: 8,
-    paddingLeft: 4,
-  },
-  cancelText: {
-    fontSize: 15,
-    color: theme.colors.accent,
-    fontWeight: '500' as const,
-  },
-  searchResultsList: {
-    paddingBottom: 40,
-  },
-  searchResultRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 12,
-  },
-  searchResultAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: theme.colors.surfaceElevated,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  searchResultAvatarText: {
-    fontSize: 14,
-    fontWeight: '700' as const,
-    color: theme.colors.textSecondary,
-  },
-  searchResultInfo: {
-    flex: 1,
-  },
-  searchResultName: {
-    fontSize: 15,
-    fontWeight: '600' as const,
-    color: theme.colors.text,
-  },
-  searchResultUsername: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-    marginTop: 1,
-  },
-  searchLoadingContainer: {
-    paddingTop: 40,
-    alignItems: 'center',
-  },
-  noResultsContainer: {
-    paddingTop: 40,
-    alignItems: 'center',
-  },
-  noResultsText: {
-    fontSize: 15,
     color: theme.colors.textTertiary,
   },
   loadingContainer: {
@@ -407,6 +244,11 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     padding: 10,
     marginBottom: TILE_GAP,
+    overflow: 'hidden',
+  },
+  gridItemOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.15)',
   },
   gridItemContent: {
     gap: 3,
