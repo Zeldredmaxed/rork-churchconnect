@@ -1,0 +1,63 @@
+export const theme = {
+  colors: {
+    background: '#0B0F1A',
+    surface: '#141926',
+    surfaceElevated: '#1C2333',
+    surfaceHover: '#242D3F',
+    border: '#2A3347',
+    borderLight: '#1E2740',
+
+    text: '#F1F3F7',
+    textSecondary: '#8B95A9',
+    textTertiary: '#5C6680',
+    textInverse: '#0B0F1A',
+
+    accent: '#D4A574',
+    accentLight: '#E8C899',
+    accentDark: '#B8895A',
+    accentMuted: 'rgba(212, 165, 116, 0.15)',
+
+    success: '#34D399',
+    successMuted: 'rgba(52, 211, 153, 0.15)',
+    error: '#F87171',
+    errorMuted: 'rgba(248, 113, 113, 0.15)',
+    warning: '#FBBF24',
+    warningMuted: 'rgba(251, 191, 36, 0.15)',
+    info: '#60A5FA',
+    infoMuted: 'rgba(96, 165, 250, 0.15)',
+
+    white: '#FFFFFF',
+    black: '#000000',
+    overlay: 'rgba(0, 0, 0, 0.6)',
+
+    tabBar: '#0E1220',
+    tabBarBorder: '#1A2035',
+    tabBarActive: '#D4A574',
+    tabBarInactive: '#5C6680',
+  },
+  spacing: {
+    xs: 4,
+    sm: 8,
+    md: 12,
+    lg: 16,
+    xl: 20,
+    xxl: 24,
+    xxxl: 32,
+  },
+  radius: {
+    sm: 6,
+    md: 10,
+    lg: 14,
+    xl: 20,
+    full: 999,
+  },
+  fontSize: {
+    xs: 11,
+    sm: 13,
+    md: 15,
+    lg: 17,
+    xl: 20,
+    xxl: 24,
+    xxxl: 32,
+  },
+} as const;

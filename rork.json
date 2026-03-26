@@ -1,0 +1,20 @@
+{
+  "$schema": "https://rork.com/schema/rork.json",
+  "apps": [
+    {
+      "name": "Shepherd",
+      "path": "expo",
+      "framework": "react-native"
+    },
+    {
+      "name": "Anti-Gravity Church",
+      "path": "expo",
+      "framework": "react-native"
+    },
+    {
+      "name": "Shepherd Church",
+      "path": "expo",
+      "framework": "react-native"
+    }
+  ]
+}

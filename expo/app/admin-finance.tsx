@@ -1,0 +1,207 @@
+import React, { useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+} from 'react-native';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Stack } from 'expo-router';
+import { DollarSign, Download } from 'lucide-react-native';
+import { theme } from '@/constants/theme';
+import { api } from '@/utils/api';
+import type { GivingTrend, FinancialSummary, Fund } from '@/types';
+
+function BarChart({ data }: { data: GivingTrend[] }) {
+  if (data.length === 0) return null;
+  const maxAmount = Math.max(...data.map((d) => d.amount), 1);
+
+  return (
+    <View style={styles.chartContainer}>
+      {data.map((item) => (
+        <View key={item.month} style={styles.barItem}>
+          <View style={styles.barWrapper}>
+            <View
+              style={[
+                styles.bar,
+                { height: `${Math.max((item.amount / maxAmount) * 100, 5)}%` },
+              ]}
+            />
+          </View>
+          <Text style={styles.barLabel}>{item.month}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+export default function AdminFinanceScreen() {
+  const queryClient = useQueryClient();
+
+  const trendsQuery = useQuery({
+    queryKey: ['admin', 'giving-trends'],
+    queryFn: () => api.get<{ data: GivingTrend[] }>('/reports/analytics/giving-trends'),
+  });
+
+  const summaryQuery = useQuery({
+    queryKey: ['admin', 'financial-summary'],
+    queryFn: () => api.get<{ data: FinancialSummary }>('/reports/financial'),
+  });
+
+  const fundsQuery = useQuery({
+    queryKey: ['admin', 'funds'],
+    queryFn: () => api.get<{ data: Fund[] }>('/funds'),
+  });
+
+  const handleRefresh = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ['admin'] });
+  }, [queryClient]);
+
+  const trends = trendsQuery.data?.data ?? [];
+  const summary = summaryQuery.data?.data;
+  const funds = fundsQuery.data?.data ?? [];
+  const isLoading = trendsQuery.isLoading || summaryQuery.isLoading;
+
+  return (
+    <View style={styles.container}>
+      <Stack.Screen
+        options={{
+          title: 'Giving & Finance',
+          headerRight: () => (
+            <TouchableOpacity onPress={() => console.log('Export')} style={{ padding: 4 }}>
+              <Download size={18} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+          ),
+        }}
+      />
+
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={false} onRefresh={handleRefresh} tintColor={theme.colors.accent} />}
+      >
+        {isLoading ? (
+          <ActivityIndicator size="large" color={theme.colors.accent} style={{ marginTop: 40 }} />
+        ) : (
+          <>
+            <View style={styles.summaryCards}>
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryLabel}>This Month</Text>
+                <Text style={styles.summaryValue}>${(summary?.total_this_month ?? 0).toLocaleString()}</Text>
+              </View>
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryLabel}>This Year</Text>
+                <Text style={styles.summaryValue}>${(summary?.total_this_year ?? 0).toLocaleString()}</Text>
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>GIVING TRENDS</Text>
+              <View style={styles.chartCard}>
+                <BarChart data={trends.slice(-12)} />
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>FUNDS</Text>
+              {funds.map((f) => (
+                <View key={f.id} style={styles.fundRow}>
+                  <View style={styles.fundIcon}>
+                    <DollarSign size={16} color={theme.colors.success} />
+                  </View>
+                  <View style={styles.fundInfo}>
+                    <Text style={styles.fundName}>{f.name}</Text>
+                    {f.description && <Text style={styles.fundDesc}>{f.description}</Text>}
+                  </View>
+                  <View style={styles.fundAmounts}>
+                    <Text style={styles.fundCurrent}>${(f.current_amount ?? 0).toLocaleString()}</Text>
+                    {f.goal_amount && (
+                      <Text style={styles.fundGoal}>of ${f.goal_amount.toLocaleString()}</Text>
+                    )}
+                  </View>
+                </View>
+              ))}
+            </View>
+
+            {summary?.fund_breakdown && summary.fund_breakdown.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>BUDGET vs. ACTUAL</Text>
+                {summary.fund_breakdown.map((fb, i) => (
+                  <View key={i} style={styles.budgetRow}>
+                    <Text style={styles.budgetFund}>{fb.fund_name}</Text>
+                    <View style={styles.budgetBar}>
+                      <View
+                        style={[
+                          styles.budgetFill,
+                          {
+                            width: fb.budget
+                              ? `${Math.min((fb.amount / fb.budget) * 100, 100)}%`
+                              : '100%',
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.budgetText}>
+                      ${fb.amount.toLocaleString()}{fb.budget ? ` / $${fb.budget.toLocaleString()}` : ''}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </>
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.colors.background },
+  scrollContent: { padding: 16, paddingBottom: 40 },
+  summaryCards: { flexDirection: 'row', gap: 10, marginBottom: 20 },
+  summaryCard: {
+    flex: 1, backgroundColor: theme.colors.surface, borderRadius: theme.radius.lg,
+    padding: 16, borderWidth: 1, borderColor: theme.colors.borderLight,
+  },
+  summaryLabel: { fontSize: 12, color: theme.colors.textTertiary, fontWeight: '600' as const },
+  summaryValue: { fontSize: 24, fontWeight: '700' as const, color: theme.colors.text, marginTop: 4 },
+  section: { marginBottom: 24 },
+  sectionTitle: {
+    fontSize: 12, fontWeight: '600' as const, color: theme.colors.textTertiary,
+    letterSpacing: 0.8, marginBottom: 10,
+  },
+  chartCard: {
+    backgroundColor: theme.colors.surface, borderRadius: theme.radius.lg,
+    padding: 16, borderWidth: 1, borderColor: theme.colors.borderLight,
+  },
+  chartContainer: { flexDirection: 'row', alignItems: 'flex-end', height: 120, gap: 4 },
+  barItem: { flex: 1, alignItems: 'center' },
+  barWrapper: { height: 100, width: '100%', justifyContent: 'flex-end', alignItems: 'center' },
+  bar: { width: '70%', backgroundColor: theme.colors.accent, borderRadius: 3, minHeight: 4 },
+  barLabel: { fontSize: 9, color: theme.colors.textTertiary, marginTop: 4 },
+  fundRow: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.md, padding: 14, marginBottom: 8, gap: 12,
+    borderWidth: 1, borderColor: theme.colors.borderLight,
+  },
+  fundIcon: {
+    width: 36, height: 36, borderRadius: 10, backgroundColor: theme.colors.successMuted,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  fundInfo: { flex: 1 },
+  fundName: { fontSize: 15, fontWeight: '600' as const, color: theme.colors.text },
+  fundDesc: { fontSize: 12, color: theme.colors.textTertiary, marginTop: 1 },
+  fundAmounts: { alignItems: 'flex-end' },
+  fundCurrent: { fontSize: 15, fontWeight: '700' as const, color: theme.colors.success },
+  fundGoal: { fontSize: 11, color: theme.colors.textTertiary, marginTop: 1 },
+  budgetRow: { marginBottom: 12 },
+  budgetFund: { fontSize: 14, fontWeight: '500' as const, color: theme.colors.text, marginBottom: 6 },
+  budgetBar: {
+    height: 8, backgroundColor: theme.colors.surfaceElevated, borderRadius: 4, overflow: 'hidden',
+    marginBottom: 4,
+  },
+  budgetFill: { height: '100%', backgroundColor: theme.colors.accent, borderRadius: 4 },
+  budgetText: { fontSize: 12, color: theme.colors.textTertiary },
+});
