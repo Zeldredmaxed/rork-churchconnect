@@ -106,7 +106,7 @@ export default function AdminSettingsScreen() {
             <TextInput style={styles.input} value={churchEmail} onChangeText={setChurchEmail} placeholder="Email" placeholderTextColor={theme.colors.textTertiary} keyboardType="email-address" autoCapitalize="none" />
             <TextInput style={styles.input} value={churchWebsite} onChangeText={setChurchWebsite} placeholder="Website" placeholderTextColor={theme.colors.textTertiary} autoCapitalize="none" />
           </View>
-        )
+        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>FEATURE TOGGLES</Text>
