@@ -13,6 +13,7 @@ interface PostCardProps {
   post: FeedPost;
   onLike: (id: string) => void;
   onComment: (id: string) => void;
+  onShare?: (id: string) => void;
   onMore?: (id: string) => void;
 }
 
@@ -27,7 +28,7 @@ function formatTimeAgo(date: string): string {
   return d.toLocaleDateString();
 }
 
-export default function PostCard({ post, onLike, onComment, onMore }: PostCardProps) {
+export default function PostCard({ post, onLike, onComment, onShare, onMore }: PostCardProps) {
   const router = useRouter();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const bookmarkScaleAnim = useRef(new Animated.Value(1)).current;
@@ -138,7 +139,14 @@ export default function PostCard({ post, onLike, onComment, onMore }: PostCardPr
           >
             <MessageCircle size={24} color={theme.colors.text} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            activeOpacity={0.7}
+            onPress={() => {
+              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              onShare?.(post.id);
+            }}
+          >
             <Send size={22} color={theme.colors.text} />
           </TouchableOpacity>
         </View>

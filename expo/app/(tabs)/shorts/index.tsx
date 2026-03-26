@@ -30,6 +30,7 @@ import MentionPicker from '@/components/MentionPicker';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSaved } from '@/contexts/SavedContext';
+import ShareSheet from '@/components/ShareSheet';
 import type { Short, Member } from '@/types';
 
 const SHORT_CATEGORIES = ['Worship', 'Testimony', 'Teaching', 'Praise', 'Community', 'Other'] as const;
@@ -38,7 +39,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 type FeedTab = 'trending' | 'my-church';
 
-function ShortOverlay({ item, onLike, onComment, onMore, onSave, isSaved, currentUserId }: { item: Short; onLike: () => void; onComment: () => void; onMore: () => void; onSave: () => void; isSaved: boolean; currentUserId?: string }) {
+function ShortOverlay({ item, onLike, onComment, onShare, onMore, onSave, isSaved, currentUserId }: { item: Short; onLike: () => void; onComment: () => void; onShare: () => void; onMore: () => void; onSave: () => void; isSaved: boolean; currentUserId?: string }) {
   const router = useRouter();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const [isFollowing, setIsFollowing] = React.useState(false);
@@ -114,7 +115,7 @@ function ShortOverlay({ item, onLike, onComment, onMore, onSave, isSaved, curren
             <MessageCircle size={26} color={theme.colors.white} />
             <Text style={styles.actionCount}>{item.comment_count}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBtn}>
+          <TouchableOpacity style={styles.actionBtn} onPress={onShare}>
             <Share2 size={24} color={theme.colors.white} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionBtn} onPress={onSave}>
@@ -149,6 +150,8 @@ export default function ShortsScreen() {
   const [showOptions, setShowOptions] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showReport, setShowReport] = useState(false);
+  const [showShare, setShowShare] = useState(false);
+  const [shareShortId, setShareShortId] = useState<string | null>(null);
   const { user } = useAuth();
   const { isItemSaved, toggleSave } = useSaved();
 
@@ -359,6 +362,11 @@ export default function ShortsScreen() {
             setCommentsShortId(item.id);
             setShowComments(true);
           }}
+          onShare={() => {
+            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setShareShortId(item.id);
+            setShowShare(true);
+          }}
           onMore={() => handleOpenShortOptions(item.id)}
           onSave={() => {
             void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -376,7 +384,7 @@ export default function ShortsScreen() {
         />
       </View>
     ),
-    [itemHeight, likeMutation, handleOpenShortOptions, user?.id, isItemSaved, toggleSave]
+    [itemHeight, likeMutation, handleOpenShortOptions, user?.id, isItemSaved, toggleSave, setShareShortId, setShowShare]
   );
 
   return (
@@ -504,6 +512,20 @@ export default function ShortsScreen() {
         onConfirm={handleConfirmDeleteShort}
         isDeleting={deleteShortMutation.isPending}
         itemType="short"
+      />
+
+      <ShareSheet
+        visible={showShare}
+        onClose={() => {
+          setShowShare(false);
+          setShareShortId(null);
+        }}
+        content={shareShortId ? {
+          id: shareShortId,
+          type: 'short',
+          title: shorts.find((s) => s.id === shareShortId)?.title ?? '',
+          authorName: shorts.find((s) => s.id === shareShortId)?.author_name,
+        } : null}
       />
 
       {showUploadModal && (

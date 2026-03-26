@@ -28,6 +28,7 @@ import CommentsSheet from '@/components/CommentsSheet';
 import PostOptionsSheet, { DeleteConfirmSheet } from '@/components/PostOptionsSheet';
 import ReportSheet from '@/components/ReportSheet';
 import { useSaved } from '@/contexts/SavedContext';
+import ShareSheet from '@/components/ShareSheet';
 import type { FeedPost, ActiveScripture } from '@/types';
 
 type FeedFilter = 'all' | 'following' | 'favourites';
@@ -88,6 +89,8 @@ export default function HomeFeedScreen() {
   const [showReport, setShowReport] = useState(false);
   const [feedFilter, setFeedFilter] = useState<FeedFilter>('all');
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showShare, setShowShare] = useState(false);
+  const [sharePostId, setSharePostId] = useState<string | null>(null);
   const [dropdownAnchor] = useState({ x: 16, y: 80 });
   const { isItemSaved, toggleSave } = useSaved();
 
@@ -144,6 +147,11 @@ export default function HomeFeedScreen() {
       deleteMutation.mutate(optionsPostId);
     }
   }, [optionsPostId, deleteMutation]);
+
+  const handleSharePost = useCallback((postId: string) => {
+    setSharePostId(postId);
+    setShowShare(true);
+  }, []);
 
   const handleRefresh = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['feed'] });
@@ -248,6 +256,7 @@ export default function HomeFeedScreen() {
               setCommentsPostId(id);
               setShowComments(true);
             }}
+            onShare={handleSharePost}
             onMore={handleOpenOptions}
           />
         )}
@@ -331,6 +340,20 @@ export default function HomeFeedScreen() {
         onConfirm={handleConfirmDelete}
         isDeleting={deleteMutation.isPending}
         itemType="post"
+      />
+
+      <ShareSheet
+        visible={showShare}
+        onClose={() => {
+          setShowShare(false);
+          setSharePostId(null);
+        }}
+        content={sharePostId ? {
+          id: sharePostId,
+          type: 'post',
+          title: posts.find((p) => p.id === sharePostId)?.content.slice(0, 80) ?? '',
+          authorName: posts.find((p) => p.id === sharePostId)?.author_name,
+        } : null}
       />
     </View>
   );
