@@ -53,7 +53,7 @@ function useSavedValue() {
   const saveMutation = useMutation({
     mutationFn: async (params: { itemId: string; itemType: 'post' | 'short'; title: string; preview: string; authorName: string; authorId: string }) => {
       try {
-        await api.post('/saved', {
+        await api.post('/social/saved', {
           item_id: params.itemId,
           item_type: params.itemType,
         });
@@ -83,7 +83,7 @@ function useSavedValue() {
   const unsaveMutation = useMutation({
     mutationFn: async (params: { itemId: string; itemType: 'post' | 'short' }) => {
       try {
-        await api.delete(`/saved/${params.itemId}?type=${params.itemType}`);
+        await api.delete(`/social/saved/${params.itemId}?type=${params.itemType}`);
       } catch {
         console.log('[Saved] API unsave failed, removing locally only');
       }

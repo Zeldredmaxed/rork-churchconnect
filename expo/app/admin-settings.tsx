@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,22 +11,56 @@ import {
   Alert,
 } from 'react-native';
 import { Stack } from 'expo-router';
-import { useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Save, Settings } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
+
+interface ChurchAbout {
+  id: string;
+  name: string;
+  description?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  logo_url?: string;
+  cover_url?: string;
+  service_times?: string;
+  social_links?: Record<string, string>;
+}
 
 export default function AdminSettingsScreen() {
   const { theme } = useTheme();
   const styles = createStyles(theme);
   const [churchName, setChurchName] = useState('');
   const [churchAddress, setChurchAddress] = useState('');
-  const [subdomain, setSubdomain] = useState('');
-  const [youtubeChannelId, setYoutubeChannelId] = useState('');
+  const [churchPhone, setChurchPhone] = useState('');
+  const [churchEmail, setChurchEmail] = useState('');
+  const [churchWebsite, setChurchWebsite] = useState('');
+  const [churchDescription, setChurchDescription] = useState('');
   const [shortsEnabled, setShortsEnabled] = useState(true);
   const [prayerWallEnabled, setPrayerWallEnabled] = useState(true);
   const [givingEnabled, setGivingEnabled] = useState(true);
+
+  const aboutQuery = useQuery({
+    queryKey: ['church-about'],
+    queryFn: () => api.get<{ data: ChurchAbout }>('/churches/about'),
+  });
+
+  useEffect(() => {
+    if (aboutQuery.data?.data) {
+      const church = aboutQuery.data.data;
+      setChurchName(church.name ?? '');
+      setChurchAddress(church.address ?? '');
+      setChurchPhone(church.phone ?? '');
+      setChurchEmail(church.email ?? '');
+      setChurchWebsite(church.website ?? '');
+      setChurchDescription(church.description ?? '');
+      console.log('[AdminSettings] Loaded church data:', church.name);
+    }
+  }, [aboutQuery.data]);
 
   const saveMutation = useMutation({
     mutationFn: (params: Record<string, unknown>) =>
@@ -37,11 +71,13 @@ export default function AdminSettingsScreen() {
 
   const handleSave = () => {
     saveMutation.mutate({
-      name: churchName.trim(),
-      address: churchAddress.trim(),
-      subdomain: subdomain.trim(),
-      youtube_channel_id: youtubeChannelId.trim(),
-      features: {
+      name: churchName.trim() || undefined,
+      description: churchDescription.trim() || undefined,
+      address: churchAddress.trim() || undefined,
+      phone: churchPhone.trim() || undefined,
+      email: churchEmail.trim() || undefined,
+      website: churchWebsite.trim() || undefined,
+      features_enabled: {
         shorts: shortsEnabled,
         prayer_wall: prayerWallEnabled,
         giving: givingEnabled,
@@ -58,13 +94,19 @@ export default function AdminSettingsScreen() {
           <Settings size={28} color={theme.colors.accent} />
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>CHURCH PROFILE</Text>
-          <TextInput style={styles.input} value={churchName} onChangeText={setChurchName} placeholder="Church Name" placeholderTextColor={theme.colors.textTertiary} />
-          <TextInput style={styles.input} value={churchAddress} onChangeText={setChurchAddress} placeholder="Address" placeholderTextColor={theme.colors.textTertiary} />
-          <TextInput style={styles.input} value={subdomain} onChangeText={setSubdomain} placeholder="Subdomain" placeholderTextColor={theme.colors.textTertiary} autoCapitalize="none" />
-          <TextInput style={styles.input} value={youtubeChannelId} onChangeText={setYoutubeChannelId} placeholder="YouTube Channel ID (for live detection)" placeholderTextColor={theme.colors.textTertiary} autoCapitalize="none" />
-        </View>
+        {aboutQuery.isLoading ? (
+          <ActivityIndicator size="large" color={theme.colors.accent} style={{ marginTop: 20 }} />
+        ) : (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>CHURCH PROFILE</Text>
+            <TextInput style={styles.input} value={churchName} onChangeText={setChurchName} placeholder="Church Name" placeholderTextColor={theme.colors.textTertiary} />
+            <TextInput style={styles.input} value={churchDescription} onChangeText={setChurchDescription} placeholder="Description" placeholderTextColor={theme.colors.textTertiary} multiline />
+            <TextInput style={styles.input} value={churchAddress} onChangeText={setChurchAddress} placeholder="Address" placeholderTextColor={theme.colors.textTertiary} />
+            <TextInput style={styles.input} value={churchPhone} onChangeText={setChurchPhone} placeholder="Phone" placeholderTextColor={theme.colors.textTertiary} keyboardType="phone-pad" />
+            <TextInput style={styles.input} value={churchEmail} onChangeText={setChurchEmail} placeholder="Email" placeholderTextColor={theme.colors.textTertiary} keyboardType="email-address" autoCapitalize="none" />
+            <TextInput style={styles.input} value={churchWebsite} onChangeText={setChurchWebsite} placeholder="Website" placeholderTextColor={theme.colors.textTertiary} autoCapitalize="none" />
+          </View>
+        )
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>FEATURE TOGGLES</Text>

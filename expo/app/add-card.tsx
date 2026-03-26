@@ -12,10 +12,12 @@ import {
   Platform,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Lock, ChevronRight } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
+import { api } from '@/utils/api';
 
 const COUNTRIES = [
   'United States',
@@ -44,8 +46,26 @@ export default function AddCardScreen() {
   const [city, setCity] = useState('');
   const [region, setRegion] = useState('');
   const [postalCode, setPostalCode] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
+  const queryClient = useQueryClient();
+
+  const addCardMutation = useMutation({
+    mutationFn: async (params: Record<string, unknown>) => {
+      return api.post('/payment-methods', params);
+    },
+    onSuccess: () => {
+      console.log('[AddCard] Card saved successfully');
+      void queryClient.invalidateQueries({ queryKey: ['payment-methods'] });
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Card Added', 'Your payment method has been saved securely.', [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
+    },
+    onError: (error) => {
+      console.log('[AddCard] Save error:', error.message);
+      Alert.alert('Error', error.message || 'Failed to save payment method. Please try again.');
+    },
+  });
 
   const formatCardNumber = useCallback((text: string) => {
     const cleaned = text.replace(/\D/g, '').slice(0, 16);
@@ -85,32 +105,35 @@ export default function AddCardScreen() {
     city.trim().length > 0 &&
     postalCode.trim().length > 0;
 
-  const handleSave = useCallback(async () => {
+  const isSaving = addCardMutation.isPending;
+
+  const handleSave = useCallback(() => {
     if (!isFormValid) return;
-    setIsSaving(true);
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1200));
+    const expiryParts = expiry.split('/');
+    const expMonth = parseInt(expiryParts[0], 10);
+    const expYear = parseInt(`20${expiryParts[1]}`, 10);
 
-      console.log('[AddCard] Saving card:', {
-        last_four: cardNumber.replace(/\s/g, '').slice(-4),
-        expiry,
-        name: fullName,
+    const payload: Record<string, unknown> = {
+      card_number: cardNumber.replace(/\s/g, ''),
+      exp_month: expMonth,
+      exp_year: expYear,
+      cardholder_name: fullName.trim(),
+      billing_address: {
+        full_name: fullName.trim(),
         country,
-        city,
-      });
+        address_line1: address.trim(),
+        address_line2: address2.trim() || undefined,
+        city: city.trim(),
+        region: region.trim(),
+        postal_code: postalCode.trim(),
+      },
+    };
 
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Card Added', 'Your payment method has been saved securely.', [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
-    } catch {
-      Alert.alert('Error', 'Failed to save payment method. Please try again.');
-    } finally {
-      setIsSaving(false);
-    }
-  }, [isFormValid, cardNumber, expiry, fullName, country, city, router]);
+    console.log('[AddCard] Saving card ending in:', cardNumber.replace(/\s/g, '').slice(-4));
+    addCardMutation.mutate(payload);
+  }, [isFormValid, cardNumber, expiry, fullName, country, address, address2, city, region, postalCode, addCardMutation]);
 
   return (
     <View style={styles.container}>

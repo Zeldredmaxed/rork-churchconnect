@@ -167,7 +167,7 @@ export default function NotificationsScreen() {
     queryKey: ['notifications'],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: Notification[] }>('/alerts');
+        const data = await api.get<{ data: Notification[] }>('/notifications');
         return data;
       } catch {
         return { data: [] as Notification[] };
@@ -189,14 +189,14 @@ export default function NotificationsScreen() {
   });
 
   const markReadMutation = useMutation({
-    mutationFn: (id: string) => api.post(`/alerts/${id}/read`),
+    mutationFn: (id: string) => api.post(`/notifications/${id}/read`),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 
   const markAllReadMutation = useMutation({
-    mutationFn: () => api.post('/alerts/read-all'),
+    mutationFn: () => api.post('/notifications/read-all'),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },

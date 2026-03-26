@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,12 @@ import {
   Animated,
   Pressable,
   Dimensions,
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   CreditCard,
   Trash2,
@@ -19,20 +23,26 @@ import {
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
+import { api } from '@/utils/api';
 import type { PaymentMethod } from '@/types';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
-
-const MOCK_METHODS: PaymentMethod[] = [];
 
 export default function PaymentMethodsScreen() {
   const { theme } = useTheme();
   const styles = createStyles(theme);
   const router = useRouter();
-  const [methods, setMethods] = useState<PaymentMethod[]>(MOCK_METHODS);
-  const [showSheet, setShowSheet] = useState(false);
+  const queryClient = useQueryClient();
+  const [showSheet, setShowSheet] = React.useState(false);
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
+
+  const methodsQuery = useQuery({
+    queryKey: ['payment-methods'],
+    queryFn: () => api.get<{ data: PaymentMethod[] }>('/payment-methods'),
+  });
+
+  const methods = methodsQuery.data?.data ?? [];
 
   const openSheet = useCallback(() => {
     setShowSheet(true);
@@ -79,17 +89,42 @@ export default function PaymentMethodsScreen() {
     console.log('PayPal flow not yet implemented');
   }, [closeSheet]);
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/payment-methods/${id}`),
+    onSuccess: () => {
+      console.log('[PaymentMethods] Deleted successfully');
+      void queryClient.invalidateQueries({ queryKey: ['payment-methods'] });
+    },
+    onError: (error) => {
+      console.log('[PaymentMethods] Delete error:', error.message);
+      Alert.alert('Error', 'Failed to delete payment method.');
+    },
+  });
+
+  const setDefaultMutation = useMutation({
+    mutationFn: (id: string) => api.put(`/payment-methods/${id}/default`),
+    onSuccess: () => {
+      console.log('[PaymentMethods] Set default successfully');
+      void queryClient.invalidateQueries({ queryKey: ['payment-methods'] });
+    },
+    onError: (error) => {
+      console.log('[PaymentMethods] Set default error:', error.message);
+      Alert.alert('Error', 'Failed to set default payment method.');
+    },
+  });
+
   const handleDeleteMethod = useCallback((id: string) => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setMethods((prev) => prev.filter((m) => m.id !== id));
-  }, []);
+    Alert.alert('Remove Card', 'Are you sure you want to remove this payment method?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: () => deleteMutation.mutate(id) },
+    ]);
+  }, [deleteMutation]);
 
   const handleSetDefault = useCallback((id: string) => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setMethods((prev) =>
-      prev.map((m) => ({ ...m, is_default: m.id === id }))
-    );
-  }, []);
+    setDefaultMutation.mutate(id);
+  }, [setDefaultMutation]);
 
   const getCardIcon = (_brand?: string) => {
     return <CreditCard size={20} color={theme.colors.textSecondary} />;
@@ -106,10 +141,23 @@ export default function PaymentMethodsScreen() {
         }}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={methodsQuery.isRefetching}
+            onRefresh={() => void queryClient.invalidateQueries({ queryKey: ['payment-methods'] })}
+            tintColor={theme.colors.accent}
+          />
+        }
+      >
         <Text style={styles.sectionTitle}>Payment methods</Text>
 
-        {methods.length > 0 ? (
+        {methodsQuery.isLoading ? (
+          <View style={{ paddingTop: 40, alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={theme.colors.accent} />
+          </View>
+        ) : methods.length > 0 ? (
           <View style={styles.methodsList}>
             {methods.map((method) => (
               <View key={method.id} style={styles.methodCard}>

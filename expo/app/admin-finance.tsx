@@ -14,7 +14,16 @@ import { DollarSign, Download } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
-import type { GivingTrend, FinancialSummary, Fund } from '@/types';
+import type { GivingTrend, Fund } from '@/types';
+
+interface FinancialSummaryResponse {
+  period: string;
+  start_date: string;
+  end_date: string;
+  total_income: number;
+  total_expenses: number;
+  net_balance: number;
+}
 
 function BarChart({ data }: { data: GivingTrend[] }) {
   const { theme } = useTheme();
@@ -53,7 +62,7 @@ export default function AdminFinanceScreen() {
 
   const summaryQuery = useQuery({
     queryKey: ['admin', 'financial-summary'],
-    queryFn: () => api.get<{ data: FinancialSummary }>('/reports/financial'),
+    queryFn: () => api.get<{ data: FinancialSummaryResponse }>('/reports/financial-summary?period=month'),
   });
 
   const fundsQuery = useQuery({
@@ -93,12 +102,12 @@ export default function AdminFinanceScreen() {
           <>
             <View style={styles.summaryCards}>
               <View style={styles.summaryCard}>
-                <Text style={styles.summaryLabel}>This Month</Text>
-                <Text style={styles.summaryValue}>${(summary?.total_this_month ?? 0).toLocaleString()}</Text>
+                <Text style={styles.summaryLabel}>Total Income</Text>
+                <Text style={styles.summaryValue}>${(summary?.total_income ?? 0).toLocaleString()}</Text>
               </View>
               <View style={styles.summaryCard}>
-                <Text style={styles.summaryLabel}>This Year</Text>
-                <Text style={styles.summaryValue}>${(summary?.total_this_year ?? 0).toLocaleString()}</Text>
+                <Text style={styles.summaryLabel}>Net Balance</Text>
+                <Text style={styles.summaryValue}>${(summary?.net_balance ?? 0).toLocaleString()}</Text>
               </View>
             </View>
 
@@ -130,29 +139,27 @@ export default function AdminFinanceScreen() {
               ))}
             </View>
 
-            {summary?.fund_breakdown && summary.fund_breakdown.length > 0 && (
+            {summary && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>BUDGET vs. ACTUAL</Text>
-                {summary.fund_breakdown.map((fb, i) => (
-                  <View key={i} style={styles.budgetRow}>
-                    <Text style={styles.budgetFund}>{fb.fund_name}</Text>
-                    <View style={styles.budgetBar}>
-                      <View
-                        style={[
-                          styles.budgetFill,
-                          {
-                            width: fb.budget
-                              ? `${Math.min((fb.amount / fb.budget) * 100, 100)}%`
-                              : '100%',
-                          },
-                        ]}
-                      />
-                    </View>
-                    <Text style={styles.budgetText}>
-                      ${fb.amount.toLocaleString()}{fb.budget ? ` / $${fb.budget.toLocaleString()}` : ''}
-                    </Text>
+                <Text style={styles.sectionTitle}>EXPENSE SUMMARY</Text>
+                <View style={styles.budgetRow}>
+                  <Text style={styles.budgetFund}>Total Expenses</Text>
+                  <View style={styles.budgetBar}>
+                    <View
+                      style={[
+                        styles.budgetFill,
+                        {
+                          width: summary.total_income > 0
+                            ? `${Math.min((summary.total_expenses / summary.total_income) * 100, 100)}%`
+                            : '0%',
+                        },
+                      ]}
+                    />
                   </View>
-                ))}
+                  <Text style={styles.budgetText}>
+                    ${summary.total_expenses.toLocaleString()} / ${summary.total_income.toLocaleString()} income
+                  </Text>
+                </View>
               </View>
             )}
           </>

@@ -106,8 +106,11 @@ export default function HomeFeedScreen() {
   });
 
   const feedQuery = useQuery({
-    queryKey: ['feed'],
-    queryFn: () => api.get<{ data: FeedPost[] }>('/feed'),
+    queryKey: ['feed', feedFilter],
+    queryFn: () => {
+      const params = feedFilter !== 'all' ? `?filter=${feedFilter}` : '';
+      return api.get<{ data: FeedPost[] }>(`/feed${params}`);
+    },
   });
 
   const likeMutation = useMutation({
