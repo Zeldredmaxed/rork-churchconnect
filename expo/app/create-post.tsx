@@ -125,6 +125,24 @@ export default function CreatePostScreen() {
 
   const pickFromGallery = useCallback(async () => {
     try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      console.log('[CreatePost] Media library permission:', permissionResult.status);
+      if (!permissionResult.granted) {
+        Alert.alert(
+          'Permission Required',
+          'Please allow access to your photo library to select images for your post.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => {
+              if (Platform.OS !== 'web') {
+                void import('expo-linking').then((Linking) => Linking.openSettings());
+              }
+            }},
+          ]
+        );
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsMultipleSelection: true,
