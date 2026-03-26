@@ -210,11 +210,15 @@ export default function ProfileTabScreen() {
 
         <View style={styles.nameSection}>
           <Text style={styles.displayName}>{user?.full_name ?? 'User'}</Text>
-          <View style={styles.rolePill}>
-            <Text style={styles.rolePillText}>
-              {(user?.role ?? 'member').charAt(0).toUpperCase() + (user?.role ?? 'member').slice(1)}
-            </Text>
-          </View>
+          {user?.bio ? (
+            <Text style={styles.bioText}>{user.bio}</Text>
+          ) : (
+            <View style={styles.rolePill}>
+              <Text style={styles.rolePillText}>
+                {(user?.role ?? 'member').charAt(0).toUpperCase() + (user?.role ?? 'member').slice(1)}
+              </Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.actionButtons}>
@@ -665,5 +669,11 @@ const styles = StyleSheet.create({
     fontWeight: '500' as const,
     color: theme.colors.text,
     marginTop: 8,
+  },
+  bioText: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+    lineHeight: 18,
   },
 });

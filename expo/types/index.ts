@@ -8,6 +8,11 @@ export interface User {
   church_id: string;
   phone?: string;
   avatar_url?: string;
+  username?: string;
+  bio?: string;
+  pronouns?: string;
+  gender?: string;
+  link?: string;
   membership_status?: string;
   created_at?: string;
 }

@@ -144,6 +144,14 @@ function useAuthValue() {
     },
   });
 
+  const updateUser = useCallback(async (updates: Partial<User>) => {
+    const updated = { ...user, ...updates } as User;
+    setUser(updated);
+    const userStr = JSON.stringify(updated);
+    await SecureStore.setItemAsync('user_data', userStr);
+    console.log('[Auth] User data updated locally:', Object.keys(updates));
+  }, [user]);
+
   const logout = useCallback(async () => {
     await clearTokens();
     setUser(null);
@@ -161,6 +169,7 @@ function useAuthValue() {
     isAuthenticated,
     isAdmin,
     isPastor,
+    updateUser,
     login: loginMutation.mutateAsync,
     loginError: loginMutation.error?.message ?? null,
     isLoggingIn: loginMutation.isPending,
@@ -171,5 +180,5 @@ function useAuthValue() {
     onboardError: onboardMutation.error?.message ?? null,
     isOnboarding: onboardMutation.isPending,
     logout,
-  }), [user, isLoading, isAuthenticated, isAdmin, isPastor, loginMutation, registerMutation, onboardMutation, logout]);
+  }), [user, isLoading, isAuthenticated, isAdmin, isPastor, updateUser, loginMutation, registerMutation, onboardMutation, logout]);
 }

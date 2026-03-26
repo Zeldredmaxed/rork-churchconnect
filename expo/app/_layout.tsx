@@ -76,6 +76,11 @@ function RootLayoutNav() {
       <Stack.Screen name="admin-sermons" options={{ title: 'Sermons & Services' }} />
       <Stack.Screen name="admin-settings" options={{ title: 'Church Settings' }} />
       <Stack.Screen name="saved-posts" options={{ title: 'Saved' }} />
+      <Stack.Screen name="edit-name" options={{ title: 'Name' }} />
+      <Stack.Screen name="edit-bio" options={{ title: 'Bio' }} />
+      <Stack.Screen name="edit-username" options={{ title: 'Username' }} />
+      <Stack.Screen name="edit-pronouns" options={{ title: 'Pronouns' }} />
+      <Stack.Screen name="edit-gender" options={{ title: 'Gender' }} />
       <Stack.Screen name="new-message" options={{ title: 'New Message' }} />
       <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
       <Stack.Screen name="+not-found" />
