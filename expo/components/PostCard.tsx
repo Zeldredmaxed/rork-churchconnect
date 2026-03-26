@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native
 import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal, Pin } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { useSaved } from '@/contexts/SavedContext';
 import Badge from './Badge';
 import MentionText from './MentionText';
@@ -29,6 +30,8 @@ function formatTimeAgo(date: string): string {
 }
 
 export default function PostCard({ post, onLike, onComment, onShare, onMore }: PostCardProps) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const router = useRouter();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const bookmarkScaleAnim = useRef(new Animated.Value(1)).current;
@@ -190,7 +193,7 @@ export default function PostCard({ post, onLike, onComment, onShare, onMore }: P
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   card: {
     paddingBottom: 12,
     borderBottomWidth: 0.5,

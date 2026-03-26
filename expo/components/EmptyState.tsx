@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 
 interface EmptyStateProps {
   icon: React.ReactNode;
@@ -9,6 +10,8 @@ interface EmptyStateProps {
 }
 
 export default function EmptyState({ icon, title, description }: EmptyStateProps) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   return (
     <View style={styles.container}>
       <View style={styles.iconWrapper}>{icon}</View>
@@ -18,7 +21,7 @@ export default function EmptyState({ icon, title, description }: EmptyStateProps
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',

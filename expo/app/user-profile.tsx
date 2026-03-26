@@ -12,7 +12,8 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Grid3x3, MessageCircle } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
 import FollowButton from '@/components/FollowButton';
@@ -35,6 +36,8 @@ interface UserProfileData {
 }
 
 export default function UserProfileScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user: currentUser } = useAuth();
   const router = useRouter();
@@ -242,7 +245,7 @@ export default function UserProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

@@ -18,7 +18,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Heart, Send, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
 import MentionText from '@/components/MentionText';
@@ -49,6 +50,8 @@ function formatTimeAgo(date: string): string {
 }
 
 function CommentRow({ comment }: { comment: Comment }) {
+  const { theme } = useTheme();
+  const rowStyles = createRowStyles(theme);
   const [liked, setLiked] = useState(comment.is_liked ?? false);
   const [likeCount, setLikeCount] = useState(comment.like_count ?? 0);
   const heartScale = useRef(new Animated.Value(1)).current;
@@ -73,15 +76,9 @@ function CommentRow({ comment }: { comment: Comment }) {
   return (
     <View style={rowStyles.container}>
       <View style={rowStyles.avatarContainer}>
-        {comment.author_avatar ? (
-          <View style={rowStyles.avatar}>
-            <Text style={rowStyles.avatarText}>{initials}</Text>
-          </View>
-        ) : (
-          <View style={rowStyles.avatar}>
-            <Text style={rowStyles.avatarText}>{initials}</Text>
-          </View>
-        )}
+        <View style={rowStyles.avatar}>
+          <Text style={rowStyles.avatarText}>{initials}</Text>
+        </View>
       </View>
       <View style={rowStyles.body}>
         <View style={rowStyles.headerRow}>
@@ -109,76 +106,9 @@ function CommentRow({ comment }: { comment: Comment }) {
   );
 }
 
-const rowStyles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    alignItems: 'flex-start',
-  },
-  avatarContainer: {
-    marginRight: 12,
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: theme.colors.surfaceElevated,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  avatarText: {
-    fontSize: 12,
-    fontWeight: '700' as const,
-    color: theme.colors.accent,
-  },
-  body: {
-    flex: 1,
-    gap: 3,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  authorName: {
-    fontSize: 13,
-    fontWeight: '600' as const,
-    color: theme.colors.text,
-  },
-  timestamp: {
-    fontSize: 12,
-    color: theme.colors.textTertiary,
-  },
-  content: {
-    fontSize: 14,
-    color: theme.colors.text,
-    lineHeight: 19,
-  },
-  replyBtn: {
-    fontSize: 12,
-    fontWeight: '600' as const,
-    color: theme.colors.textTertiary,
-    marginTop: 2,
-  },
-  likeBtn: {
-    alignItems: 'center',
-    paddingLeft: 12,
-    paddingTop: 4,
-    gap: 2,
-  },
-  likeCount: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-  },
-  likeCountActive: {
-    color: theme.colors.error,
-  },
-});
-
 export default function CommentsSheet({ visible, onClose, postId, source }: CommentsSheetProps) {
+  const { theme } = useTheme();
+  const sheetStyles = createSheetStyles(theme);
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -468,7 +398,76 @@ export default function CommentsSheet({ visible, onClose, postId, source }: Comm
   );
 }
 
-const sheetStyles = StyleSheet.create({
+const createRowStyles = (theme: AppTheme) => StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    alignItems: 'flex-start',
+  },
+  avatarContainer: {
+    marginRight: 12,
+  },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: theme.colors.surfaceElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  avatarText: {
+    fontSize: 12,
+    fontWeight: '700' as const,
+    color: theme.colors.accent,
+  },
+  body: {
+    flex: 1,
+    gap: 3,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  authorName: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: theme.colors.text,
+  },
+  timestamp: {
+    fontSize: 12,
+    color: theme.colors.textTertiary,
+  },
+  content: {
+    fontSize: 14,
+    color: theme.colors.text,
+    lineHeight: 19,
+  },
+  replyBtn: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: theme.colors.textTertiary,
+    marginTop: 2,
+  },
+  likeBtn: {
+    alignItems: 'center',
+    paddingLeft: 12,
+    paddingTop: 4,
+    gap: 2,
+  },
+  likeCount: {
+    fontSize: 11,
+    color: theme.colors.textTertiary,
+  },
+  likeCountActive: {
+    color: theme.colors.error,
+  },
+});
+
+const createSheetStyles = (theme: AppTheme) => StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',

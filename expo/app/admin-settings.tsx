@@ -13,10 +13,13 @@ import {
 import { Stack } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 import { Save, Settings } from 'lucide-react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 
 export default function AdminSettingsScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const [churchName, setChurchName] = useState('');
   const [churchAddress, setChurchAddress] = useState('');
   const [subdomain, setSubdomain] = useState('');
@@ -98,7 +101,7 @@ export default function AdminSettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   scrollContent: { padding: 16, paddingBottom: 40 },
   iconContainer: {

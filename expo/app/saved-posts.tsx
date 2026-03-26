@@ -11,7 +11,8 @@ import {
 import { Stack } from 'expo-router';
 import { Bookmark, Clapperboard, FileText } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { useSaved, SavedItemData } from '@/contexts/SavedContext';
 import EmptyState from '@/components/EmptyState';
 
@@ -23,6 +24,8 @@ const TILE_SIZE = (SCREEN_WIDTH - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS;
 type FilterTab = 'all' | 'posts' | 'shorts';
 
 export default function SavedPostsScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const { savedItems, savedPosts, savedShorts, toggleSave } = useSaved();
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
 
@@ -157,7 +160,7 @@ export default function SavedPostsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

@@ -16,7 +16,8 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Stack, useRouter } from 'expo-router';
 import { Plus, X, Download, Upload } from 'lucide-react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import SearchBar from '@/components/SearchBar';
 import MemberRow from '@/components/MemberRow';
@@ -25,6 +26,8 @@ import { Users } from 'lucide-react-native';
 import type { Member, PaginatedResponse } from '@/types';
 
 export default function AdminMembersScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const queryClient = useQueryClient();
   const router = useRouter();
   const [search, setSearch] = useState('');
@@ -217,7 +220,7 @@ export default function AdminMembersScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   headerActions: { flexDirection: 'row', gap: 12 },
   headerBtn: { padding: 4 },

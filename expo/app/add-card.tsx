@@ -14,7 +14,8 @@ import {
 import { Stack, useRouter } from 'expo-router';
 import { Lock, ChevronRight } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 
 const COUNTRIES = [
   'United States',
@@ -30,6 +31,8 @@ const COUNTRIES = [
 ];
 
 export default function AddCardScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const router = useRouter();
   const [cardNumber, setCardNumber] = useState('');
   const [expiry, setExpiry] = useState('');
@@ -329,7 +332,7 @@ export default function AddCardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

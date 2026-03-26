@@ -18,7 +18,8 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Stack, useRouter } from 'expo-router';
 import { Plus, X, HandHeart } from 'lucide-react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import PrayerCard from '@/components/PrayerCard';
 import EmptyState from '@/components/EmptyState';
@@ -27,6 +28,8 @@ import type { Prayer } from '@/types';
 const CATEGORIES = ['general', 'health', 'family', 'financial', 'spiritual'] as const;
 
 export default function PrayerWallScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const queryClient = useQueryClient();
   const router = useRouter();
   const [showNewPrayer, setShowNewPrayer] = useState(false);
@@ -252,7 +255,7 @@ export default function PrayerWallScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

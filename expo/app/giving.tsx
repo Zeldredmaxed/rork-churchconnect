@@ -15,12 +15,15 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { DollarSign, X, Receipt, ChevronDown } from 'lucide-react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import EmptyState from '@/components/EmptyState';
 import type { Fund, Donation } from '@/types';
 
 export default function GivingScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const queryClient = useQueryClient();
   const [showGiveModal, setShowGiveModal] = useState(false);
   const [selectedFund, setSelectedFund] = useState<Fund | null>(null);
@@ -209,7 +212,7 @@ export default function GivingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

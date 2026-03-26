@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import Badge from './Badge';
 import type { Member } from '@/types';
 
@@ -17,6 +18,8 @@ const statusVariant: Record<string, 'success' | 'warning' | 'info'> = {
 };
 
 export default function MemberRow({ member, onPress }: MemberRowProps) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const initials = member.full_name
     .split(' ')
     .map((n) => n[0])
@@ -43,7 +46,7 @@ export default function MemberRow({ member, onPress }: MemberRowProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',

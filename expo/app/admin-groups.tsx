@@ -16,13 +16,16 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { Plus, X, Users } from 'lucide-react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import EmptyState from '@/components/EmptyState';
 import Badge from '@/components/Badge';
 import type { Group } from '@/types';
 
 export default function AdminGroupsScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const queryClient = useQueryClient();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [name, setName] = useState('');
@@ -123,7 +126,7 @@ export default function AdminGroupsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   listContent: { paddingTop: 8, paddingBottom: 100 },
   card: {

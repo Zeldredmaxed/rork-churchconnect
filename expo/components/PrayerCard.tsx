@@ -2,7 +2,8 @@ import React, { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { HandHeart, AlertTriangle, CheckCircle2, Users } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import Badge from './Badge';
 import type { Prayer } from '@/types';
 
@@ -32,6 +33,8 @@ function formatTimeAgo(date: string): string {
 }
 
 export default function PrayerCard({ prayer, onPray, onPress }: PrayerCardProps) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePray = () => {
@@ -110,7 +113,7 @@ export default function PrayerCard({ prayer, onPray, onPress }: PrayerCardProps)
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   card: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.lg,

@@ -12,12 +12,15 @@ import {
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { User, Mail, Phone, Trash2, Send } from 'lucide-react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import Badge from '@/components/Badge';
 import type { Member, MemberNote, MemberEngagement } from '@/types';
 
 export default function AdminMemberDetailScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
   const [noteText, setNoteText] = useState('');
@@ -201,7 +204,7 @@ export default function AdminMemberDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   center: { flex: 1, backgroundColor: theme.colors.background, alignItems: 'center', justifyContent: 'center' },
   emptyText: { color: theme.colors.textTertiary, fontSize: 16 },

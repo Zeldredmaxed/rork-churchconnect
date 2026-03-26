@@ -13,11 +13,14 @@ import {
 import { Stack, useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 import { Eye, EyeOff, CheckCircle } from 'lucide-react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function ChangePasswordScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const router = useRouter();
   const { user } = useAuth();
   const [currentPassword, setCurrentPassword] = useState('');
@@ -253,7 +256,7 @@ export default function ChangePasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

@@ -14,7 +14,8 @@ import { useRouter } from 'expo-router';
 import { Search } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import EmptyState from '@/components/EmptyState';
 import type { Event, Sermon, Prayer } from '@/types';
@@ -32,6 +33,8 @@ interface DiscoverItem {
 }
 
 export default function ExploreScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -201,7 +204,7 @@ export default function ExploreScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

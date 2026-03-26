@@ -18,13 +18,16 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { Plus, X, CalendarDays } from 'lucide-react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import EventCard from '@/components/EventCard';
 import EmptyState from '@/components/EmptyState';
 import type { Event } from '@/types';
 
 export default function AdminEventsScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const queryClient = useQueryClient();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [title, setTitle] = useState('');
@@ -177,7 +180,7 @@ export default function AdminEventsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   listContent: { paddingTop: 8, paddingBottom: 100 },
   fab: {

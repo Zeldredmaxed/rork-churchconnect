@@ -11,12 +11,15 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { Download, TrendingUp, Users } from 'lucide-react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import StatCard from '@/components/StatCard';
 import type { AnalyticsOverview, EngagementData, GrowthData, AttendanceRecord } from '@/types';
 
 export default function AdminAnalyticsScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const queryClient = useQueryClient();
 
   const overviewQuery = useQuery({
@@ -139,7 +142,7 @@ export default function AdminAnalyticsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   scrollContent: { padding: 16, paddingBottom: 40 },
   statsGrid: { flexDirection: 'row', gap: 10, marginBottom: 20 },

@@ -19,7 +19,8 @@ import {
   Heart,
   Users,
 } from 'lucide-react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import type { Donation } from '@/types';
 
@@ -30,6 +31,8 @@ interface SettingsRowProps {
 }
 
 function SettingsRow({ icon, label, onPress }: SettingsRowProps) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   return (
     <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.6}>
       <View style={styles.rowIcon}>{icon}</View>
@@ -40,6 +43,8 @@ function SettingsRow({ icon, label, onPress }: SettingsRowProps) {
 }
 
 export default function OrdersPaymentsScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const router = useRouter();
 
   const historyQuery = useQuery({
@@ -146,7 +151,7 @@ export default function OrdersPaymentsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

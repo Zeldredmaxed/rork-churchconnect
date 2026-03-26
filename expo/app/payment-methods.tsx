@@ -17,7 +17,8 @@ import {
   Landmark,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import type { PaymentMethod } from '@/types';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -25,6 +26,8 @@ const SCREEN_HEIGHT = Dimensions.get('window').height;
 const MOCK_METHODS: PaymentMethod[] = [];
 
 export default function PaymentMethodsScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const router = useRouter();
   const [methods, setMethods] = useState<PaymentMethod[]>(MOCK_METHODS);
   const [showSheet, setShowSheet] = useState(false);
@@ -203,7 +206,7 @@ export default function PaymentMethodsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

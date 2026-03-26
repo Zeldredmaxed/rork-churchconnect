@@ -13,12 +13,15 @@ import { useLocalSearchParams, Stack } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { HandHeart, AlertTriangle, CheckCircle2, Send } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import Badge from '@/components/Badge';
 import type { Prayer, PrayerResponse } from '@/types';
 
 export default function PrayerDetailScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
   const [responseText, setResponseText] = useState('');
@@ -183,7 +186,7 @@ export default function PrayerDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

@@ -13,7 +13,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useRouter } from 'expo-router';
 import { ArrowLeft, Video, SquarePen, Search } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
 import FollowButton from '@/components/FollowButton';
@@ -31,6 +32,8 @@ function formatTimeAgo(date: string): string {
 }
 
 function ConversationRow({ convo, onPress }: { convo: Conversation; onPress: () => void }) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const displayName = convo.name || convo.participants.map((p) => p.name).join(', ');
   const initials = displayName
     .split(' ')
@@ -60,6 +63,8 @@ function ConversationRow({ convo, onPress }: { convo: Conversation; onPress: () 
 }
 
 function FollowerSuggestionRow({ user }: { user: FlockUser }) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const router = useRouter();
   const [isFollowing, setIsFollowing] = useState(user.is_following ?? false);
 
@@ -96,6 +101,8 @@ function FollowerSuggestionRow({ user }: { user: FlockUser }) {
 }
 
 export default function ChatScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const queryClient = useQueryClient();
   const router = useRouter();
   const { user } = useAuth();
@@ -301,7 +308,7 @@ export default function ChatScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

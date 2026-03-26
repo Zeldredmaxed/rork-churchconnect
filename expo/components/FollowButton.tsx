@@ -2,7 +2,8 @@ import React, { useRef } from 'react';
 import { TouchableOpacity, Text, StyleSheet, Animated, ActivityIndicator } from 'react-native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 
 interface FollowButtonProps {
@@ -13,6 +14,8 @@ interface FollowButtonProps {
 }
 
 export default function FollowButton({ userId, isFollowing, size = 'medium', onToggle }: FollowButtonProps) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const queryClient = useQueryClient();
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -86,7 +89,7 @@ export default function FollowButton({ userId, isFollowing, size = 'medium', onT
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   button: {
     borderRadius: 8,
     alignItems: 'center',

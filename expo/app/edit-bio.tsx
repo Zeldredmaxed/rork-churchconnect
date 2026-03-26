@@ -13,13 +13,16 @@ import { Stack, useRouter } from 'expo-router';
 import { X, Check } from 'lucide-react-native';
 import { useMutation } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/utils/api';
 
 const MAX_BIO_LENGTH = 150;
 
 export default function EditBioScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const { user, updateUser } = useAuth();
   const router = useRouter();
   const [bio, setBio] = useState(user?.bio ?? '');
@@ -115,7 +118,7 @@ export default function EditBioScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

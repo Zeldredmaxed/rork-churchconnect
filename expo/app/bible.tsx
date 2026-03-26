@@ -12,13 +12,16 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { BookOpen, Search, ArrowLeft } from 'lucide-react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import type { BibleBook, BibleChapter } from '@/types';
 
 type ViewMode = 'books' | 'chapters' | 'reading' | 'search';
 
 export default function BibleScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const [mode, setMode] = useState<ViewMode>('books');
   const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<number>(1);
@@ -197,7 +200,7 @@ export default function BibleScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

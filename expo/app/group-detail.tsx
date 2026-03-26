@@ -10,11 +10,14 @@ import {
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Users, MessageSquare, ChevronRight } from 'lucide-react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import type { Group } from '@/types';
 
 export default function GroupDetailScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const groupQuery = useQuery({
@@ -107,7 +110,7 @@ export default function GroupDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

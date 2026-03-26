@@ -8,7 +8,8 @@ import {
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { ChevronRight, KeyRound, Shield, Smartphone } from 'lucide-react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 interface SecurityRowProps {
   icon: React.ReactNode;
   label: string;
@@ -16,6 +17,8 @@ interface SecurityRowProps {
 }
 
 function SecurityRow({ icon, label, onPress }: SecurityRowProps) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   return (
     <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.6}>
       <View style={styles.rowIcon}>{icon}</View>
@@ -26,6 +29,8 @@ function SecurityRow({ icon, label, onPress }: SecurityRowProps) {
 }
 
 export default function PasswordSecurityScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const router = useRouter();
   return (
     <View style={styles.container}>
@@ -77,7 +82,7 @@ export default function PasswordSecurityScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

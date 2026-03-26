@@ -14,13 +14,16 @@ import { useLocalSearchParams, Stack } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Heart, Eye, Play, Send, Clock } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import type { Sermon, SermonNote } from '@/types';
 
 const { width } = Dimensions.get('window');
 
 export default function SermonPlayerScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
   const [noteText, setNoteText] = useState('');
@@ -203,7 +206,7 @@ export default function SermonPlayerScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

@@ -11,13 +11,16 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useRouter } from 'expo-router';
 import { Users, ChevronRight } from 'lucide-react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import EmptyState from '@/components/EmptyState';
 import Badge from '@/components/Badge';
 import type { Group } from '@/types';
 
 function GroupCard({ group, onPress }: { group: Group; onPress: () => void }) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.cardIcon}>
@@ -37,6 +40,8 @@ function GroupCard({ group, onPress }: { group: Group; onPress: () => void }) {
 }
 
 export default function GroupsScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -97,7 +102,7 @@ export default function GroupsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

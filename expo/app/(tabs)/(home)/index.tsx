@@ -18,7 +18,8 @@ import { Heart, MessageCircle, Plus } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
 import PostCard from '@/components/PostCard';
@@ -46,6 +47,8 @@ function FeedDropdown({
   onSelect: (filter: FeedFilter) => void;
   anchor: { x: number; y: number };
 }) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   if (!visible) return null;
 
   return (
@@ -77,6 +80,8 @@ function FeedDropdown({
 }
 
 export default function HomeFeedScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -359,7 +364,7 @@ export default function HomeFeedScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

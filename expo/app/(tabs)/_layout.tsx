@@ -3,10 +3,13 @@ import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable } from 'reac
 import { Tabs, useRouter } from 'expo-router';
 import { Home, Search, PlusSquare, Clapperboard, LayoutDashboard } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 
 function CreateSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const router = useRouter();
 
   const handleOption = (route: string) => {
@@ -54,6 +57,8 @@ function CreateSheet({ visible, onClose }: { visible: boolean; onClose: () => vo
 }
 
 export default function TabLayout() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const { isAdmin } = useAuth();
   const [showCreate, setShowCreate] = useState(false);
 
@@ -141,7 +146,7 @@ export default function TabLayout() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   createIconWrap: {
     alignItems: 'center',
     justifyContent: 'center',

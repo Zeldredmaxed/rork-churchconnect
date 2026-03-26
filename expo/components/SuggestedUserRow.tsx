@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { X } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import FollowButton from './FollowButton';
 import type { FlockUser } from '@/types';
 
@@ -15,6 +16,8 @@ interface SuggestedUserRowProps {
 }
 
 export default function SuggestedUserRow({ user, subtitle, onDismiss, showDismiss = true }: SuggestedUserRowProps) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const router = useRouter();
   const [isFollowing, setIsFollowing] = useState(user.is_following ?? false);
 
@@ -67,7 +70,7 @@ export default function SuggestedUserRow({ user, subtitle, onDismiss, showDismis
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',

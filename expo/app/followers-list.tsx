@@ -11,7 +11,8 @@ import {
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import FollowButton from '@/components/FollowButton';
 import EmptyState from '@/components/EmptyState';
@@ -21,6 +22,8 @@ import type { FlockUser } from '@/types';
 type TabType = 'followers' | 'following';
 
 function UserRow({ user }: { user: FlockUser }) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const router = useRouter();
   const [isFollowing, setIsFollowing] = useState(user.is_following ?? false);
 
@@ -62,6 +65,8 @@ function UserRow({ user }: { user: FlockUser }) {
 }
 
 export default function FollowersListScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const { id, tab } = useLocalSearchParams<{ id: string; tab: string }>();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabType>((tab as TabType) ?? 'followers');
@@ -161,7 +166,7 @@ export default function FollowersListScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

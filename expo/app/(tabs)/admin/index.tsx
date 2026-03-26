@@ -22,7 +22,8 @@ import {
   ChevronRight,
   PlayCircle,
 } from 'lucide-react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
 import StatCard from '@/components/StatCard';
@@ -36,6 +37,8 @@ interface AdminLinkProps {
 }
 
 function AdminLink({ icon, label, description, onPress }: AdminLinkProps) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   return (
     <TouchableOpacity style={styles.adminLink} onPress={onPress} activeOpacity={0.6}>
       <View style={styles.adminLinkIcon}>{icon}</View>
@@ -49,6 +52,8 @@ function AdminLink({ icon, label, description, onPress }: AdminLinkProps) {
 }
 
 function EngagementRing({ score }: { score: number }) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const percentage = Math.min(Math.max(score, 0), 100);
   return (
     <View style={styles.ringContainer}>
@@ -77,6 +82,8 @@ function EngagementRing({ score }: { score: number }) {
 }
 
 export default function AdminDashboard() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const { isPastor } = useAuth();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -225,7 +232,7 @@ export default function AdminDashboard() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

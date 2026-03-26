@@ -5,7 +5,7 @@ import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { SavedProvider } from "@/contexts/SavedContext";
-import { theme } from "@/constants/theme";
+import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -13,6 +13,7 @@ const queryClient = new QueryClient();
 
 function RootLayoutNav() {
   const { isAuthenticated, isLoading } = useAuth();
+  const { theme } = useTheme();
   const router = useRouter();
   const segments = useSegments();
 
@@ -96,11 +97,13 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <AuthProvider>
-          <SavedProvider>
-            <RootLayoutNav />
-          </SavedProvider>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <SavedProvider>
+              <RootLayoutNav />
+            </SavedProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </GestureHandlerRootView>
     </QueryClientProvider>
   );

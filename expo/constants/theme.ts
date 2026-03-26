@@ -1,40 +1,78 @@
-export const theme = {
-  colors: {
-    background: '#0B0F1A',
-    surface: '#141926',
-    surfaceElevated: '#1C2333',
-    surfaceHover: '#242D3F',
-    border: '#2A3347',
-    borderLight: '#1E2740',
+const darkColors = {
+  background: '#0B0F1A',
+  surface: '#141926',
+  surfaceElevated: '#1C2333',
+  surfaceHover: '#242D3F',
+  border: '#2A3347',
+  borderLight: '#1E2740',
 
-    text: '#F1F3F7',
-    textSecondary: '#8B95A9',
-    textTertiary: '#5C6680',
-    textInverse: '#0B0F1A',
+  text: '#F1F3F7',
+  textSecondary: '#8B95A9',
+  textTertiary: '#5C6680',
+  textInverse: '#0B0F1A',
 
-    accent: '#D4A574',
-    accentLight: '#E8C899',
-    accentDark: '#B8895A',
-    accentMuted: 'rgba(212, 165, 116, 0.15)',
+  accent: '#D4A574',
+  accentLight: '#E8C899',
+  accentDark: '#B8895A',
+  accentMuted: 'rgba(212, 165, 116, 0.15)',
 
-    success: '#34D399',
-    successMuted: 'rgba(52, 211, 153, 0.15)',
-    error: '#F87171',
-    errorMuted: 'rgba(248, 113, 113, 0.15)',
-    warning: '#FBBF24',
-    warningMuted: 'rgba(251, 191, 36, 0.15)',
-    info: '#60A5FA',
-    infoMuted: 'rgba(96, 165, 250, 0.15)',
+  success: '#34D399',
+  successMuted: 'rgba(52, 211, 153, 0.15)',
+  error: '#F87171',
+  errorMuted: 'rgba(248, 113, 113, 0.15)',
+  warning: '#FBBF24',
+  warningMuted: 'rgba(251, 191, 36, 0.15)',
+  info: '#60A5FA',
+  infoMuted: 'rgba(96, 165, 250, 0.15)',
 
-    white: '#FFFFFF',
-    black: '#000000',
-    overlay: 'rgba(0, 0, 0, 0.6)',
+  white: '#FFFFFF',
+  black: '#000000',
+  overlay: 'rgba(0, 0, 0, 0.6)',
 
-    tabBar: '#0E1220',
-    tabBarBorder: '#1A2035',
-    tabBarActive: '#D4A574',
-    tabBarInactive: '#5C6680',
-  },
+  tabBar: '#0E1220',
+  tabBarBorder: '#1A2035',
+  tabBarActive: '#D4A574',
+  tabBarInactive: '#5C6680',
+} as const;
+
+const lightColors = {
+  background: '#FFFFFF',
+  surface: '#FFFFFF',
+  surfaceElevated: '#F2F2F7',
+  surfaceHover: '#E5E5EA',
+  border: '#D1D1D6',
+  borderLight: '#E5E5EA',
+
+  text: '#1A1A1A',
+  textSecondary: '#6B6B6B',
+  textTertiary: '#8E8E93',
+  textInverse: '#FFFFFF',
+
+  accent: '#D4A574',
+  accentLight: '#E8C899',
+  accentDark: '#B8895A',
+  accentMuted: 'rgba(212, 165, 116, 0.12)',
+
+  success: '#34C759',
+  successMuted: 'rgba(52, 199, 89, 0.12)',
+  error: '#FF3B30',
+  errorMuted: 'rgba(255, 59, 48, 0.12)',
+  warning: '#FF9500',
+  warningMuted: 'rgba(255, 149, 0, 0.12)',
+  info: '#007AFF',
+  infoMuted: 'rgba(0, 122, 255, 0.12)',
+
+  white: '#FFFFFF',
+  black: '#000000',
+  overlay: 'rgba(0, 0, 0, 0.4)',
+
+  tabBar: '#FFFFFF',
+  tabBarBorder: '#D1D1D6',
+  tabBarActive: '#D4A574',
+  tabBarInactive: '#8E8E93',
+} as const;
+
+const shared = {
   spacing: {
     xs: 4,
     sm: 8,
@@ -61,3 +99,47 @@ export const theme = {
     xxxl: 32,
   },
 } as const;
+
+export const darkTheme = { colors: darkColors, ...shared } as const;
+export const lightTheme = { colors: lightColors, ...shared } as const;
+
+export interface ThemeColors {
+  background: string;
+  surface: string;
+  surfaceElevated: string;
+  surfaceHover: string;
+  border: string;
+  borderLight: string;
+  text: string;
+  textSecondary: string;
+  textTertiary: string;
+  textInverse: string;
+  accent: string;
+  accentLight: string;
+  accentDark: string;
+  accentMuted: string;
+  success: string;
+  successMuted: string;
+  error: string;
+  errorMuted: string;
+  warning: string;
+  warningMuted: string;
+  info: string;
+  infoMuted: string;
+  white: string;
+  black: string;
+  overlay: string;
+  tabBar: string;
+  tabBarBorder: string;
+  tabBarActive: string;
+  tabBarInactive: string;
+}
+
+export interface AppTheme {
+  colors: ThemeColors;
+  spacing: typeof shared.spacing;
+  radius: typeof shared.radius;
+  fontSize: typeof shared.fontSize;
+}
+
+export const theme = darkTheme;

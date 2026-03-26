@@ -16,7 +16,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ChevronRight } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api, BASE_URL, getToken } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
 import type { ChatMessage, Conversation } from '@/types';
@@ -32,6 +33,8 @@ interface ChatUserProfile {
 }
 
 function ProfileHeader({ profile, onViewProfile }: { profile: ChatUserProfile; onViewProfile: () => void }) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const initials = profile.full_name
     .split(' ')
     .map((n) => n[0])
@@ -67,6 +70,7 @@ function ProfileHeader({ profile, onViewProfile }: { profile: ChatUserProfile; o
 }
 
 function InviteNotice({ name }: { name: string }) {
+  const styles = createStyles(useTheme().theme);
   return (
     <View style={styles.inviteNotice}>
       <View style={styles.inviteDivider} />
@@ -85,6 +89,8 @@ function InviteNotice({ name }: { name: string }) {
 }
 
 export default function ChatRoomScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const { id, userId, userName, isNew } = useLocalSearchParams<{
     id?: string;
     userId?: string;
@@ -287,7 +293,7 @@ export default function ChatRoomScreen() {
         </View>
       </View>
     );
-  }, [user?.id]);
+  }, [user?.id, styles]);
 
   const showProfileSection = !!targetUserId;
 
@@ -420,7 +426,7 @@ export default function ChatRoomScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

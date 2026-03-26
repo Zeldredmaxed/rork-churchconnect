@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Text, StyleSheet } from 'react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 
 interface MentionTextProps {
   children: string;
@@ -36,6 +37,8 @@ function parseMentions(text: string): TextPart[] {
 }
 
 export default function MentionText({ children, style, numberOfLines, onMentionPress }: MentionTextProps) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const parts = useMemo(() => parseMentions(children), [children]);
 
   if (parts.every((p) => !p.isMention)) {
@@ -65,7 +68,7 @@ export default function MentionText({ children, style, numberOfLines, onMentionP
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   mention: {
     color: theme.colors.accent,
     fontWeight: '600' as const,

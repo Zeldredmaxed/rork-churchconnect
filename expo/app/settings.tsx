@@ -44,7 +44,8 @@ import {
   LogOut,
   Search,
 } from 'lucide-react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import * as Haptics from 'expo-haptics';
 
@@ -58,6 +59,8 @@ interface SettingsRowProps {
 }
 
 function SettingsRow({ icon, label, sublabel, onPress, rightValue, destructive }: SettingsRowProps) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   return (
     <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.6}>
       <View style={styles.rowIcon}>{icon}</View>
@@ -74,10 +77,13 @@ function SettingsRow({ icon, label, sublabel, onPress, rightValue, destructive }
 }
 
 function SectionDivider({ height }: { height?: number }) {
+  const styles = createStyles(useTheme().theme);
   return <View style={[styles.sectionDivider, height ? { height } : undefined]} />;
 }
 
 export default function SettingsScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const router = useRouter();
   const { logout } = useAuth();
 
@@ -408,7 +414,7 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

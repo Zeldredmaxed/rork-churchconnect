@@ -10,7 +10,8 @@ import { Stack, useRouter } from 'expo-router';
 import { X, Check } from 'lucide-react-native';
 import { useMutation } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/utils/api';
 
@@ -22,6 +23,8 @@ const GENDER_OPTIONS = [
 ];
 
 export default function EditGenderScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const { user, updateUser } = useAuth();
   const router = useRouter();
   const [selected, setSelected] = useState(user?.gender ?? 'Prefer not to say');
@@ -102,7 +105,7 @@ export default function EditGenderScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

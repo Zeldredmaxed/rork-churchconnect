@@ -12,10 +12,13 @@ import {
 import { Stack } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 import { Send, Bell } from 'lucide-react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 
 export default function AdminAnnouncementsScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [target, setTarget] = useState<'all' | 'group'>('all');
@@ -110,7 +113,7 @@ export default function AdminAnnouncementsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   scrollContent: { padding: 16, paddingBottom: 40 },
   iconContainer: {

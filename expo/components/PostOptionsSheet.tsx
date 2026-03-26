@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 import { Trash2, Flag, Bookmark, Share2, Link, AlertTriangle } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 
 interface PostOptionsSheetProps {
   visible: boolean;
@@ -36,36 +37,21 @@ export default function PostOptionsSheet({
   isDeleting = false,
   itemType = 'post',
 }: PostOptionsSheetProps) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const slideAnim = useRef(new Animated.Value(0)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
       Animated.parallel([
-        Animated.timing(backdropAnim, {
-          toValue: 1,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-        Animated.spring(slideAnim, {
-          toValue: 1,
-          friction: 8,
-          tension: 65,
-          useNativeDriver: true,
-        }),
+        Animated.timing(backdropAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+        Animated.spring(slideAnim, { toValue: 1, friction: 8, tension: 65, useNativeDriver: true }),
       ]).start();
     } else {
       Animated.parallel([
-        Animated.timing(backdropAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
+        Animated.timing(backdropAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
       ]).start();
     }
   }, [visible, slideAnim, backdropAnim]);
@@ -80,11 +66,7 @@ export default function PostOptionsSheet({
     onClose();
   };
 
-  const translateY = slideAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [400, 0],
-  });
-
+  const translateY = slideAnim.interpolate({ inputRange: [0, 1], outputRange: [400, 0] });
   const label = itemType === 'short' ? 'short' : 'post';
 
   return (
@@ -186,45 +168,26 @@ export function DeleteConfirmSheet({
   isDeleting,
   itemType = 'post',
 }: DeleteConfirmSheetProps) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const slideAnim = useRef(new Animated.Value(0)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
       Animated.parallel([
-        Animated.timing(backdropAnim, {
-          toValue: 1,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-        Animated.spring(slideAnim, {
-          toValue: 1,
-          friction: 8,
-          tension: 65,
-          useNativeDriver: true,
-        }),
+        Animated.timing(backdropAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+        Animated.spring(slideAnim, { toValue: 1, friction: 8, tension: 65, useNativeDriver: true }),
       ]).start();
     } else {
       Animated.parallel([
-        Animated.timing(backdropAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
+        Animated.timing(backdropAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
       ]).start();
     }
   }, [visible, slideAnim, backdropAnim]);
 
-  const translateY = slideAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [300, 0],
-  });
-
+  const translateY = slideAnim.interpolate({ inputRange: [0, 1], outputRange: [300, 0] });
   const label = itemType === 'short' ? 'short' : 'post';
 
   return (
@@ -268,7 +231,7 @@ export function DeleteConfirmSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   modalContainer: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -336,11 +299,6 @@ const styles = StyleSheet.create({
     gap: 14,
     paddingHorizontal: 20,
     paddingVertical: 16,
-  },
-  optionText: {
-    fontSize: 16,
-    color: theme.colors.text,
-    fontWeight: '400' as const,
   },
   optionTextDanger: {
     fontSize: 16,

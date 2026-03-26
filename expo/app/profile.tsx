@@ -9,10 +9,13 @@ import {
 import { Stack, useRouter } from 'expo-router';
 import { ArrowLeft, ChevronRight } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function EditProfileScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const { user } = useAuth();
   const router = useRouter();
 
@@ -154,7 +157,7 @@ export default function EditProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

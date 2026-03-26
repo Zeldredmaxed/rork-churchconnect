@@ -24,7 +24,8 @@ import {
   Church,
   CreditCard,
 } from 'lucide-react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface MenuItemProps {
@@ -36,6 +37,8 @@ interface MenuItemProps {
 }
 
 function MenuItem({ icon, label, sublabel, onPress, destructive }: MenuItemProps) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   return (
     <TouchableOpacity style={styles.menuItem} onPress={onPress} activeOpacity={0.6}>
       <View style={[styles.menuIcon, destructive && styles.menuIconDestructive]}>
@@ -51,6 +54,8 @@ function MenuItem({ icon, label, sublabel, onPress, destructive }: MenuItemProps
 }
 
 export default function MoreScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const { user, logout } = useAuth();
   const router = useRouter();
 
@@ -216,7 +221,7 @@ export default function MoreScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

@@ -11,13 +11,16 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useRouter } from 'expo-router';
 import { PlayCircle, Radio } from 'lucide-react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import SermonCard from '@/components/SermonCard';
 import EmptyState from '@/components/EmptyState';
 import type { Sermon } from '@/types';
 
 export default function SermonsScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -99,7 +102,7 @@ export default function SermonsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

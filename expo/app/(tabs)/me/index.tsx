@@ -20,7 +20,8 @@ import {
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSaved } from '@/contexts/SavedContext';
 import { api } from '@/utils/api';
@@ -46,6 +47,8 @@ function DiscoverPeopleCard({
   onFollow: () => void;
   onDismiss: () => void;
 }) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const initials = user.full_name
     .split(' ')
     .map((n) => n[0])
@@ -75,6 +78,8 @@ function DiscoverPeopleCard({
 }
 
 export default function ProfileTabScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const { user } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -361,7 +366,7 @@ export default function ProfileTabScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

@@ -13,11 +13,14 @@ import { Stack, useRouter } from 'expo-router';
 import { X, Check } from 'lucide-react-native';
 import { useMutation } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/utils/api';
 
 export default function EditNameScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const { user, updateUser } = useAuth();
   const router = useRouter();
   const [name, setName] = useState(user?.full_name ?? '');
@@ -117,7 +120,7 @@ export default function EditNameScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

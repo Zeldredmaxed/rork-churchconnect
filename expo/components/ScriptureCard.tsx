@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { BookOpen } from 'lucide-react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import type { ActiveScripture } from '@/types';
 
 interface ScriptureCardProps {
@@ -9,6 +10,8 @@ interface ScriptureCardProps {
 }
 
 export default function ScriptureCard({ scripture }: ScriptureCardProps) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   return (
     <View style={styles.card}>
       <View style={styles.header}>
@@ -31,7 +34,7 @@ export default function ScriptureCard({ scripture }: ScriptureCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   card: {
     backgroundColor: theme.colors.accentMuted,
     borderRadius: theme.radius.lg,

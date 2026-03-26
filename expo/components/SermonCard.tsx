@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { Play, Eye, Heart, Radio } from 'lucide-react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import type { Sermon } from '@/types';
 
 interface SermonCardProps {
@@ -11,6 +12,8 @@ interface SermonCardProps {
 }
 
 export default function SermonCard({ sermon, onPress }: SermonCardProps) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   return (
     <TouchableOpacity style={styles.card} onPress={() => onPress(sermon)} activeOpacity={0.7}>
       <View style={styles.thumbnailContainer}>
@@ -63,7 +66,7 @@ export default function SermonCard({ sermon, onPress }: SermonCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   card: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.lg,

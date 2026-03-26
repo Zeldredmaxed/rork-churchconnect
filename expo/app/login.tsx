@@ -13,10 +13,13 @@ import {
 } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const router = useRouter();
   const { login, isLoggingIn } = useAuth();
   const [email, setEmail] = useState('');
@@ -147,7 +150,7 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

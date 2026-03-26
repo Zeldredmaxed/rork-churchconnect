@@ -19,7 +19,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Heart, MessageCircle, Share2, Eye, ChevronUp, Plus, X, Video, Upload, AtSign, MoreVertical, Bookmark } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api, getToken, API_URL } from '@/utils/api';
 import EmptyState from '@/components/EmptyState';
 import CommentsSheet from '@/components/CommentsSheet';
@@ -40,6 +41,8 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 type FeedTab = 'trending' | 'my-church';
 
 function ShortOverlay({ item, onLike, onComment, onShare, onMore, onSave, isSaved, currentUserId }: { item: Short; onLike: () => void; onComment: () => void; onShare: () => void; onMore: () => void; onSave: () => void; isSaved: boolean; currentUserId?: string }) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const router = useRouter();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const [isFollowing, setIsFollowing] = React.useState(false);
@@ -135,6 +138,8 @@ function ShortOverlay({ item, onLike, onComment, onShare, onMore, onSave, isSave
 }
 
 export default function ShortsScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<FeedTab>('trending');
@@ -384,7 +389,7 @@ export default function ShortsScreen() {
         />
       </View>
     ),
-    [itemHeight, likeMutation, handleOpenShortOptions, user?.id, isItemSaved, toggleSave, setShareShortId, setShowShare]
+    [itemHeight, likeMutation, handleOpenShortOptions, user?.id, isItemSaved, toggleSave, setShareShortId, setShowShare, styles]
   );
 
   return (
@@ -660,7 +665,7 @@ export default function ShortsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.black,

@@ -11,7 +11,8 @@ import {
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Calendar, MapPin, Users, Clock, Check, X } from 'lucide-react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import Badge from '@/components/Badge';
 import type { Event } from '@/types';
@@ -24,6 +25,8 @@ const typeBadgeVariant: Record<string, 'accent' | 'info' | 'warning' | 'success'
 };
 
 export default function EventDetailScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
 
@@ -205,7 +208,7 @@ export default function EventDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

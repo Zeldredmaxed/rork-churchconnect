@@ -32,7 +32,8 @@ import {
   Check,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
 import MentionInput from '@/components/MentionInput';
@@ -51,6 +52,8 @@ interface SelectedImage {
 }
 
 export default function CreatePostScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
@@ -497,7 +500,7 @@ export default function CreatePostScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

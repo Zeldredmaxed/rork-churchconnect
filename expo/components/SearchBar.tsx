@@ -2,7 +2,8 @@ import React, { useState, useRef, useCallback } from 'react';
 import { View, TextInput, StyleSheet } from 'react-native';
 import { Search, X } from 'lucide-react-native';
 import { TouchableOpacity } from 'react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 
 interface SearchBarProps {
   placeholder?: string;
@@ -11,6 +12,8 @@ interface SearchBarProps {
 }
 
 export default function SearchBar({ placeholder = 'Search...', onSearch, debounceMs = 300 }: SearchBarProps) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const [value, setValue] = useState('');
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -49,7 +52,7 @@ export default function SearchBar({ placeholder = 'Search...', onSearch, debounc
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',

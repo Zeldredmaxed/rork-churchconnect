@@ -1,8 +1,9 @@
 import React from 'react';
 import { Stack } from 'expo-router';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function PrayersLayout() {
+  const { theme } = useTheme();
   return (
     <Stack
       screenOptions={{

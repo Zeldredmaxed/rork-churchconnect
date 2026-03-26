@@ -22,33 +22,24 @@ import {
   ChevronRight,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import EmptyState from '@/components/EmptyState';
 import SuggestedUserRow from '@/components/SuggestedUserRow';
 import type { Notification, FlockUser } from '@/types';
 
-const typeIcons: Record<string, { icon: React.ReactNode; color: string }> = {
-  like: { icon: <Heart size={16} color={theme.colors.error} />, color: theme.colors.errorMuted },
-  comment: {
-    icon: <MessageCircle size={16} color={theme.colors.info} />,
-    color: theme.colors.infoMuted,
-  },
-  rsvp: {
-    icon: <Calendar size={16} color={theme.colors.success} />,
-    color: theme.colors.successMuted,
-  },
-  prayer: {
-    icon: <HandHeart size={16} color={theme.colors.warning} />,
-    color: theme.colors.warningMuted,
-  },
-  event: {
-    icon: <Calendar size={16} color={theme.colors.accent} />,
-    color: theme.colors.accentMuted,
-  },
-  short: { icon: <Play size={16} color={theme.colors.info} />, color: theme.colors.infoMuted },
-  follow: { icon: <UserPlus size={16} color="#0095F6" />, color: 'rgba(0, 149, 246, 0.12)' },
-};
+function getTypeIcons(theme: AppTheme): Record<string, { icon: React.ReactNode; color: string }> {
+  return {
+    like: { icon: <Heart size={16} color={theme.colors.error} />, color: theme.colors.errorMuted },
+    comment: { icon: <MessageCircle size={16} color={theme.colors.info} />, color: theme.colors.infoMuted },
+    rsvp: { icon: <Calendar size={16} color={theme.colors.success} />, color: theme.colors.successMuted },
+    prayer: { icon: <HandHeart size={16} color={theme.colors.warning} />, color: theme.colors.warningMuted },
+    event: { icon: <Calendar size={16} color={theme.colors.accent} />, color: theme.colors.accentMuted },
+    short: { icon: <Play size={16} color={theme.colors.info} />, color: theme.colors.infoMuted },
+    follow: { icon: <UserPlus size={16} color="#0095F6" />, color: 'rgba(0, 149, 246, 0.12)' },
+  };
+}
 
 function formatTimeAgo(date: string): string {
   const now = new Date();
@@ -68,7 +59,10 @@ function NotificationRow({
   item: Notification & { user_id?: string; is_following_back?: boolean };
   onRead: (id: string) => void;
 }) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const router = useRouter();
+  const typeIcons = getTypeIcons(theme);
   const typeConfig = typeIcons[item.type] ?? {
     icon: <Bell size={16} color={theme.colors.textSecondary} />,
     color: theme.colors.surfaceElevated,
@@ -140,6 +134,8 @@ function NotificationRow({
 }
 
 function FollowRequestsBanner({ count, onPress }: { count: number; onPress: () => void }) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   if (count === 0) return null;
 
   return (
@@ -162,6 +158,8 @@ function FollowRequestsBanner({ count, onPress }: { count: number; onPress: () =
 }
 
 export default function NotificationsScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const queryClient = useQueryClient();
   const [dismissedUsers, setDismissedUsers] = useState<string[]>([]);
 
@@ -374,7 +372,7 @@ export default function NotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

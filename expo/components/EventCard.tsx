@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Calendar, MapPin, Users } from 'lucide-react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import Badge from './Badge';
 import type { Event } from '@/types';
 
@@ -36,6 +37,8 @@ function formatTime(date: string): string {
 }
 
 export default function EventCard({ event, onPress }: EventCardProps) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   return (
     <TouchableOpacity
       style={styles.card}
@@ -94,7 +97,7 @@ export default function EventCard({ event, onPress }: EventCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   card: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.lg,

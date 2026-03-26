@@ -12,7 +12,8 @@ import { Stack, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import type { FlockUser } from '@/types';
 
@@ -27,6 +28,8 @@ interface SearchResultUser {
 }
 
 function UserRow({ user, onPress }: { user: SearchResultUser; onPress: () => void }) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const initials = user.full_name
     .split(' ')
     .map((n) => n[0])
@@ -50,6 +53,8 @@ function UserRow({ user, onPress }: { user: SearchResultUser; onPress: () => voi
 }
 
 export default function NewMessageScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -165,7 +170,7 @@ export default function NewMessageScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

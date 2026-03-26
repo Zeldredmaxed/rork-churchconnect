@@ -11,11 +11,14 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { DollarSign, Download } from 'lucide-react-native';
-import { theme } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import type { GivingTrend, FinancialSummary, Fund } from '@/types';
 
 function BarChart({ data }: { data: GivingTrend[] }) {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   if (data.length === 0) return null;
   const maxAmount = Math.max(...data.map((d) => d.amount), 1);
 
@@ -39,6 +42,8 @@ function BarChart({ data }: { data: GivingTrend[] }) {
 }
 
 export default function AdminFinanceScreen() {
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const queryClient = useQueryClient();
 
   const trendsQuery = useQuery({
@@ -157,7 +162,7 @@ export default function AdminFinanceScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   scrollContent: { padding: 16, paddingBottom: 40 },
   summaryCards: { flexDirection: 'row', gap: 10, marginBottom: 20 },
