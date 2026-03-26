@@ -43,6 +43,9 @@ import {
   Info,
   LogOut,
   Search,
+  Sun,
+  Moon,
+  Monitor,
 } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
@@ -91,6 +94,21 @@ export default function SettingsScreen() {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push(route as never);
   };
+
+  const { mode, setThemeMode } = useTheme();
+
+  const handleThemeCycle = async () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (mode === 'light') {
+      await setThemeMode('dark');
+    } else if (mode === 'dark') {
+      await setThemeMode('system');
+    } else {
+      await setThemeMode('light');
+    }
+  };
+
+  const ThemeIcon = mode === 'light' ? Sun : mode === 'dark' ? Moon : Monitor;
 
   const handleLeaveChurch = () => {
     Alert.alert(
@@ -306,6 +324,26 @@ export default function SettingsScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionHeader}>Your app and media</Text>
+          <TouchableOpacity style={styles.row} onPress={handleThemeCycle} activeOpacity={0.6}>
+            <View style={styles.rowIcon}>
+              <ThemeIcon size={20} color={theme.colors.textSecondary} />
+            </View>
+            <View style={styles.rowContent}>
+              <Text style={styles.rowLabel}>Appearance</Text>
+              <Text style={styles.rowSublabel}>Switch between light, dark, and system theme</Text>
+            </View>
+            <View style={styles.themeToggleRow}>
+              <View style={[styles.themeChip, mode === 'light' && styles.themeChipActive]}>
+                <Sun size={14} color={mode === 'light' ? theme.colors.accent : theme.colors.textTertiary} />
+              </View>
+              <View style={[styles.themeChip, mode === 'dark' && styles.themeChipActive]}>
+                <Moon size={14} color={mode === 'dark' ? theme.colors.accent : theme.colors.textTertiary} />
+              </View>
+              <View style={[styles.themeChip, mode === 'system' && styles.themeChipActive]}>
+                <Monitor size={14} color={mode === 'system' ? theme.colors.accent : theme.colors.textTertiary} />
+              </View>
+            </View>
+          </TouchableOpacity>
           <SettingsRow
             icon={<Smartphone size={20} color={theme.colors.textSecondary} />}
             label="Device permissions"
@@ -532,5 +570,23 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   sectionLogoInline: {
     width: 80,
     height: 20,
+  },
+  themeToggleRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+  },
+  themeChip: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: theme.colors.surfaceElevated,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  themeChipActive: {
+    backgroundColor: theme.colors.accentMuted,
+    borderWidth: 1.5,
+    borderColor: theme.colors.accent,
   },
 });

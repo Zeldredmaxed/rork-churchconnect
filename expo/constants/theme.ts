@@ -1,15 +1,15 @@
 const darkColors = {
-  background: '#0B0F1A',
-  surface: '#141926',
-  surfaceElevated: '#1C2333',
-  surfaceHover: '#242D3F',
-  border: '#2A3347',
-  borderLight: '#1E2740',
+  background: '#1A1A1A',
+  surface: '#222222',
+  surfaceElevated: '#2C2C2C',
+  surfaceHover: '#333333',
+  border: '#3A3A3A',
+  borderLight: '#2E2E2E',
 
-  text: '#F1F3F7',
-  textSecondary: '#8B95A9',
-  textTertiary: '#5C6680',
-  textInverse: '#0B0F1A',
+  text: '#F2F2F2',
+  textSecondary: '#A0A0A0',
+  textTertiary: '#6E6E6E',
+  textInverse: '#1A1A1A',
 
   accent: '#D4A574',
   accentLight: '#E8C899',
@@ -29,10 +29,10 @@ const darkColors = {
   black: '#000000',
   overlay: 'rgba(0, 0, 0, 0.6)',
 
-  tabBar: '#0E1220',
-  tabBarBorder: '#1A2035',
+  tabBar: '#1A1A1A',
+  tabBarBorder: '#2E2E2E',
   tabBarActive: '#D4A574',
-  tabBarInactive: '#5C6680',
+  tabBarInactive: '#6E6E6E',
 } as const;
 
 const lightColors = {
