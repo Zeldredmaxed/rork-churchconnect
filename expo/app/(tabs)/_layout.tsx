@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { Tabs, useRouter } from 'expo-router';
-import { Home, Search, PlusSquare, Clapperboard, LayoutDashboard } from 'lucide-react-native';
+import { Home, PlusSquare, Clapperboard, LayoutDashboard, HandHeart } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
@@ -91,9 +91,9 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="explore"
+          name="prayers"
           options={{
-            tabBarIcon: ({ color, size }) => <Search size={size} color={color} />,
+            tabBarIcon: ({ color, size }) => <HandHeart size={size} color={color} />,
           }}
         />
         <Tabs.Screen
@@ -140,7 +140,7 @@ export default function TabLayout() {
         />
         <Tabs.Screen name="events" options={{ href: null }} />
         <Tabs.Screen name="sermons" options={{ href: null }} />
-        <Tabs.Screen name="prayers" options={{ href: null }} />
+        <Tabs.Screen name="explore" options={{ href: null }} />
         <Tabs.Screen name="more" options={{ href: null }} />
       </Tabs>
       <CreateSheet visible={showCreate} onClose={() => setShowCreate(false)} onCreateShort={() => setShowCreateShort(true)} />
