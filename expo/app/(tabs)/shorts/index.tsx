@@ -16,7 +16,8 @@ import {
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Heart, MessageCircle, Share2, Eye, ChevronUp, Plus, X, Video, Upload, AtSign, MoreVertical, Bookmark } from 'lucide-react-native';
+import { Heart, MessageCircle, Share2, Eye, Plus, X, Video, Upload, AtSign, MoreVertical, Bookmark } from 'lucide-react-native';
+import ShortVideoPlayer from '@/components/ShortVideoPlayer';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -302,11 +303,16 @@ export default function ShortsScreen() {
     setSelectedVideo(null);
   }, []);
 
+  const [visibleShortId, setVisibleShortId] = useState<string | null>(null);
+
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: Array<{ item: Short }> }) => {
       if (viewableItems.length > 0) {
         const item = viewableItems[0].item;
+        setVisibleShortId(item.id);
         viewMutation.mutate(item.id);
+      } else {
+        setVisibleShortId(null);
       }
     },
     [viewMutation]
@@ -342,12 +348,11 @@ export default function ShortsScreen() {
   const renderItem = useCallback(
     ({ item }: { item: Short }) => (
       <View style={[styles.shortItem, { height: itemHeight }]}>
-        <View style={styles.videoPlaceholder}>
-          <View style={styles.videoContent}>
-            <ChevronUp size={20} color="rgba(255,255,255,0.3)" />
-            <Text style={styles.swipeHint}>Swipe up for next</Text>
-          </View>
-        </View>
+        <ShortVideoPlayer
+          videoUrl={item.video_url}
+          thumbnailUrl={item.thumbnail_url}
+          isVisible={visibleShortId === item.id}
+        />
         <ShortOverlay
           item={item}
           onLike={() => likeMutation.mutate({ id: item.id, liked: !!item.is_liked })}
@@ -377,7 +382,7 @@ export default function ShortsScreen() {
         />
       </View>
     ),
-    [itemHeight, likeMutation, handleOpenShortOptions, user?.id, isItemSaved, toggleSave, setShareShortId, setShowShare, styles]
+    [itemHeight, likeMutation, handleOpenShortOptions, user?.id, isItemSaved, toggleSave, setShareShortId, setShowShare, styles, visibleShortId]
   );
 
   return (
