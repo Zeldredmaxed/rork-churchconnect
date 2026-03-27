@@ -170,8 +170,8 @@ export default function HomeFeedScreen() {
   const posts = feedQuery.data?.data ?? [];
   const selectedPost = optionsPostId ? posts.find((p) => p.id === optionsPostId) : null;
   const isPostOwner = selectedPost?.author_id === user?.id;
-  const pinnedPosts = posts.filter((p) => p.is_pinned);
-  const regularPosts = posts.filter((p) => !p.is_pinned);
+  const pinnedPosts = posts.filter((p) => p.is_pinned).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const regularPosts = posts.filter((p) => !p.is_pinned).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   const sortedPosts = [...pinnedPosts, ...regularPosts];
   const activeScripture = scriptureQuery.data?.data;
 

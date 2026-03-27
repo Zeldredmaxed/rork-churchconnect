@@ -218,7 +218,7 @@ export default function ShortsScreen() {
     [viewMutation]
   );
 
-  const shorts = shortsQuery.data?.data ?? [];
+  const shorts = [...(shortsQuery.data?.data ?? [])].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   const itemHeight = SCREEN_HEIGHT;
 
   const selectedShort = optionsShortId ? shorts.find((s) => s.id === optionsShortId) : null;
