@@ -1,6 +1,6 @@
-import React, { useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
-import { Heart, MessageCircle, MoreVertical, AlertTriangle, CheckCircle2 } from 'lucide-react-native';
+import React, { useRef, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Modal, Alert } from 'react-native';
+import { Heart, MessageCircle, MoreVertical, AlertTriangle, CheckCircle2, Flag, Trash2, PartyPopper } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
@@ -10,6 +10,10 @@ interface PrayerCardProps {
   prayer: Prayer;
   onPray: (id: string) => void;
   onPress: (prayer: Prayer) => void;
+  onMarkFulfilled?: (id: string) => void;
+  onDelete?: (id: string) => void;
+  onReport?: (id: string) => void;
+  isOwner?: boolean;
 }
 
 function formatTimeAgo(date: string): string {
@@ -31,14 +35,17 @@ function getPrayerContent(prayer: Prayer): { title: string; description: string 
   return { title, description };
 }
 
-export default function PrayerCard({ prayer, onPray, onPress }: PrayerCardProps) {
+export default function PrayerCard({ prayer, onPray, onPress, onMarkFulfilled, onDelete, onReport, isOwner }: PrayerCardProps) {
   const { theme } = useTheme();
   const styles = createStyles(theme);
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const [showMenu, setShowMenu] = useState(false);
+  const [localHasPrayed, setLocalHasPrayed] = useState<boolean | null>(null);
+  const [localPrayCount, setLocalPrayCount] = useState<number | null>(null);
 
   const { description } = getPrayerContent(prayer);
-  const prayCount = prayer.pray_count ?? 0;
-  const hasPrayed = prayer.has_prayed ?? false;
+  const prayCount = localPrayCount ?? prayer.pray_count ?? 0;
+  const hasPrayed = localHasPrayed ?? prayer.has_prayed ?? false;
   const authorName = prayer.is_anonymous ? 'Anonymous' : (prayer.author_name || 'Member');
   const responseCount = prayer.response_count ?? 0;
 
@@ -48,7 +55,58 @@ export default function PrayerCard({ prayer, onPray, onPress }: PrayerCardProps)
       Animated.spring(scaleAnim, { toValue: 1.15, useNativeDriver: true, friction: 3 }),
       Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, friction: 3 }),
     ]).start();
+
+    const newHasPrayed = !hasPrayed;
+    setLocalHasPrayed(newHasPrayed);
+    setLocalPrayCount(newHasPrayed ? prayCount + 1 : Math.max(0, prayCount - 1));
     onPray(prayer.id);
+  };
+
+  const handleMorePress = () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setShowMenu(true);
+  };
+
+  const handleMarkFulfilled = () => {
+    setShowMenu(false);
+    if (onMarkFulfilled) {
+      Alert.alert(
+        'Prayer Fulfilled',
+        'Mark this prayer as fulfilled? Everyone who prayed will be notified. Thank you for sharing!',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Yes, Fulfilled!',
+            onPress: () => onMarkFulfilled(prayer.id),
+          },
+        ]
+      );
+    }
+  };
+
+  const handleDelete = () => {
+    setShowMenu(false);
+    if (onDelete) {
+      Alert.alert(
+        'Delete Prayer',
+        'Are you sure you want to delete this prayer request?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: () => onDelete(prayer.id),
+          },
+        ]
+      );
+    }
+  };
+
+  const handleReport = () => {
+    setShowMenu(false);
+    if (onReport) {
+      onReport(prayer.id);
+    }
   };
 
   const initials = authorName
@@ -58,74 +116,134 @@ export default function PrayerCard({ prayer, onPray, onPress }: PrayerCardProps)
     .join('');
 
   return (
-    <TouchableOpacity style={styles.card} onPress={() => onPress(prayer)} activeOpacity={0.85}>
-      {(prayer.is_urgent || prayer.is_answered) && (
-        <View style={styles.badgeRow}>
-          {prayer.is_urgent && (
-            <View style={styles.urgentBadge}>
-              <AlertTriangle size={10} color={theme.colors.error} />
-              <Text style={styles.urgentText}>Urgent</Text>
-            </View>
-          )}
-          {prayer.is_answered && (
-            <View style={styles.answeredBadge}>
-              <CheckCircle2 size={10} color={theme.colors.success} />
-              <Text style={styles.answeredText}>Answered</Text>
-            </View>
-          )}
-        </View>
-      )}
+    <>
+      <TouchableOpacity style={styles.card} onPress={() => onPress(prayer)} activeOpacity={0.85}>
+        {(prayer.is_urgent || prayer.is_answered) && (
+          <View style={styles.badgeRow}>
+            {prayer.is_urgent && (
+              <View style={styles.urgentBadge}>
+                <AlertTriangle size={10} color={theme.colors.error} />
+                <Text style={styles.urgentText}>Urgent</Text>
+              </View>
+            )}
+            {prayer.is_answered && (
+              <View style={styles.answeredBadge}>
+                <CheckCircle2 size={10} color={theme.colors.success} />
+                <Text style={styles.answeredText}>Fulfilled</Text>
+              </View>
+            )}
+          </View>
+        )}
 
-      <View style={styles.authorRow}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initials}</Text>
+        <View style={styles.authorRow}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initials}</Text>
+          </View>
+          <View style={styles.authorInfo}>
+            <Text style={styles.authorName}>{authorName}</Text>
+            <Text style={styles.timeText}>{formatTimeAgo(prayer.created_at)}</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.moreButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            onPress={handleMorePress}
+          >
+            <MoreVertical size={18} color={theme.colors.textTertiary} />
+          </TouchableOpacity>
         </View>
-        <View style={styles.authorInfo}>
-          <Text style={styles.authorName}>{authorName}</Text>
-          <Text style={styles.timeText}>{formatTimeAgo(prayer.created_at)}</Text>
-        </View>
-        <TouchableOpacity style={styles.moreButton} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <MoreVertical size={18} color={theme.colors.textTertiary} />
-        </TouchableOpacity>
-      </View>
 
-      <Text style={styles.prayerText}>{description || prayer.title}</Text>
+        <Text style={styles.prayerText}>{description || prayer.title}</Text>
 
-      <View style={styles.actionsRow}>
-        <TouchableOpacity
-          style={[styles.prayButton, hasPrayed && styles.prayButtonActive]}
-          onPress={handlePray}
-          activeOpacity={0.7}
-        >
-          <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-            <Heart
-              size={16}
-              color={hasPrayed ? theme.colors.accent : theme.colors.textTertiary}
-              fill={hasPrayed ? theme.colors.accent : 'none'}
-            />
-          </Animated.View>
-          <Text style={[styles.prayButtonText, hasPrayed && styles.prayButtonTextActive]}>
-            Praying
-          </Text>
-          {prayCount > 0 && (
-            <Text style={[styles.prayCount, hasPrayed && styles.prayCountActive]}>
-              {prayCount}
+        <View style={styles.actionsRow}>
+          <TouchableOpacity
+            style={[styles.prayButton, hasPrayed && styles.prayButtonActive]}
+            onPress={handlePray}
+            activeOpacity={0.7}
+          >
+            <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+              <Heart
+                size={16}
+                color={hasPrayed ? theme.colors.accent : theme.colors.textTertiary}
+                fill={hasPrayed ? theme.colors.accent : 'none'}
+              />
+            </Animated.View>
+            <Text style={[styles.prayButtonText, hasPrayed && styles.prayButtonTextActive]}>
+              {hasPrayed ? 'Praying' : 'Pray'}
             </Text>
-          )}
-        </TouchableOpacity>
+            {prayCount > 0 && (
+              <Text style={[styles.prayCount, hasPrayed && styles.prayCountActive]}>
+                {prayCount}
+              </Text>
+            )}
+          </TouchableOpacity>
 
-        {responseCount > 0 ? (
           <TouchableOpacity style={styles.messagesLink} onPress={() => onPress(prayer)}>
             <MessageCircle size={14} color={theme.colors.textTertiary} />
-            <Text style={styles.messagesText}>Messages ({responseCount})</Text>
+            {responseCount > 0 ? (
+              <Text style={styles.messagesText}>Messages ({responseCount})</Text>
+            ) : (
+              <Text style={styles.messagesTextMuted}>Add a comment</Text>
+            )}
           </TouchableOpacity>
-        ) : (
-          <TouchableOpacity style={styles.messagesLink} onPress={() => onPress(prayer)}>
-            <Text style={styles.messagesTextMuted}>Be first to message</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+
+      <Modal visible={showMenu} transparent animationType="fade" onRequestClose={() => setShowMenu(false)}>
+        <TouchableOpacity
+          style={styles.menuOverlay}
+          activeOpacity={1}
+          onPress={() => setShowMenu(false)}
+        >
+          <View style={styles.menuSheet}>
+            <View style={styles.menuHandle} />
+
+            {isOwner && !prayer.is_answered && (
+              <TouchableOpacity style={styles.menuItem} onPress={handleMarkFulfilled} activeOpacity={0.7}>
+                <View style={[styles.menuIconWrap, { backgroundColor: theme.colors.successMuted }]}>
+                  <PartyPopper size={18} color={theme.colors.success} />
+                </View>
+                <View style={styles.menuItemInfo}>
+                  <Text style={styles.menuItemTitle}>Prayer Fulfilled</Text>
+                  <Text style={styles.menuItemDesc}>Let everyone know this prayer was answered</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+
+            {isOwner && (
+              <TouchableOpacity style={styles.menuItem} onPress={handleDelete} activeOpacity={0.7}>
+                <View style={[styles.menuIconWrap, { backgroundColor: theme.colors.errorMuted }]}>
+                  <Trash2 size={18} color={theme.colors.error} />
+                </View>
+                <View style={styles.menuItemInfo}>
+                  <Text style={[styles.menuItemTitle, { color: theme.colors.error }]}>Delete Prayer</Text>
+                  <Text style={styles.menuItemDesc}>Remove this prayer request</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+
+            {!isOwner && (
+              <TouchableOpacity style={styles.menuItem} onPress={handleReport} activeOpacity={0.7}>
+                <View style={[styles.menuIconWrap, { backgroundColor: theme.colors.errorMuted }]}>
+                  <Flag size={18} color={theme.colors.error} />
+                </View>
+                <View style={styles.menuItemInfo}>
+                  <Text style={styles.menuItemTitle}>Report</Text>
+                  <Text style={styles.menuItemDesc}>Report this prayer request</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={styles.menuCancelBtn}
+              onPress={() => setShowMenu(false)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.menuCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </>
   );
 }
 
@@ -277,5 +395,66 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     fontWeight: '500' as const,
     color: theme.colors.textTertiary,
     fontStyle: 'italic' as const,
+  },
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  menuSheet: {
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 40,
+  },
+  menuHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: theme.colors.borderLight,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderLight,
+  },
+  menuIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuItemInfo: {
+    flex: 1,
+  },
+  menuItemTitle: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: theme.colors.text,
+    marginBottom: 2,
+  },
+  menuItemDesc: {
+    fontSize: 13,
+    color: theme.colors.textTertiary,
+  },
+  menuCancelBtn: {
+    marginTop: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: theme.colors.surfaceElevated,
+    alignItems: 'center',
+  },
+  menuCancelText: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: theme.colors.textSecondary,
   },
 });

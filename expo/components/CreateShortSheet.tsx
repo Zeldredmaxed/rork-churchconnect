@@ -139,6 +139,7 @@ export default function CreateShortSheet({ visible, onClose }: CreateShortSheetP
     onSuccess: () => {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       void queryClient.invalidateQueries({ queryKey: ['shorts'] });
+      void queryClient.invalidateQueries({ queryKey: ['my-shorts'] });
       resetForm();
       Alert.alert('Success', 'Your short has been uploaded!');
     },

@@ -31,6 +31,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSaved } from '@/contexts/SavedContext';
+import type { SavedItemData as SavedItemType } from '@/contexts/SavedContext';
 import { api } from '@/utils/api';
 import type { FlockUser, FeedPost, Short } from '@/types';
 import type { SavedItemData } from '@/contexts/SavedContext';
@@ -94,7 +95,7 @@ export default function ProfileTabScreen() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'grid' | 'shorts' | 'saved'>('grid');
   const [dismissedSuggestions, setDismissedSuggestions] = useState<string[]>([]);
-  const { savedItems } = useSaved();
+  const { savedItems, toggleSave } = useSaved();
 
   const flockQuery = useQuery({
     queryKey: ['my-flock-stats'],
@@ -165,6 +166,7 @@ export default function ProfileTabScreen() {
       }
     },
     enabled: !!user?.id,
+    refetchOnMount: 'always' as const,
   });
 
   const deletePostMutation = useMutation({
@@ -231,6 +233,33 @@ export default function ProfileTabScreen() {
       ]
     );
   }, [deleteShortMutation]);
+
+  const handleUnsaveFavorite = useCallback((item: SavedItemType) => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Alert.alert(
+      'Remove from Favorites',
+      `Remove this ${item.item_type} from your favorites?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => {
+            toggleSave({
+              itemId: item.item_id,
+              itemType: item.item_type,
+              title: item.title,
+              preview: item.preview,
+              authorName: item.author_name,
+              authorId: item.author_id,
+              mediaUrl: item.media_url,
+              thumbnailUrl: item.thumbnail_url,
+            });
+          },
+        },
+      ]
+    );
+  }, [toggleSave]);
 
   const initials = user?.full_name
     ?.split(' ')
@@ -568,6 +597,7 @@ export default function ProfileTabScreen() {
                 key={`${item.item_type}-${item.item_id}`}
                 style={styles.postGridItem}
                 activeOpacity={0.8}
+                onLongPress={() => handleUnsaveFavorite(item)}
               >
                 {(item.media_url || item.thumbnail_url) ? (
                   <View style={styles.postGridImageContainer}>

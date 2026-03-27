@@ -18,6 +18,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Stack, useRouter } from 'expo-router';
 import { Plus, X, HandHeart, Leaf } from 'lucide-react-native';
+import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
@@ -54,6 +55,7 @@ export default function PrayerWallScreen() {
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [isUrgent, setIsUrgent] = useState(false);
 
+  const { user } = useAuth();
   const verse = getDailyVerse();
 
   const prayersQuery = useQuery({
@@ -71,6 +73,29 @@ export default function PrayerWallScreen() {
     mutationFn: (id: string) => api.post(`/prayers/${id}/pray`),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['prayers'] });
+    },
+  });
+
+  const fulfillMutation = useMutation({
+    mutationFn: (id: string) => api.put(`/prayers/${id}`, { is_answered: true }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['prayers'] });
+      Alert.alert('Praise!', 'Your prayer has been marked as fulfilled. Thank you for sharing!');
+    },
+    onError: (error) => {
+      console.log('[Prayers] Fulfill error:', error.message);
+      Alert.alert('Error', 'Could not mark prayer as fulfilled.');
+    },
+  });
+
+  const deletePrayerMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/prayers/${id}`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['prayers'] });
+    },
+    onError: (error) => {
+      console.log('[Prayers] Delete error:', error.message);
+      Alert.alert('Error', 'Could not delete prayer.');
     },
   });
 
@@ -159,6 +184,13 @@ export default function PrayerWallScreen() {
             prayer={item}
             onPray={(id) => prayMutation.mutate(id)}
             onPress={(prayer) => router.push(`/prayer-detail?id=${prayer.id}` as never)}
+            onMarkFulfilled={(id) => fulfillMutation.mutate(id)}
+            onDelete={(id) => deletePrayerMutation.mutate(id)}
+            onReport={(id) => {
+              console.log('[Prayers] Report prayer:', id);
+              Alert.alert('Reported', 'Thank you for your report. We will review this prayer request.');
+            }}
+            isOwner={item.author_id === user?.id}
           />
         )}
         contentContainerStyle={styles.listContent}

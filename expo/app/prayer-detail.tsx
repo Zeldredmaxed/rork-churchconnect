@@ -38,6 +38,9 @@ export default function PrayerDetailScreen() {
     enabled: !!id,
   });
 
+  const [localHasPrayed, setLocalHasPrayed] = useState<boolean | null>(null);
+  const [localPrayCount, setLocalPrayCount] = useState<number | null>(null);
+
   const prayMutation = useMutation({
     mutationFn: () => api.post(`/prayers/${id}/pray`),
     onSuccess: () => {
@@ -57,7 +60,14 @@ export default function PrayerDetailScreen() {
     onError: (error) => Alert.alert('Error', error.message),
   });
 
-  const prayer = prayerQuery.data?.data;
+  const rawPrayer = prayerQuery.data;
+  const prayer = React.useMemo(() => {
+    if (!rawPrayer) return undefined;
+    const rp = rawPrayer as unknown as Record<string, unknown>;
+    if (rp.data && typeof rp.data === 'object') return rp.data as Prayer;
+    if (rp.id) return rp as unknown as Prayer;
+    return undefined;
+  }, [rawPrayer]);
   const responses = responsesQuery.data?.data ?? [];
 
   if (prayerQuery.isLoading) {
@@ -122,19 +132,25 @@ export default function PrayerDetailScreen() {
 
         <View style={styles.prayRow}>
           <TouchableOpacity
-            style={[styles.prayButton, prayer.has_prayed && styles.prayButtonActive]}
-            onPress={() => prayMutation.mutate()}
+            style={[styles.prayButton, (localHasPrayed ?? prayer.has_prayed) && styles.prayButtonActive]}
+            onPress={() => {
+              const current = localHasPrayed ?? prayer.has_prayed ?? false;
+              const currentCount = localPrayCount ?? prayer.pray_count ?? 0;
+              setLocalHasPrayed(!current);
+              setLocalPrayCount(!current ? currentCount + 1 : Math.max(0, currentCount - 1));
+              prayMutation.mutate();
+            }}
             activeOpacity={0.7}
           >
             <HandHeart
               size={20}
-              color={prayer.has_prayed ? theme.colors.accent : theme.colors.textSecondary}
+              color={(localHasPrayed ?? prayer.has_prayed) ? theme.colors.accent : theme.colors.textSecondary}
             />
-            <Text style={[styles.prayButtonText, prayer.has_prayed && styles.prayButtonTextActive]}>
-              {prayer.has_prayed ? 'Prayed' : 'Pray'}
+            <Text style={[styles.prayButtonText, (localHasPrayed ?? prayer.has_prayed) && styles.prayButtonTextActive]}>
+              {(localHasPrayed ?? prayer.has_prayed) ? 'Praying' : 'Pray'}
             </Text>
           </TouchableOpacity>
-          <Text style={styles.prayCount}>{prayer.pray_count} people praying</Text>
+          <Text style={styles.prayCount}>{localPrayCount ?? prayer.pray_count ?? 0} people praying</Text>
         </View>
 
         <View style={styles.responsesSection}>
