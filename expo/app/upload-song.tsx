@@ -108,7 +108,7 @@ export default function UploadSongScreen() {
     // Use XMLHttpRequest for better binary FormData support on React Native
     return new Promise<string>((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      xhr.open('POST', `${BASE_URL}/api/v1/uploads/`);
+      xhr.open('POST', `${BASE_URL}/api/v1/uploads`);
       xhr.setRequestHeader('Authorization', `Bearer ${token}`);
       // Do NOT set Content-Type — XHR sets it with correct boundary for FormData
       xhr.timeout = 120000; // 2 minute timeout for large files
