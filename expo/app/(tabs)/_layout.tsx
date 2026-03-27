@@ -7,6 +7,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import CreateShortSheet from '@/components/CreateShortSheet';
+import Avatar from '@/components/Avatar';
 
 function CreateSheet({ visible, onClose, onCreateShort }: { visible: boolean; onClose: () => void; onCreateShort: () => void }) {
   const { theme } = useTheme();
@@ -60,7 +61,7 @@ function CreateSheet({ visible, onClose, onCreateShort }: { visible: boolean; on
 export default function TabLayout() {
   const { theme } = useTheme();
   const styles = createStyles(theme);
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const [showCreate, setShowCreate] = useState(false);
   const [showCreateShort, setShowCreateShort] = useState(false);
 
@@ -123,9 +124,12 @@ export default function TabLayout() {
           options={{
             tabBarIcon: ({ focused }) => (
               <View style={[styles.profileTabIcon, focused && styles.profileTabIconActive]}>
-                <View style={styles.profileTabAvatar}>
-                  <Text style={styles.profileTabAvatarText}>U</Text>
-                </View>
+                <Avatar 
+                  url={user?.avatar_url} 
+                  name={user?.full_name ?? 'User'} 
+                  size={24} 
+                  style={{ borderWidth: 0 }} 
+                />
               </View>
             ),
           }}
