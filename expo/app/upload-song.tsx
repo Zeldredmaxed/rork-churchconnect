@@ -91,6 +91,7 @@ export default function UploadSongScreen() {
     formData.append('file', { uri, name, type: mimeType } as any);
 
     const token = await SecureStore.getItemAsync('access_token');
+    console.log('[Upload] Uploading:', name, mimeType);
     const res = await fetch(`${BASE_URL}/api/v1/uploads/`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
@@ -98,12 +99,17 @@ export default function UploadSongScreen() {
     });
 
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || 'Upload failed');
+      const errText = await res.text().catch(() => '');
+      console.log('[Upload] Error response:', res.status, errText);
+      let detail = 'Upload failed';
+      try { detail = JSON.parse(errText).detail || detail; } catch {}
+      throw new Error(detail);
     }
 
-    const data = await res.json();
-    const url = data.url || data.secure_url;
+    const json = await res.json();
+    console.log('[Upload] Response:', JSON.stringify(json).slice(0, 200));
+    // Backend returns { data: { url: "..." } }
+    const url = json?.data?.url || json?.url || json?.secure_url;
     if (!url) throw new Error('No URL returned from upload');
     return url;
   };
