@@ -1,10 +1,9 @@
 import React, { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
-import { HandHeart, AlertTriangle, CheckCircle2, Users } from 'lucide-react-native';
+import { HandHeart, AlertTriangle, CheckCircle2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
-import Badge from './Badge';
 import type { Prayer } from '@/types';
 
 interface PrayerCardProps {
@@ -12,6 +11,14 @@ interface PrayerCardProps {
   onPray: (id: string) => void;
   onPress: (prayer: Prayer) => void;
 }
+
+const categoryEmojis: Record<string, string> = {
+  general: '🙏',
+  health: '💊',
+  family: '👨‍👩‍👧‍👦',
+  financial: '💰',
+  spiritual: '✝️',
+};
 
 const categoryLabels: Record<string, string> = {
   general: 'General',
@@ -25,11 +32,18 @@ function formatTimeAgo(date: string): string {
   const now = new Date();
   const d = new Date(date);
   const diff = Math.floor((now.getTime() - d.getTime()) / 1000);
-  if (diff < 60) return 'now';
+  if (diff < 60) return 'just now';
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
   return d.toLocaleDateString();
+}
+
+function getPrayerContent(prayer: Prayer): { title: string; description: string } {
+  const raw = prayer as unknown as Record<string, unknown>;
+  const title = (prayer.title || raw.subject || raw.name || raw.request_title || 'Prayer Request') as string;
+  const description = (prayer.description || raw.body || raw.content || raw.request || raw.message || raw.text || '') as string;
+  return { title, description };
 }
 
 export default function PrayerCard({ prayer, onPray, onPress }: PrayerCardProps) {
@@ -37,10 +51,17 @@ export default function PrayerCard({ prayer, onPray, onPress }: PrayerCardProps)
   const styles = createStyles(theme);
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
+  const { title, description } = getPrayerContent(prayer);
+  const prayCount = prayer.pray_count ?? 0;
+  const hasPrayed = prayer.has_prayed ?? false;
+  const authorName = prayer.is_anonymous ? 'Anonymous' : (prayer.author_name || 'Member');
+  const category = prayer.category || 'general';
+  const emoji = categoryEmojis[category] || '🙏';
+
   const handlePray = () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Animated.sequence([
-      Animated.spring(scaleAnim, { toValue: 1.15, useNativeDriver: true, friction: 3 }),
+      Animated.spring(scaleAnim, { toValue: 1.2, useNativeDriver: true, friction: 3 }),
       Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, friction: 3 }),
     ]).start();
     onPray(prayer.id);
@@ -48,9 +69,12 @@ export default function PrayerCard({ prayer, onPray, onPress }: PrayerCardProps)
 
   return (
     <TouchableOpacity style={styles.card} onPress={() => onPress(prayer)} activeOpacity={0.7}>
-      <View style={styles.header}>
-        <View style={styles.badges}>
-          <Badge label={categoryLabels[prayer.category] || 'General'} variant="accent" small />
+      <View style={styles.topRow}>
+        <View style={styles.categoryTag}>
+          <Text style={styles.categoryEmoji}>{emoji}</Text>
+          <Text style={styles.categoryLabel}>{categoryLabels[category] || 'General'}</Text>
+        </View>
+        <View style={styles.topRight}>
           {prayer.is_urgent && (
             <View style={styles.urgentBadge}>
               <AlertTriangle size={10} color={theme.colors.error} />
@@ -63,52 +87,49 @@ export default function PrayerCard({ prayer, onPray, onPress }: PrayerCardProps)
               <Text style={styles.answeredText}>Answered</Text>
             </View>
           )}
+          <Text style={styles.time}>{formatTimeAgo(prayer.created_at)}</Text>
         </View>
-        <Text style={styles.time}>{formatTimeAgo(prayer.created_at)}</Text>
       </View>
 
-      <Text style={styles.title} numberOfLines={1}>{prayer.title}</Text>
-      <Text style={styles.description} numberOfLines={2}>{prayer.description}</Text>
+      <Text style={styles.title} numberOfLines={2}>{title}</Text>
 
-      <View style={styles.footer}>
-        <Text style={styles.author}>
-          {prayer.is_anonymous ? 'Anonymous' : prayer.author_name}
-        </Text>
+      {description ? (
+        <Text style={styles.description} numberOfLines={3}>{description}</Text>
+      ) : null}
+
+      <View style={styles.authorRow}>
+        <View style={styles.authorAvatar}>
+          <Text style={styles.authorInitial}>
+            {authorName.charAt(0).toUpperCase()}
+          </Text>
+        </View>
+        <Text style={styles.authorName}>{authorName}</Text>
       </View>
 
-      {prayer.has_prayed && prayer.pray_count > 0 && (
-        <View style={styles.socialProof}>
-          <Users size={13} color={theme.colors.accent} />
-          <Text style={styles.socialProofText}>
-            You and {prayer.pray_count - 1 > 0 ? `${prayer.pray_count - 1} other${prayer.pray_count - 1 === 1 ? '' : 's'}` : 'others'} are praying for this
+      <View style={styles.actionRow}>
+        <TouchableOpacity
+          style={[styles.prayButton, hasPrayed && styles.prayButtonActive]}
+          onPress={handlePray}
+          activeOpacity={0.7}
+        >
+          <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+            <HandHeart
+              size={18}
+              color={hasPrayed ? theme.colors.accent : theme.colors.white}
+            />
+          </Animated.View>
+          <Text style={[styles.prayButtonText, hasPrayed && styles.prayButtonTextActive]}>
+            {hasPrayed ? 'Praying' : 'Pray'}
           </Text>
-        </View>
-      )}
-
-      {!prayer.has_prayed && prayer.pray_count > 0 && (
-        <View style={styles.socialProof}>
-          <Users size={13} color={theme.colors.textTertiary} />
-          <Text style={styles.socialProofTextMuted}>
-            {prayer.pray_count} {prayer.pray_count === 1 ? 'person is' : 'people are'} praying for this
-          </Text>
-        </View>
-      )}
-
-      <TouchableOpacity
-        style={[styles.prayForThisButton, prayer.has_prayed && styles.prayForThisButtonActive]}
-        onPress={handlePray}
-        activeOpacity={0.7}
-      >
-        <Animated.View style={[styles.prayButtonInner, { transform: [{ scale: scaleAnim }] }]}>
-          <HandHeart
-            size={18}
-            color={prayer.has_prayed ? theme.colors.accent : theme.colors.white}
-          />
-        </Animated.View>
-        <Text style={[styles.prayForThisText, prayer.has_prayed && styles.prayForThisTextActive]}>
-          {prayer.has_prayed ? 'Praying' : 'Pray for this'}
-        </Text>
-      </TouchableOpacity>
+          {prayCount > 0 && (
+            <View style={[styles.countBadge, hasPrayed && styles.countBadgeActive]}>
+              <Text style={[styles.countText, hasPrayed && styles.countTextActive]}>
+                {prayCount}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -119,21 +140,37 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     borderRadius: theme.radius.lg,
     padding: 16,
     marginHorizontal: 16,
-    marginBottom: 10,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
   },
-  header: {
+  topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
-  badges: {
+  topRight: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
-    flexWrap: 'wrap',
-    flex: 1,
+  },
+  categoryTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: theme.colors.surfaceElevated,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  categoryEmoji: {
+    fontSize: 12,
+  },
+  categoryLabel: {
+    fontSize: 11,
+    fontWeight: '600' as const,
+    color: theme.colors.textSecondary,
   },
   urgentBadge: {
     flexDirection: 'row',
@@ -141,12 +178,12 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     gap: 3,
     backgroundColor: theme.colors.errorMuted,
     paddingHorizontal: 7,
-    paddingVertical: 2,
+    paddingVertical: 3,
     borderRadius: 6,
   },
   urgentText: {
     fontSize: 10,
-    fontWeight: '600' as const,
+    fontWeight: '700' as const,
     color: theme.colors.error,
   },
   answeredBadge: {
@@ -155,12 +192,12 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     gap: 3,
     backgroundColor: theme.colors.successMuted,
     paddingHorizontal: 7,
-    paddingVertical: 2,
+    paddingVertical: 3,
     borderRadius: 6,
   },
   answeredText: {
     fontSize: 10,
-    fontWeight: '600' as const,
+    fontWeight: '700' as const,
     color: theme.colors.success,
   },
   time: {
@@ -168,67 +205,87 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     color: theme.colors.textTertiary,
   },
   title: {
-    fontSize: 16,
-    fontWeight: '600' as const,
+    fontSize: 17,
+    fontWeight: '700' as const,
     color: theme.colors.text,
-    marginBottom: 4,
+    marginBottom: 6,
+    lineHeight: 22,
   },
   description: {
     fontSize: 14,
     color: theme.colors.textSecondary,
-    lineHeight: 20,
+    lineHeight: 21,
+    marginBottom: 4,
   },
-  footer: {
+  authorRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: theme.colors.borderLight,
   },
-  author: {
+  authorAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: theme.colors.accentMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  authorInitial: {
+    fontSize: 11,
+    fontWeight: '700' as const,
+    color: theme.colors.accent,
+  },
+  authorName: {
     fontSize: 13,
     color: theme.colors.textTertiary,
-  },
-  socialProof: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 10,
-  },
-  socialProofText: {
-    fontSize: 13,
-    color: theme.colors.accent,
     fontWeight: '500' as const,
   },
-  socialProofTextMuted: {
-    fontSize: 13,
-    color: theme.colors.textTertiary,
+  actionRow: {
+    marginTop: 14,
   },
-  prayForThisButton: {
+  prayButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginTop: 12,
-    paddingVertical: 11,
+    paddingVertical: 12,
     borderRadius: 10,
     backgroundColor: theme.colors.accent,
   },
-  prayForThisButtonActive: {
+  prayButtonActive: {
     backgroundColor: theme.colors.accentMuted,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
   },
-  prayButtonInner: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  prayForThisText: {
+  prayButtonText: {
     fontSize: 15,
     fontWeight: '600' as const,
     color: theme.colors.white,
   },
-  prayForThisTextActive: {
+  prayButtonTextActive: {
     color: theme.colors.accent,
+  },
+  countBadge: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    minWidth: 26,
+    alignItems: 'center',
+  },
+  countBadgeActive: {
+    backgroundColor: theme.colors.accent,
+  },
+  countText: {
+    fontSize: 12,
+    fontWeight: '700' as const,
+    color: theme.colors.white,
+  },
+  countTextActive: {
+    color: theme.colors.white,
   },
 });
