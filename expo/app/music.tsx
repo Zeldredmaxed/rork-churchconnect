@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  ActivityIndicator, Modal, Pressable, Alert, FlatList, Dimensions, Image,
+  View, Text, StyleSheet, TouchableOpacity,
+  ActivityIndicator, Modal, Pressable, Alert, Dimensions, Image,
   AppState,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
@@ -43,22 +43,22 @@ export default function MusicScreen() {
   const queryClient = useQueryClient();
   const soundRef = useRef<Audio.Sound | null>(null);
 
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showDonate, setShowDonate] = useState(false);
   const [showQueue, setShowQueue] = useState(false);
-  const [mode, setMode] = useState<'radio' | 'browse'>('radio');
   const inactivityTimer = useRef<NodeJS.Timeout | null>(null);
   const appStateRef = useRef(AppState.currentState);
   const backgroundTimeRef = useRef<number>(0);
+  const currentSongIdRef = useRef<number | null>(null);
+  const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch radio queue
-  const radioQuery = useQuery({
-    queryKey: ['music', 'radio'],
-    queryFn: () => api.get<{ data: Song[] }>('/music/radio?limit=30'),
-  });
+  // ── Server-side radio: fetch what's currently playing ──────────
+  const [currentSong, setCurrentSong] = useState<Song | null>(null);
+  const [queuePosition, setQueuePosition] = useState(0);
+  const [queueLength, setQueueLength] = useState(0);
 
   // Fetch skip premium status
   const skipQuery = useQuery({
@@ -72,8 +72,6 @@ export default function MusicScreen() {
     queryFn: () => api.get<{ data: any }>('/music/artist/me'),
   });
 
-  const songs = radioQuery.data?.data ?? [];
-  const currentSong = songs[currentIndex];
   const canSkip = skipQuery.data?.data?.is_active ?? false;
 
   // Donate mutation
@@ -86,7 +84,6 @@ export default function MusicScreen() {
         '🙏 Donation Sent!',
         `Thank you for your gift! The artist receives 70%.${sent ? '\n\nA download link has been sent to your email.' : ''}`,
       );
-      queryClient.invalidateQueries({ queryKey: ['music'] });
       setShowDonate(false);
     },
     onError: (e: any) => Alert.alert('Error', e.message || 'Donation failed'),
@@ -107,40 +104,62 @@ export default function MusicScreen() {
     mutationFn: (songId: number) => api.post(`/music/songs/${songId}/play`, {}),
   });
 
-  // Audio playback
-  const loadAndPlay = useCallback(async (song: Song) => {
+  // ── Sync to server-side radio station ──────────────────────────
+  const syncToStation = useCallback(async () => {
     try {
-      if (soundRef.current) {
-        await soundRef.current.unloadAsync();
-      }
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: true,
-      });
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: song.audio_url },
-        { shouldPlay: true },
-        (status) => {
-          if (status.isLoaded) {
-            setProgress(status.positionMillis || 0);
-            setDuration(status.durationMillis || 0);
-            if (status.didJustFinish) {
-              playMutation.mutate(song.id);
-              handleNext();
+      const resp = await api.get<{ data: any }>('/music/radio/now-playing');
+      const data = resp?.data;
+      if (!data || !data.song) return;
+
+      const serverSong = data.song as Song;
+      const elapsedSeconds = data.elapsed_seconds || 0;
+      const elapsedMs = Math.floor(elapsedSeconds * 1000);
+
+      setQueuePosition(data.queue_position || 0);
+      setQueueLength(data.queue_length || 0);
+
+      // If the song changed, load the new one and seek
+      if (serverSong.id !== currentSongIdRef.current) {
+        currentSongIdRef.current = serverSong.id;
+        setCurrentSong(serverSong);
+
+        // Unload previous
+        if (soundRef.current) {
+          await soundRef.current.unloadAsync();
+        }
+
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: true,
+        });
+
+        const { sound } = await Audio.Sound.createAsync(
+          { uri: serverSong.audio_url },
+          { shouldPlay: true, positionMillis: elapsedMs },
+          (status) => {
+            if (status.isLoaded) {
+              setProgress(status.positionMillis || 0);
+              setDuration(status.durationMillis || 0);
+              if (status.didJustFinish) {
+                // Song ended on client — re-sync to get the next song from server
+                playMutation.mutate(serverSong.id);
+                syncToStation();
+              }
             }
-          }
-        },
-      );
-      soundRef.current = sound;
-      setIsPlaying(true);
+          },
+        );
+        soundRef.current = sound;
+        setIsPlaying(true);
+      }
     } catch (e) {
-      console.log('[Music] Playback error:', e);
+      console.log('[Radio] Sync error:', e);
     }
   }, []);
 
   const handlePlayPause = async () => {
     if (!soundRef.current) {
-      if (currentSong) await loadAndPlay(currentSong);
+      // First play — sync to station
+      await syncToStation();
       return;
     }
     const status = await soundRef.current.getStatusAsync();
@@ -155,69 +174,47 @@ export default function MusicScreen() {
     }
   };
 
-  const handleNext = useCallback(() => {
-    if (songs.length === 0) return;
-    const nextIdx = (currentIndex + 1) % songs.length;
-    // If we've looped back to the start, refetch the queue for fresh songs
-    if (nextIdx === 0) {
-      radioQuery.refetch();
-    }
-    setCurrentIndex(nextIdx);
-  }, [currentIndex, songs.length]);
+  // ── Initial sync + periodic re-sync every 30s ──────────────────
+  useEffect(() => {
+    // Tune in immediately on mount
+    syncToStation();
 
-  // ── 5-minute inactivity timeout ──────────────────────────
-  // When the app goes to background, start a 5-min timer.
-  // If the user doesn't return within 5 min, stop playback.
+    // Re-sync every 30 seconds to catch song changes
+    syncIntervalRef.current = setInterval(() => {
+      syncToStation();
+    }, 30_000);
+
+    // Heartbeat every 60s to keep station alive
+    heartbeatIntervalRef.current = setInterval(() => {
+      api.post('/music/radio/heartbeat', {}).catch(() => {});
+    }, 60_000);
+
+    return () => {
+      if (syncIntervalRef.current) clearInterval(syncIntervalRef.current);
+      if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
+      soundRef.current?.unloadAsync();
+    };
+  }, []);
+
+  // ── Background / foreground handling ───────────────────────────
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (
         appStateRef.current.match(/active/) &&
         nextState.match(/inactive|background/)
       ) {
-        // App went to background — record the time
         backgroundTimeRef.current = Date.now();
-        inactivityTimer.current = setTimeout(async () => {
-          // 5 minutes of inactivity — stop playback
-          if (soundRef.current) {
-            await soundRef.current.pauseAsync();
-            setIsPlaying(false);
-          }
-        }, 5 * 60 * 1000); // 5 minutes
       } else if (
         appStateRef.current.match(/inactive|background/) &&
         nextState === 'active'
       ) {
-        // App came back — clear the timer
-        if (inactivityTimer.current) {
-          clearTimeout(inactivityTimer.current);
-          inactivityTimer.current = null;
-        }
-        // If they were gone for more than 5 min but timer already fired,
-        // we don't need to do anything extra — music is already paused.
+        // Came back — re-sync to the server to join mid-song
+        syncToStation();
       }
       appStateRef.current = nextState;
     });
 
-    return () => {
-      subscription.remove();
-      if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (currentSong) {
-      loadAndPlay(currentSong);
-    }
-    return () => {
-      soundRef.current?.unloadAsync();
-    };
-  }, [currentIndex, currentSong?.id]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      soundRef.current?.unloadAsync();
-    };
+    return () => subscription.remove();
   }, []);
 
   const formatTime = (ms: number) => {
@@ -229,7 +226,7 @@ export default function MusicScreen() {
 
   const progressPercent = duration > 0 ? (progress / duration) * 100 : 0;
 
-  if (radioQuery.isLoading) {
+  if (!currentSong) {
     return (
       <View style={styles.container}>
         <Stack.Screen options={{ headerShown: false }} />
@@ -338,7 +335,11 @@ export default function MusicScreen() {
         {canSkip ? (
           <TouchableOpacity
             style={styles.skipBtn}
-            onPress={handleNext}
+            onPress={() => {
+              // Force re-sync to skip to whatever the server has next
+              currentSongIdRef.current = null;
+              syncToStation();
+            }}
             activeOpacity={0.7}
           >
             <SkipForward size={22} color={theme.colors.text} />
@@ -371,7 +372,7 @@ export default function MusicScreen() {
       >
         <Music size={16} color={theme.colors.textSecondary} />
         <Text style={styles.queueToggleText}>
-          Up Next · {Math.max(0, songs.length - currentIndex - 1)} songs
+          Station · Song {queuePosition + 1} of {queueLength}
         </Text>
       </TouchableOpacity>
 
@@ -414,30 +415,24 @@ export default function MusicScreen() {
           <Pressable style={styles.queueSheet} onPress={(e) => e.stopPropagation()}>
             <View style={styles.sheetHandle} />
             <View style={styles.queueHeader}>
-              <Text style={styles.sheetTitle}>Up Next</Text>
+              <Text style={styles.sheetTitle}>Now Playing</Text>
               <TouchableOpacity onPress={() => setShowQueue(false)}>
                 <X size={22} color={theme.colors.textSecondary} />
               </TouchableOpacity>
             </View>
-            <FlatList
-              data={songs.slice(currentIndex + 1)}
-              keyExtractor={(item) => String(item.id)}
-              renderItem={({ item, index }) => (
-                <View style={styles.queueItem}>
-                  <View style={styles.queueNum}>
-                    <Text style={styles.queueNumText}>{index + 1}</Text>
-                  </View>
-                  <View style={styles.queueInfo}>
-                    <Text style={styles.queueSongTitle} numberOfLines={1}>{item.title}</Text>
-                    <Text style={styles.queueArtist} numberOfLines={1}>{item.artist_name}</Text>
-                  </View>
-                </View>
-              )}
-              contentContainerStyle={{ paddingBottom: 40 }}
-              ListEmptyComponent={
-                <Text style={styles.emptyQueue}>No more songs in queue</Text>
-              }
-            />
+            <View style={styles.queueItem}>
+              <View style={styles.queueNum}>
+                <Text style={styles.queueNumText}>🔴</Text>
+              </View>
+              <View style={styles.queueInfo}>
+                <Text style={styles.queueSongTitle} numberOfLines={1}>{currentSong?.title}</Text>
+                <Text style={styles.queueArtist} numberOfLines={1}>{currentSong?.artist_name}</Text>
+              </View>
+            </View>
+            <Text style={[styles.emptyQueue, { marginTop: 20 }]}>
+              This is live radio — songs are chosen by the station.
+              {"\n"}Song {queuePosition + 1} of {queueLength} in today's rotation.
+            </Text>
           </Pressable>
         </Pressable>
       </Modal>
