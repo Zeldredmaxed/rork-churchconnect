@@ -61,7 +61,7 @@ export default function CreateShortSheet({ visible, onClose }: CreateShortSheetP
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['videos'],
+        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
         allowsEditing: true,
         quality: 0.8,
         videoMaxDuration: 60,
@@ -88,7 +88,7 @@ export default function CreateShortSheet({ visible, onClose }: CreateShortSheetP
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ['videos'],
+        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
         allowsEditing: true,
         quality: 0.8,
         videoMaxDuration: 60,
@@ -115,7 +115,7 @@ export default function CreateShortSheet({ visible, onClose }: CreateShortSheetP
         console.log('[CreateShort] Step 1: Uploading video to CDN...');
         const videoResult = await uploadSingleFile({
           uri: params.video.uri,
-          mimeType: params.video.mimeType || 'video/mp4',
+          mimeType: params.video.mimeType,
           category: 'video',
         });
         videoUrl = videoResult.url;

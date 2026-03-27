@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
-import { Heart, MessageCircle, Plus } from 'lucide-react-native';
+import { Heart, MessageCircle, Plus, Radio } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -207,6 +207,16 @@ export default function HomeFeedScreen() {
           />
         </TouchableOpacity>
         <View style={styles.headerIcons}>
+          <TouchableOpacity
+            style={styles.headerIconBtn}
+            onPress={() => {
+              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push('/music' as never);
+            }}
+            testID="header-music"
+          >
+            <Radio size={24} color={theme.colors.text} />
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerIconBtn}
             onPress={() => {

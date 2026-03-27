@@ -23,6 +23,8 @@ import {
   CalendarDays,
   Church,
   CreditCard,
+  Radio,
+  Music,
 } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
@@ -121,6 +123,13 @@ export default function MoreScreen() {
             />
             <View style={styles.divider} />
             <MenuItem
+              icon={<Radio size={18} color={theme.colors.accent} />}
+              label="Gospel Radio"
+              sublabel="Listen, discover & bless artists"
+              onPress={() => router.push('/music' as never)}
+            />
+            <View style={styles.divider} />
+            <MenuItem
               icon={<CalendarDays size={18} color={theme.colors.info} />}
               label="Events"
               sublabel="View upcoming church events"
@@ -170,6 +179,20 @@ export default function MoreScreen() {
               label="Orders & Payments"
               sublabel="Payment methods, giving activity"
               onPress={() => router.push('/orders-payments')}
+            />
+            <View style={styles.divider} />
+            <MenuItem
+              icon={<Radio size={18} color={theme.colors.accent} />}
+              label="Gospel Radio"
+              sublabel="Listen & support gospel artists"
+              onPress={() => router.push('/music' as never)}
+            />
+            <View style={styles.divider} />
+            <MenuItem
+              icon={<Music size={18} color={theme.colors.accent} />}
+              label="Upload Music"
+              sublabel="Share your songs as an artist"
+              onPress={() => router.push('/upload-song' as never)}
             />
             <View style={styles.divider} />
             <MenuItem
