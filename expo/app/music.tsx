@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   ActivityIndicator, Modal, Pressable, Alert, FlatList, Dimensions, Image,
+  AppState,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import {
@@ -49,6 +50,9 @@ export default function MusicScreen() {
   const [showDonate, setShowDonate] = useState(false);
   const [showQueue, setShowQueue] = useState(false);
   const [mode, setMode] = useState<'radio' | 'browse'>('radio');
+  const inactivityTimer = useRef<NodeJS.Timeout | null>(null);
+  const appStateRef = useRef(AppState.currentState);
+  const backgroundTimeRef = useRef<number>(0);
 
   // Fetch radio queue
   const radioQuery = useQuery({
@@ -154,8 +158,51 @@ export default function MusicScreen() {
   const handleNext = useCallback(() => {
     if (songs.length === 0) return;
     const nextIdx = (currentIndex + 1) % songs.length;
+    // If we've looped back to the start, refetch the queue for fresh songs
+    if (nextIdx === 0) {
+      radioQuery.refetch();
+    }
     setCurrentIndex(nextIdx);
   }, [currentIndex, songs.length]);
+
+  // ── 5-minute inactivity timeout ──────────────────────────
+  // When the app goes to background, start a 5-min timer.
+  // If the user doesn't return within 5 min, stop playback.
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (
+        appStateRef.current.match(/active/) &&
+        nextState.match(/inactive|background/)
+      ) {
+        // App went to background — record the time
+        backgroundTimeRef.current = Date.now();
+        inactivityTimer.current = setTimeout(async () => {
+          // 5 minutes of inactivity — stop playback
+          if (soundRef.current) {
+            await soundRef.current.pauseAsync();
+            setIsPlaying(false);
+          }
+        }, 5 * 60 * 1000); // 5 minutes
+      } else if (
+        appStateRef.current.match(/inactive|background/) &&
+        nextState === 'active'
+      ) {
+        // App came back — clear the timer
+        if (inactivityTimer.current) {
+          clearTimeout(inactivityTimer.current);
+          inactivityTimer.current = null;
+        }
+        // If they were gone for more than 5 min but timer already fired,
+        // we don't need to do anything extra — music is already paused.
+      }
+      appStateRef.current = nextState;
+    });
+
+    return () => {
+      subscription.remove();
+      if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (currentSong) {
@@ -205,6 +252,10 @@ export default function MusicScreen() {
           <ChevronDown size={24} color={theme.colors.text} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
+          <View style={styles.liveIndicator}>
+            <View style={styles.liveDot} />
+            <Text style={styles.liveText}>LIVE</Text>
+          </View>
           <Radio size={14} color={theme.colors.accent} />
           <Text style={styles.headerLabel}>GOSPEL RADIO</Text>
         </View>
@@ -439,6 +490,28 @@ const createStyles = (theme: AppTheme) =>
       fontWeight: '700',
       color: theme.colors.accent,
       letterSpacing: 1.5,
+    },
+    liveIndicator: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: 'rgba(239, 68, 68, 0.15)',
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 10,
+      marginRight: 6,
+    },
+    liveDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: '#EF4444',
+    },
+    liveText: {
+      fontSize: 10,
+      fontWeight: '800',
+      color: '#EF4444',
+      letterSpacing: 0.5,
     },
 
     // Album Art
