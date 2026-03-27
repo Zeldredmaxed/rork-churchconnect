@@ -10,12 +10,8 @@ interface ShortVideoPlayerProps {
 }
 
 export default function ShortVideoPlayer({ videoUrl, thumbnailUrl, isVisible }: ShortVideoPlayerProps) {
-  const videoRef = useRef<Video>(null);
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [isBuffering, setIsBuffering] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const pauseIconOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const setupAudio = async () => {
@@ -32,33 +28,77 @@ export default function ShortVideoPlayer({ videoUrl, thumbnailUrl, isVisible }: 
     void setupAudio();
   }, []);
 
+  const handleRetry = useCallback(() => {
+    console.log('[ShortVideoPlayer] Retrying video load, attempt:', retryCount + 1);
+    setHasError(false);
+    setRetryCount((c) => c + 1);
+  }, [retryCount]);
+
+  if (hasError) {
+    return (
+      <TouchableWithoutFeedback onPress={handleRetry}>
+        <View style={styles.errorContainer}>
+          <Play size={36} color="rgba(255,255,255,0.5)" />
+          <Text style={styles.errorText}>Unable to load video</Text>
+          <Text style={styles.errorSubtext}>Tap to retry</Text>
+        </View>
+      </TouchableWithoutFeedback>
+    );
+  }
+
+  if (isVisible) {
+    return (
+      <ActiveVideoPlayer
+        videoUrl={videoUrl}
+        thumbnailUrl={thumbnailUrl}
+        retryCount={retryCount}
+        onError={() => setHasError(true)}
+      />
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.placeholder} />
+    </View>
+  );
+}
+
+interface ActiveVideoPlayerProps {
+  videoUrl: string;
+  thumbnailUrl?: string;
+  retryCount: number;
+  onError: () => void;
+}
+
+function ActiveVideoPlayer({ videoUrl, thumbnailUrl, retryCount, onError }: ActiveVideoPlayerProps) {
+  const videoRef = useRef<Video>(null);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [isBuffering, setIsBuffering] = useState(true);
+  const pauseIconOpacity = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
-    const ref = videoRef.current;
+    console.log('[ShortVideoPlayer] ActiveVideoPlayer mounted for:', videoUrl.slice(0, 60));
+    const currentRef = videoRef.current;
     return () => {
-      console.log('[ShortVideoPlayer] Unmounting, stopping video');
-      if (ref) {
-        ref.stopAsync().catch(() => {});
-        ref.unloadAsync().catch(() => {});
+      console.log('[ShortVideoPlayer] ActiveVideoPlayer unmounting, destroying video:', videoUrl.slice(0, 60));
+      if (currentRef) {
+        currentRef.setStatusAsync({ shouldPlay: false, volume: 0, isMuted: true }).catch(() => {});
+        currentRef.stopAsync().catch(() => {});
+        currentRef.unloadAsync().catch(() => {});
       }
     };
-  }, []);
+  }, [videoUrl]);
 
   const handlePlaybackStatusUpdate = useCallback((status: AVPlaybackStatus) => {
     if (status.isLoaded) {
       setIsPlaying(status.isPlaying);
       setIsBuffering(status.isBuffering);
-      setHasError(false);
-
-      if (status.didJustFinish && !status.isLooping) {
-        console.log('[ShortVideoPlayer] Video finished, replaying...');
-        videoRef.current?.replayAsync().catch(() => {});
-      }
     } else if ('error' in status && status.error) {
       console.log('[ShortVideoPlayer] Playback error:', status.error);
-      setHasError(true);
-      setIsBuffering(false);
+      onError();
     }
-  }, []);
+  }, [onError]);
 
   const togglePlayPause = useCallback(async () => {
     if (!videoRef.current) return;
@@ -81,47 +121,6 @@ export default function ShortVideoPlayer({ videoUrl, thumbnailUrl, isVisible }: 
     }
   }, [pauseIconOpacity]);
 
-  React.useEffect(() => {
-    if (!videoRef.current) return;
-
-    const updatePlayback = async () => {
-      try {
-        const status = await videoRef.current?.getStatusAsync();
-        if (!status?.isLoaded) return;
-
-        if (isVisible && !status.isPlaying) {
-          await videoRef.current?.playAsync();
-        } else if (!isVisible && status.isPlaying) {
-          await videoRef.current?.pauseAsync();
-          await videoRef.current?.setPositionAsync(0);
-        }
-      } catch (error) {
-        console.log('[ShortVideoPlayer] Visibility change error:', error);
-      }
-    };
-
-    void updatePlayback();
-  }, [isVisible]);
-
-  const handleRetry = useCallback(() => {
-    console.log('[ShortVideoPlayer] Retrying video load, attempt:', retryCount + 1);
-    setHasError(false);
-    setIsBuffering(true);
-    setRetryCount((c) => c + 1);
-  }, [retryCount]);
-
-  if (hasError) {
-    return (
-      <TouchableWithoutFeedback onPress={handleRetry}>
-        <View style={styles.errorContainer}>
-          <Play size={36} color="rgba(255,255,255,0.5)" />
-          <Text style={styles.errorText}>Unable to load video</Text>
-          <Text style={styles.errorSubtext}>Tap to retry</Text>
-        </View>
-      </TouchableWithoutFeedback>
-    );
-  }
-
   return (
     <TouchableWithoutFeedback onPress={togglePlayPause}>
       <View style={styles.container}>
@@ -135,7 +134,7 @@ export default function ShortVideoPlayer({ videoUrl, thumbnailUrl, isVisible }: 
           style={styles.video}
           resizeMode={ResizeMode.COVER}
           isLooping={true}
-          shouldPlay={isVisible}
+          shouldPlay={true}
           isMuted={false}
           volume={1.0}
           rate={1.0}
@@ -146,7 +145,7 @@ export default function ShortVideoPlayer({ videoUrl, thumbnailUrl, isVisible }: 
           }}
           onError={(error) => {
             console.log('[ShortVideoPlayer] Video error:', error, 'URL:', videoUrl.slice(0, 80));
-            setHasError(true);
+            onError();
           }}
           {...(Platform.OS === 'web' ? { useNativeControls: true } : {})}
         />
@@ -182,6 +181,10 @@ const styles = StyleSheet.create({
   poster: {
     flex: 1,
     resizeMode: 'cover',
+  },
+  placeholder: {
+    flex: 1,
+    backgroundColor: '#000',
   },
   bufferingOverlay: {
     ...StyleSheet.absoluteFillObject,
