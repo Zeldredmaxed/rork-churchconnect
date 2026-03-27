@@ -141,9 +141,14 @@ export default function MusicScreen() {
               setProgress(status.positionMillis || 0);
               setDuration(status.durationMillis || 0);
               if (status.didJustFinish) {
-                // Song ended on client — re-sync to get the next song from server
+                // Song ended on client — force server to advance and re-sync
                 playMutation.mutate(serverSong.id);
-                syncToStation();
+                api.post('/music/radio/advance')
+                  .catch(err => console.error('[Radio] Error advancing:', err))
+                  .finally(() => {
+                    currentSongIdRef.current = null; // Force reload
+                    syncToStation();
+                  });
               }
             }
           },
