@@ -94,60 +94,54 @@ export default function UploadSongScreen() {
     }
 
     const fileName = name || fileUri.split('/').pop() || 'upload';
-    console.log('[Upload] Starting upload:', fileName, mimeType, 'from:', fileUri.slice(0, 80));
+    const isAudio = mimeType.startsWith('audio/');
+    const resourceType = isAudio ? 'video' : 'image'; // Cloudinary uses 'video' for audio
 
+    console.log('[Upload] Getting signed credentials for:', fileName, resourceType);
+
+    // Step 1: Get signed upload credentials from our backend
+    const signData = await api.get<{
+      cloud_name: string;
+      api_key: string;
+      timestamp: number;
+      signature: string;
+      folder: string;
+    }>(`/uploads/sign?resource_type=${resourceType}`);
+
+    console.log('[Upload] Got credentials for cloud:', signData.cloud_name);
+
+    // Step 2: Upload directly to Cloudinary (bypasses our backend)
     const formData = new FormData();
     formData.append('file', {
       uri: fileUri,
       name: fileName,
       type: mimeType || 'application/octet-stream',
     } as any);
+    formData.append('api_key', signData.api_key);
+    formData.append('timestamp', String(signData.timestamp));
+    formData.append('signature', signData.signature);
+    formData.append('folder', signData.folder);
 
-    const token = await SecureStore.getItemAsync('access_token');
+    const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${signData.cloud_name}/${resourceType}/upload`;
+    console.log('[Upload] Uploading to Cloudinary:', cloudinaryUrl);
 
-    // Use XMLHttpRequest for better binary FormData support on React Native
-    return new Promise<string>((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', `${BASE_URL}/api/v1/uploads`);
-      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-      // Do NOT set Content-Type — XHR sets it with correct boundary for FormData
-      xhr.timeout = 120000; // 2 minute timeout for large files
-
-      xhr.onload = () => {
-        console.log('[Upload] Response status:', xhr.status);
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            const json = JSON.parse(xhr.responseText);
-            console.log('[Upload] Success:', JSON.stringify(json).slice(0, 200));
-            const url = json?.data?.url || json?.url || json?.secure_url;
-            if (!url) {
-              reject(new Error('No URL returned from upload'));
-            } else {
-              resolve(url);
-            }
-          } catch (e) {
-            reject(new Error('Invalid response from server'));
-          }
-        } else {
-          let detail = 'Upload failed';
-          try { detail = JSON.parse(xhr.responseText).detail || detail; } catch {}
-          console.log('[Upload] Error:', xhr.status, detail);
-          reject(new Error(detail));
-        }
-      };
-
-      xhr.onerror = () => {
-        console.log('[Upload] Network error');
-        reject(new Error('Network request failed. Check your connection and try again.'));
-      };
-
-      xhr.ontimeout = () => {
-        console.log('[Upload] Timeout');
-        reject(new Error('Upload timed out. Try a smaller file.'));
-      };
-
-      xhr.send(formData);
+    const res = await fetch(cloudinaryUrl, {
+      method: 'POST',
+      body: formData,
+      // No Content-Type header — let fetch set it with boundary
+      // No Authorization header — Cloudinary uses signature-based auth
     });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      console.log('[Upload] Cloudinary error:', res.status, errText);
+      throw new Error(`Upload failed (${res.status})`);
+    }
+
+    const result = await res.json();
+    console.log('[Upload] Cloudinary success:', result.secure_url?.slice(0, 80));
+    if (!result.secure_url) throw new Error('No URL returned from Cloudinary');
+    return result.secure_url;
   };
 
   const handleUpload = async () => {
