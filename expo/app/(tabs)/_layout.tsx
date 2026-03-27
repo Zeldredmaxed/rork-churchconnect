@@ -6,8 +6,9 @@ import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
+import CreateShortSheet from '@/components/CreateShortSheet';
 
-function CreateSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+function CreateSheet({ visible, onClose, onCreateShort }: { visible: boolean; onClose: () => void; onCreateShort: () => void }) {
   const { theme } = useTheme();
   const styles = createStyles(theme);
   const router = useRouter();
@@ -41,7 +42,7 @@ function CreateSheet({ visible, onClose }: { visible: boolean; onClose: () => vo
             style={styles.sheetOption}
             onPress={() => {
               onClose();
-              router.push('/(tabs)/shorts' as never);
+              setTimeout(() => onCreateShort(), 200);
             }}
             activeOpacity={0.6}
           >
@@ -61,6 +62,7 @@ export default function TabLayout() {
   const styles = createStyles(theme);
   const { isAdmin } = useAuth();
   const [showCreate, setShowCreate] = useState(false);
+  const [showCreateShort, setShowCreateShort] = useState(false);
 
   const handleCreatePress = useCallback(() => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -141,7 +143,8 @@ export default function TabLayout() {
         <Tabs.Screen name="prayers" options={{ href: null }} />
         <Tabs.Screen name="more" options={{ href: null }} />
       </Tabs>
-      <CreateSheet visible={showCreate} onClose={() => setShowCreate(false)} />
+      <CreateSheet visible={showCreate} onClose={() => setShowCreate(false)} onCreateShort={() => setShowCreateShort(true)} />
+      <CreateShortSheet visible={showCreateShort} onClose={() => setShowCreateShort(false)} />
     </>
   );
 }
