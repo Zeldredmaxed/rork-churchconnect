@@ -234,6 +234,16 @@ export default function ProfileTabScreen() {
     );
   }, [deleteShortMutation]);
 
+  const handleTapSavedItem = useCallback((item: SavedItemType) => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    console.log('[Profile] Tapped saved item:', item.item_type, item.item_id);
+    if (item.item_type === 'short') {
+      router.push(`/short-viewer?id=${item.item_id}` as never);
+    } else {
+      router.push('/(tabs)/(home)' as never);
+    }
+  }, [router]);
+
   const handleUnsaveFavorite = useCallback((item: SavedItemType) => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert(
@@ -597,6 +607,7 @@ export default function ProfileTabScreen() {
                 key={`${item.item_type}-${item.item_id}`}
                 style={styles.postGridItem}
                 activeOpacity={0.8}
+                onPress={() => handleTapSavedItem(item)}
                 onLongPress={() => handleUnsaveFavorite(item)}
               >
                 {(item.media_url || item.thumbnail_url) ? (

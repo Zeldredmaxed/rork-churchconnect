@@ -77,6 +77,7 @@ function RootLayoutNav() {
       <Stack.Screen name="admin-sermons" options={{ title: 'Sermons & Services' }} />
       <Stack.Screen name="admin-settings" options={{ title: 'Church Settings' }} />
       <Stack.Screen name="saved-posts" options={{ title: 'Saved' }} />
+      <Stack.Screen name="short-viewer" options={{ headerShown: false }} />
       <Stack.Screen name="search" options={{ headerShown: false, animation: 'fade' }} />
       <Stack.Screen name="edit-name" options={{ title: 'Name' }} />
       <Stack.Screen name="edit-bio" options={{ title: 'Bio' }} />

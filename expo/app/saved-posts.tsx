@@ -7,9 +7,10 @@ import {
   FlatList,
   Dimensions,
   Alert,
+  Image,
 } from 'react-native';
-import { Stack } from 'expo-router';
-import { Bookmark, Clapperboard, FileText } from 'lucide-react-native';
+import { Stack, useRouter } from 'expo-router';
+import { Bookmark, Clapperboard, FileText, Play } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
@@ -26,6 +27,7 @@ type FilterTab = 'all' | 'posts' | 'shorts';
 export default function SavedPostsScreen() {
   const { theme } = useTheme();
   const styles = createStyles(theme);
+  const router = useRouter();
   const { savedItems, savedPosts, savedShorts, toggleSave } = useSaved();
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
 
@@ -53,6 +55,8 @@ export default function SavedPostsScreen() {
               preview: item.preview,
               authorName: item.author_name,
               authorId: item.author_id,
+              mediaUrl: item.media_url,
+              thumbnailUrl: item.thumbnail_url,
             });
           },
         },
@@ -60,31 +64,63 @@ export default function SavedPostsScreen() {
     );
   }, [toggleSave]);
 
+  const handleTapItem = useCallback((item: SavedItemData) => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    console.log('[SavedPosts] Tapped item:', item.item_type, item.item_id);
+    if (item.item_type === 'short') {
+      router.push(`/short-viewer?id=${item.item_id}` as never);
+    } else {
+      router.push('/(tabs)/(home)' as never);
+    }
+  }, [router]);
+
   const renderGridItem = ({ item }: { item: SavedItemData }) => {
     const isShort = item.item_type === 'short';
+    const hasMedia = !!(item.thumbnail_url || item.media_url);
 
     return (
       <TouchableOpacity
         style={styles.gridItem}
         activeOpacity={0.8}
+        onPress={() => handleTapItem(item)}
         onLongPress={() => handleUnsave(item)}
       >
-        <View style={[styles.gridItemInner, isShort && styles.gridItemShort]}>
-          {isShort ? (
-            <Clapperboard size={20} color="rgba(255,255,255,0.5)" />
-          ) : (
-            <FileText size={20} color={theme.colors.textTertiary} />
-          )}
-          <Text style={[styles.gridItemText, isShort && styles.gridItemTextShort]} numberOfLines={3}>
-            {item.title || item.preview}
-          </Text>
-          <Text style={[styles.gridItemAuthor, isShort && styles.gridItemAuthorShort]} numberOfLines={1}>
-            {item.author_name}
-          </Text>
-        </View>
-        {isShort && (
+        {hasMedia ? (
+          <View style={styles.gridItemImageContainer}>
+            <Image
+              source={{ uri: item.thumbnail_url ?? item.media_url }}
+              style={styles.gridItemImage}
+              resizeMode="cover"
+            />
+            {isShort && (
+              <View style={styles.playBadge}>
+                <Play size={14} color="#fff" fill="#fff" />
+              </View>
+            )}
+            <View style={styles.gridItemImageOverlay}>
+              <Text style={styles.gridItemImageAuthor} numberOfLines={1}>
+                {item.author_name}
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <View style={[styles.gridItemInner, isShort && styles.gridItemShort]}>
+            {isShort ? (
+              <Play size={20} color="rgba(255,255,255,0.5)" fill="rgba(255,255,255,0.5)" />
+            ) : (
+              <FileText size={20} color={theme.colors.textTertiary} />
+            )}
+            <Text style={[styles.gridItemText, isShort && styles.gridItemTextShort]} numberOfLines={3}>
+              {item.title || item.preview}
+            </Text>
+            <Text style={[styles.gridItemAuthor, isShort && styles.gridItemAuthorShort]} numberOfLines={1}>
+              {item.author_name}
+            </Text>
+          </View>
+        )}
+        {isShort && !hasMedia && (
           <View style={styles.shortBadge}>
-            <Clapperboard size={10} color={theme.colors.white} />
+            <Clapperboard size={10} color="#fff" />
           </View>
         )}
       </TouchableOpacity>
@@ -209,6 +245,39 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     marginBottom: GRID_GAP,
     position: 'relative' as const,
   },
+  gridItemImageContainer: {
+    flex: 1,
+    position: 'relative' as const,
+  },
+  gridItemImage: {
+    width: '100%',
+    height: '100%',
+  },
+  playBadge: {
+    position: 'absolute' as const,
+    top: 6,
+    left: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gridItemImageOverlay: {
+    position: 'absolute' as const,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  gridItemImageAuthor: {
+    fontSize: 10,
+    fontWeight: '600' as const,
+    color: '#fff',
+  },
   gridItemInner: {
     flex: 1,
     backgroundColor: theme.colors.surfaceElevated,
@@ -248,42 +317,4 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  listItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
-    borderBottomWidth: 0.5,
-    borderBottomColor: theme.colors.borderLight,
-  },
-  listItemThumb: {
-    width: 52,
-    height: 52,
-    borderRadius: 8,
-    backgroundColor: theme.colors.surfaceElevated,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  listItemThumbShort: {
-    backgroundColor: '#1A1520',
-  },
-  listItemContent: {
-    flex: 1,
-    gap: 4,
-  },
-  listItemTitle: {
-    fontSize: 14,
-    fontWeight: '500' as const,
-    color: theme.colors.text,
-    lineHeight: 19,
-  },
-  listItemMeta: {
-    fontSize: 12,
-    color: theme.colors.textTertiary,
-  },
-  listItemAction: {
-    padding: 8,
-  },
 });
-
