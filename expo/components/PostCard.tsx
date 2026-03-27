@@ -46,6 +46,7 @@ export default function PostCard({ post, onLike, onComment, onShare, onMore }: P
       Animated.spring(bookmarkScaleAnim, { toValue: 1.4, useNativeDriver: true, friction: 3 }),
       Animated.spring(bookmarkScaleAnim, { toValue: 1, useNativeDriver: true, friction: 3 }),
     ]).start();
+    const firstMedia = post.media_urls?.[0] ?? post.image_url;
     const wasSaved = toggleSave({
       itemId: post.id,
       itemType: 'post',
@@ -53,6 +54,7 @@ export default function PostCard({ post, onLike, onComment, onShare, onMore }: P
       preview: post.content.slice(0, 150),
       authorName: post.author_name,
       authorId: post.author_id,
+      mediaUrl: firstMedia,
     });
     if (wasSaved) {
       setShowSavedBanner(true);

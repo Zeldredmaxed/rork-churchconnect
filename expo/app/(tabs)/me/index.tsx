@@ -32,6 +32,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSaved } from '@/contexts/SavedContext';
 import { api } from '@/utils/api';
 import type { FlockUser, FeedPost, Short } from '@/types';
+import type { SavedItemData } from '@/contexts/SavedContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const POST_SIZE = SCREEN_WIDTH / 3 - 1;
@@ -122,11 +123,19 @@ export default function ProfileTabScreen() {
     queryKey: ['my-posts', user?.id],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: FeedPost[] }>(`/feed?author_id=${user?.id}`);
+        const data = await api.get<{ data: FeedPost[] }>('/feed/me');
+        console.log('[Profile] My posts response:', JSON.stringify(data).slice(0, 300));
         return data?.data ?? [];
-      } catch (e) {
-        console.log('[Profile] Failed to fetch my posts:', e);
-        return [] as FeedPost[];
+      } catch (e: unknown) {
+        console.log('[Profile] /feed/me failed, trying fallback:', e);
+        try {
+          const data = await api.get<{ data: FeedPost[] }>(`/feed?author_id=${user?.id}`);
+          console.log('[Profile] Fallback posts response:', JSON.stringify(data).slice(0, 300));
+          return data?.data ?? [];
+        } catch (e2) {
+          console.log('[Profile] Fallback also failed:', e2);
+          return [] as FeedPost[];
+        }
       }
     },
     enabled: !!user?.id,
@@ -136,15 +145,22 @@ export default function ProfileTabScreen() {
     queryKey: ['my-shorts', user?.id],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: Short[] }>('/shorts/trending?limit=100');
-        const userId = user?.id;
-        if (userId && Array.isArray(data?.data)) {
-          return data.data.filter((s) => s.author_id === userId);
+        const data = await api.get<{ data: Short[] }>('/shorts/me');
+        console.log('[Profile] My shorts response:', JSON.stringify(data).slice(0, 300));
+        return data?.data ?? [];
+      } catch (e: unknown) {
+        console.log('[Profile] /shorts/me failed, trying fallback:', e);
+        try {
+          const data = await api.get<{ data: Short[] }>('/shorts/trending?limit=100');
+          const userId = user?.id;
+          if (userId && Array.isArray(data?.data)) {
+            return data.data.filter((s) => s.author_id === userId);
+          }
+          return [];
+        } catch (e2) {
+          console.log('[Profile] Fallback shorts also failed:', e2);
+          return [] as Short[];
         }
-        return [];
-      } catch (e) {
-        console.log('[Profile] Failed to fetch my shorts:', e);
-        return [] as Short[];
       }
     },
     enabled: !!user?.id,
@@ -525,26 +541,48 @@ export default function ProfileTabScreen() {
             </View>
           )
         ) : savedItems.length > 0 ? (
-          <View>
-            <TouchableOpacity
-              style={styles.savedCollectionCard}
-              onPress={() => handleMenuPress('/saved-posts')}
-              activeOpacity={0.7}
-            >
-              <View style={styles.savedCollectionGrid}>
-                {savedItems.slice(0, 4).map((item) => (
-                  <View key={`${item.item_type}-${item.item_id}`} style={styles.savedCollectionTile}>
-                    <Text style={styles.savedCollectionTileText} numberOfLines={2}>
+          <View style={styles.postsGrid}>
+            {savedItems.map((item: SavedItemData) => (
+              <TouchableOpacity
+                key={`${item.item_type}-${item.item_id}`}
+                style={styles.postGridItem}
+                activeOpacity={0.8}
+              >
+                {(item.media_url || item.thumbnail_url) ? (
+                  <View style={styles.postGridImageContainer}>
+                    <Image
+                      source={{ uri: item.thumbnail_url ?? item.media_url }}
+                      style={styles.postGridImage}
+                      resizeMode="cover"
+                    />
+                    {item.item_type === 'short' && (
+                      <View style={styles.shortBadgeOverlay}>
+                        <Play size={14} color="#fff" fill="#fff" />
+                      </View>
+                    )}
+                    <View style={styles.savedItemOverlay}>
+                      <Text style={styles.savedItemAuthor} numberOfLines={1}>
+                        {item.author_name}
+                      </Text>
+                    </View>
+                  </View>
+                ) : (
+                  <View style={[styles.postGridContent, item.item_type === 'short' && styles.shortGridBg]}>
+                    {item.item_type === 'short' && (
+                      <Play size={18} color="rgba(255,255,255,0.5)" fill="rgba(255,255,255,0.5)" style={{ marginBottom: 4 }} />
+                    )}
+                    <Text style={[styles.postGridText, item.item_type === 'short' && styles.shortGridText]} numberOfLines={4}>
                       {item.title || item.preview}
                     </Text>
+                    <View style={styles.postGridMeta}>
+                      <Text style={[styles.postGridDate, item.item_type === 'short' && styles.shortGridDate]}>
+                        {item.author_name}
+                      </Text>
+                    </View>
                   </View>
-                ))}
-                {savedItems.length < 4 && Array.from({ length: 4 - Math.min(savedItems.length, 4) }).map((_, idx) => (
-                  <View key={`empty-${idx}`} style={styles.savedCollectionTileEmpty} />
-                ))}
-              </View>
-              <Text style={styles.savedCollectionLabel}>All posts</Text>
-            </TouchableOpacity>
+                )}
+              </TouchableOpacity>
+            ))}
           </View>
         ) : (
           <View style={styles.emptyGrid}>
@@ -922,40 +960,39 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 40,
   },
-  savedCollectionCard: {
-    margin: 16,
-  },
-  savedCollectionGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    borderRadius: 8,
-    overflow: 'hidden',
-    gap: 2,
-  },
-  savedCollectionTile: {
-    width: (SCREEN_WIDTH - 32 - 2) / 2,
-    height: (SCREEN_WIDTH - 32 - 2) / 2,
-    backgroundColor: theme.colors.surfaceElevated,
-    padding: 8,
-    justifyContent: 'center',
+  shortBadgeOverlay: {
+    position: 'absolute' as const,
+    top: 6,
+    left: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.55)',
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  savedCollectionTileText: {
+  savedItemOverlay: {
+    position: 'absolute' as const,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  savedItemAuthor: {
     fontSize: 10,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 14,
+    fontWeight: '600' as const,
+    color: '#fff',
   },
-  savedCollectionTileEmpty: {
-    width: (SCREEN_WIDTH - 32 - 2) / 2,
-    height: (SCREEN_WIDTH - 32 - 2) / 2,
-    backgroundColor: theme.colors.surfaceElevated,
+  shortGridBg: {
+    backgroundColor: '#1A1A1A',
   },
-  savedCollectionLabel: {
-    fontSize: 13,
-    fontWeight: '500' as const,
-    color: theme.colors.text,
-    marginTop: 8,
+  shortGridText: {
+    color: 'rgba(255,255,255,0.7)',
+  },
+  shortGridDate: {
+    color: 'rgba(255,255,255,0.4)',
   },
   bioText: {
     fontSize: 14,

@@ -275,6 +275,8 @@ export default function ShortsScreen() {
               preview: item.description ?? item.title,
               authorName: item.author_name ?? item.church_name,
               authorId: item.author_id ?? '',
+              thumbnailUrl: item.thumbnail_url,
+              mediaUrl: item.video_url,
             });
           }}
           isSaved={isItemSaved(item.id, 'short')}
@@ -369,6 +371,8 @@ export default function ShortsScreen() {
               preview: selectedShort.description ?? selectedShort.title,
               authorName: selectedShort.author_name ?? selectedShort.church_name,
               authorId: selectedShort.author_id ?? '',
+              thumbnailUrl: selectedShort.thumbnail_url,
+              mediaUrl: selectedShort.video_url,
             });
           }
         }}

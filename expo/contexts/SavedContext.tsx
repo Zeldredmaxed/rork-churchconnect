@@ -15,6 +15,8 @@ export interface SavedItemData {
   author_name: string;
   author_id: string;
   saved_at: string;
+  media_url?: string;
+  thumbnail_url?: string;
 }
 
 export const [SavedProvider, useSaved] = createContextHook(() => {
@@ -51,7 +53,7 @@ function useSavedValue() {
   }, []);
 
   const saveMutation = useMutation({
-    mutationFn: async (params: { itemId: string; itemType: 'post' | 'short'; title: string; preview: string; authorName: string; authorId: string }) => {
+    mutationFn: async (params: { itemId: string; itemType: 'post' | 'short'; title: string; preview: string; authorName: string; authorId: string; mediaUrl?: string; thumbnailUrl?: string }) => {
       try {
         await api.post('/social/saved', {
           item_id: params.itemId,
@@ -72,6 +74,8 @@ function useSavedValue() {
         author_name: params.authorName,
         author_id: params.authorId,
         saved_at: new Date().toISOString(),
+        media_url: params.mediaUrl,
+        thumbnail_url: params.thumbnailUrl,
       };
       const updated = [newItem, ...savedItems.filter((i) => !(i.item_id === params.itemId && i.item_type === params.itemType))];
       setSavedItems(updated);
@@ -105,7 +109,7 @@ function useSavedValue() {
   );
 
   const toggleSave = useCallback(
-    (params: { itemId: string; itemType: 'post' | 'short'; title: string; preview: string; authorName: string; authorId: string }) => {
+    (params: { itemId: string; itemType: 'post' | 'short'; title: string; preview: string; authorName: string; authorId: string; mediaUrl?: string; thumbnailUrl?: string }) => {
       if (isItemSaved(params.itemId, params.itemType)) {
         unsaveMutation.mutate({ itemId: params.itemId, itemType: params.itemType });
         return false;
