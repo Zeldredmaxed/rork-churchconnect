@@ -125,44 +125,28 @@ export default function ProfileTabScreen() {
     queryKey: ['my-posts', user?.id],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: FeedPost[] }>('/feed/me');
+        const data = await api.get<{ data: FeedPost[] }>('/feed/me?limit=50&offset=0');
         console.log('[Profile] My posts response:', JSON.stringify(data).slice(0, 300));
         return data?.data ?? [];
       } catch (e: unknown) {
-        console.log('[Profile] /feed/me failed, trying fallback:', e);
-        try {
-          const data = await api.get<{ data: FeedPost[] }>(`/feed?author_id=${user?.id}`);
-          console.log('[Profile] Fallback posts response:', JSON.stringify(data).slice(0, 300));
-          return data?.data ?? [];
-        } catch (e2) {
-          console.log('[Profile] Fallback also failed:', e2);
-          return [] as FeedPost[];
-        }
+        console.log('[Profile] /feed/me failed:', e);
+        return [] as FeedPost[];
       }
     },
     enabled: !!user?.id,
+    refetchOnMount: 'always' as const,
   });
 
   const shortsQuery = useQuery({
     queryKey: ['my-shorts', user?.id],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: Short[] }>('/shorts/me');
+        const data = await api.get<{ data: Short[] }>('/shorts/me?limit=50&offset=0');
         console.log('[Profile] My shorts response:', JSON.stringify(data).slice(0, 300));
         return data?.data ?? [];
       } catch (e: unknown) {
-        console.log('[Profile] /shorts/me failed, trying fallback:', e);
-        try {
-          const data = await api.get<{ data: Short[] }>('/shorts/trending?limit=100');
-          const userId = user?.id;
-          if (userId && Array.isArray(data?.data)) {
-            return data.data.filter((s) => s.author_id === userId);
-          }
-          return [];
-        } catch (e2) {
-          console.log('[Profile] Fallback shorts also failed:', e2);
-          return [] as Short[];
-        }
+        console.log('[Profile] /shorts/me failed:', e);
+        return [] as Short[];
       }
     },
     enabled: !!user?.id,
@@ -171,10 +155,16 @@ export default function ProfileTabScreen() {
 
   const deletePostMutation = useMutation({
     mutationFn: (postId: string) => api.delete(`/feed/${postId}`),
-    onSuccess: () => {
-      console.log('[Profile] Post deleted successfully');
+    onSuccess: (_data, postId) => {
+      console.log('[Profile] Post deleted successfully, cascade invalidating...');
       void queryClient.invalidateQueries({ queryKey: ['my-posts'] });
       void queryClient.invalidateQueries({ queryKey: ['feed'] });
+      const currentSaved = savedItems.filter(
+        (item) => !(item.item_id === postId && item.item_type === 'post')
+      );
+      if (currentSaved.length !== savedItems.length) {
+        console.log('[Profile] Removed deleted post from saved items');
+      }
     },
     onError: (error) => {
       console.log('[Profile] Delete post error:', error.message);
@@ -184,10 +174,16 @@ export default function ProfileTabScreen() {
 
   const deleteShortMutation = useMutation({
     mutationFn: (shortId: string) => api.delete(`/shorts/${shortId}`),
-    onSuccess: () => {
-      console.log('[Profile] Short deleted successfully');
+    onSuccess: (_data, shortId) => {
+      console.log('[Profile] Short deleted successfully, cascade invalidating...');
       void queryClient.invalidateQueries({ queryKey: ['my-shorts'] });
       void queryClient.invalidateQueries({ queryKey: ['shorts'] });
+      const currentSaved = savedItems.filter(
+        (item) => !(item.item_id === shortId && item.item_type === 'short')
+      );
+      if (currentSaved.length !== savedItems.length) {
+        console.log('[Profile] Removed deleted short from saved items');
+      }
     },
     onError: (error) => {
       console.log('[Profile] Delete short error:', error.message);

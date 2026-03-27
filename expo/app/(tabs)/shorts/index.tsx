@@ -174,8 +174,9 @@ export default function ShortsScreen() {
   const deleteShortMutation = useMutation({
     mutationFn: (shortId: string) => api.delete(`/shorts/${shortId}`),
     onSuccess: () => {
-      console.log('[Shorts] Short deleted successfully');
+      console.log('[Shorts] Short deleted successfully, cascade invalidating...');
       void queryClient.invalidateQueries({ queryKey: ['shorts'] });
+      void queryClient.invalidateQueries({ queryKey: ['my-shorts'] });
       setShowDeleteConfirm(false);
       setShowOptions(false);
       setOptionsShortId(null);

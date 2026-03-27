@@ -123,8 +123,9 @@ export default function HomeFeedScreen() {
   const deleteMutation = useMutation({
     mutationFn: (postId: string) => api.delete(`/feed/${postId}`),
     onSuccess: () => {
-      console.log('[Feed] Post deleted successfully');
+      console.log('[Feed] Post deleted successfully, cascade invalidating...');
       void queryClient.invalidateQueries({ queryKey: ['feed'] });
+      void queryClient.invalidateQueries({ queryKey: ['my-posts'] });
       setShowDeleteConfirm(false);
       setShowOptions(false);
       setOptionsPostId(null);
