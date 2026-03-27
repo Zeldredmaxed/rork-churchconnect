@@ -25,6 +25,7 @@ import {
   CreditCard,
   Radio,
   Music,
+  Disc,
 } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
@@ -193,6 +194,13 @@ export default function MoreScreen() {
               label="Upload Music"
               sublabel="Share your songs as an artist"
               onPress={() => router.push('/upload-song' as never)}
+            />
+            <View style={styles.divider} />
+            <MenuItem
+              icon={<Disc size={18} color={theme.colors.accent} />}
+              label="My Music"
+              sublabel="Manage your songs & earnings"
+              onPress={() => router.push('/artist-dashboard' as never)}
             />
             <View style={styles.divider} />
             <MenuItem
