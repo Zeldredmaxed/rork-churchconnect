@@ -32,6 +32,17 @@ export default function ShortVideoPlayer({ videoUrl, thumbnailUrl, isVisible }: 
     void setupAudio();
   }, []);
 
+  useEffect(() => {
+    const ref = videoRef.current;
+    return () => {
+      console.log('[ShortVideoPlayer] Unmounting, stopping video');
+      if (ref) {
+        ref.stopAsync().catch(() => {});
+        ref.unloadAsync().catch(() => {});
+      }
+    };
+  }, []);
+
   const handlePlaybackStatusUpdate = useCallback((status: AVPlaybackStatus) => {
     if (status.isLoaded) {
       setIsPlaying(status.isPlaying);

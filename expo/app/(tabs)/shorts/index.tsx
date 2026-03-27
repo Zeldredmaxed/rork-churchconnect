@@ -23,6 +23,7 @@ import CommentsSheet from '@/components/CommentsSheet';
 import PostOptionsSheet, { DeleteConfirmSheet } from '@/components/PostOptionsSheet';
 import ReportSheet from '@/components/ReportSheet';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSaved } from '@/contexts/SavedContext';
 import ShareSheet from '@/components/ShareSheet';
@@ -190,6 +191,19 @@ export default function ShortsScreen() {
 
 
   const [visibleShortId, setVisibleShortId] = useState<string | null>(null);
+  const [isScreenFocused, setIsScreenFocused] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      console.log('[Shorts] Screen focused, resuming playback');
+      setIsScreenFocused(true);
+      return () => {
+        console.log('[Shorts] Screen unfocused, pausing all videos');
+        setIsScreenFocused(false);
+        setVisibleShortId(null);
+      };
+    }, [])
+  );
 
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: Array<{ item: Short }> }) => {
@@ -237,7 +251,7 @@ export default function ShortsScreen() {
         <ShortVideoPlayer
           videoUrl={item.video_url}
           thumbnailUrl={item.thumbnail_url}
-          isVisible={visibleShortId === item.id}
+          isVisible={isScreenFocused && visibleShortId === item.id}
         />
         <ShortOverlay
           item={item}
@@ -268,7 +282,7 @@ export default function ShortsScreen() {
         />
       </View>
     ),
-    [itemHeight, likeMutation, handleOpenShortOptions, user?.id, isItemSaved, toggleSave, setShareShortId, setShowShare, styles, visibleShortId]
+    [itemHeight, likeMutation, handleOpenShortOptions, user?.id, isItemSaved, toggleSave, setShareShortId, setShowShare, styles, visibleShortId, isScreenFocused]
   );
 
   return (

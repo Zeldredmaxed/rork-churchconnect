@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import React, { useRef, useState, useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Image } from 'react-native';
 import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal, Pin } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -81,6 +81,12 @@ export default function PostCard({ post, onLike, onComment, onShare, onMore }: P
     .toUpperCase()
     .slice(0, 2);
 
+  const mediaUrls = useMemo(() => {
+    if (post.media_urls && post.media_urls.length > 0) return post.media_urls;
+    if (post.image_url) return [post.image_url];
+    return [];
+  }, [post.media_urls, post.image_url]);
+
   return (
     <View style={styles.card}>
       <View style={styles.header}>
@@ -123,6 +129,33 @@ export default function PostCard({ post, onLike, onComment, onShare, onMore }: P
       )}
 
       <MentionText style={styles.content}>{post.content}</MentionText>
+
+      {mediaUrls.length > 0 && (
+        <View style={styles.mediaContainer}>
+          {mediaUrls.length === 1 ? (
+            <Image
+              source={{ uri: mediaUrls[0] }}
+              style={styles.singleImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.imageGrid}>
+              {mediaUrls.slice(0, 4).map((url, index) => (
+                <Image
+                  key={`${post.id}-media-${index}`}
+                  source={{ uri: url }}
+                  style={[
+                    styles.gridImage,
+                    mediaUrls.length === 2 && styles.gridImageHalf,
+                    mediaUrls.length === 3 && index === 0 && styles.gridImageFull,
+                  ]}
+                  resizeMode="cover"
+                />
+              ))}
+            </View>
+          )}
+        </View>
+      )}
 
       <View style={styles.actionsRow}>
         <View style={styles.actionsLeft}>
@@ -316,5 +349,32 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     fontSize: 14,
     fontWeight: '600' as const,
     color: theme.colors.accent,
+  },
+  mediaContainer: {
+    marginBottom: 10,
+  },
+  singleImage: {
+    width: '100%' as const,
+    aspectRatio: 1,
+    backgroundColor: theme.colors.surfaceElevated,
+  },
+  imageGrid: {
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
+    gap: 2,
+  },
+  gridImage: {
+    width: '49%' as const,
+    aspectRatio: 1,
+    backgroundColor: theme.colors.surfaceElevated,
+  },
+  gridImageHalf: {
+    width: '49.5%' as const,
+    aspectRatio: 0.8,
+  },
+  gridImageFull: {
+    width: '100%' as const,
+    aspectRatio: 1.5,
+    marginBottom: 2,
   },
 });

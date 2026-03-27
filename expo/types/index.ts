@@ -45,6 +45,7 @@ export interface FeedPost {
   is_liked?: boolean;
   post_type?: 'text' | 'photo' | 'video';
   media_urls?: string[];
+  image_url?: string;
   created_at: string;
   updated_at?: string;
 }
