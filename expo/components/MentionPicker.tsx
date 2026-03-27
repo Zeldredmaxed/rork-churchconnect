@@ -36,8 +36,8 @@ export default function MentionPicker({ visible, onClose, onSelect, selectedIds 
 
   const membersQuery = useQuery({
     queryKey: ['members', 'mention-picker', search],
-    queryFn: () => api.get<MemberSearchResult | Member[]>(`/members?search=${encodeURIComponent(search)}&per_page=20`),
-    enabled: visible, staleTime: 30000,
+    queryFn: () => api.get<MemberSearchResult | Member[]>(`/members/search?q=${encodeURIComponent(search)}&per_page=20`),
+    enabled: visible && search.length > 0, staleTime: 30000,
   });
 
   const members: Member[] = (() => {

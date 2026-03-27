@@ -78,8 +78,27 @@ export default function CreatePostScreen() {
     .slice(0, 2) ?? 'U';
 
   const createPostMutation = useMutation({
-    mutationFn: async (params: { content: string; visibility: string; image_url?: string }) =>
-      api.post('/feed', params as unknown as Record<string, unknown>),
+    mutationFn: async (params: { content: string; visibility: string; images?: SelectedImage[] }) => {
+      if (params.images && params.images.length > 0) {
+        const formData = new FormData();
+        formData.append('content', params.content);
+        formData.append('visibility', params.visibility);
+        params.images.forEach((img, index) => {
+          const uriParts = img.uri.split('.');
+          const fileExtension = uriParts[uriParts.length - 1] || 'jpg';
+          const mimeType = `image/${fileExtension === 'png' ? 'png' : 'jpeg'}`;
+          formData.append('images', {
+            uri: img.uri,
+            name: `photo_${index}.${fileExtension}`,
+            type: mimeType,
+          } as unknown as Blob);
+        });
+        console.log('[CreatePost] Uploading with FormData, images:', params.images.length);
+        return api.post('/feed', formData as unknown as Record<string, unknown>);
+      }
+      console.log('[CreatePost] Creating text-only post');
+      return api.post('/feed', { content: params.content, visibility: params.visibility });
+    },
     onSuccess: () => {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       void queryClient.invalidateQueries({ queryKey: ['feed'] });
@@ -233,7 +252,7 @@ export default function CreatePostScreen() {
     createPostMutation.mutate({
       content: caption.trim(),
       visibility,
-      image_url: selectedImages.length > 0 ? selectedImages[0].uri : undefined,
+      images: selectedImages.length > 0 ? selectedImages : undefined,
     });
   }, [caption, visibility, selectedImages, createPostMutation]);
 
