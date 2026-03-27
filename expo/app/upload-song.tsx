@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
-  ScrollView, Alert, ActivityIndicator, Image,
+  ScrollView, Alert, ActivityIndicator, Image, Platform,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Upload, Music, Mic, Image as ImageIcon, CheckCircle } from 'lucide-react-native';
@@ -87,31 +87,67 @@ export default function UploadSongScreen() {
     name: string,
     mimeType: string,
   ): Promise<string> => {
-    const formData = new FormData();
-    formData.append('file', { uri, name, type: mimeType } as any);
-
-    const token = await SecureStore.getItemAsync('access_token');
-    console.log('[Upload] Uploading:', name, mimeType);
-    const res = await fetch(`${BASE_URL}/api/v1/uploads/`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    });
-
-    if (!res.ok) {
-      const errText = await res.text().catch(() => '');
-      console.log('[Upload] Error response:', res.status, errText);
-      let detail = 'Upload failed';
-      try { detail = JSON.parse(errText).detail || detail; } catch {}
-      throw new Error(detail);
+    // Normalize URI for React Native
+    let fileUri = uri;
+    if (Platform.OS === 'android' && !fileUri.startsWith('file://') && !fileUri.startsWith('content://')) {
+      fileUri = 'file://' + fileUri;
     }
 
-    const json = await res.json();
-    console.log('[Upload] Response:', JSON.stringify(json).slice(0, 200));
-    // Backend returns { data: { url: "..." } }
-    const url = json?.data?.url || json?.url || json?.secure_url;
-    if (!url) throw new Error('No URL returned from upload');
-    return url;
+    const fileName = name || fileUri.split('/').pop() || 'upload';
+    console.log('[Upload] Starting upload:', fileName, mimeType, 'from:', fileUri.slice(0, 80));
+
+    const formData = new FormData();
+    formData.append('file', {
+      uri: fileUri,
+      name: fileName,
+      type: mimeType || 'application/octet-stream',
+    } as any);
+
+    const token = await SecureStore.getItemAsync('access_token');
+
+    // Use XMLHttpRequest for better binary FormData support on React Native
+    return new Promise<string>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${BASE_URL}/api/v1/uploads/`);
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      // Do NOT set Content-Type — XHR sets it with correct boundary for FormData
+      xhr.timeout = 120000; // 2 minute timeout for large files
+
+      xhr.onload = () => {
+        console.log('[Upload] Response status:', xhr.status);
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const json = JSON.parse(xhr.responseText);
+            console.log('[Upload] Success:', JSON.stringify(json).slice(0, 200));
+            const url = json?.data?.url || json?.url || json?.secure_url;
+            if (!url) {
+              reject(new Error('No URL returned from upload'));
+            } else {
+              resolve(url);
+            }
+          } catch (e) {
+            reject(new Error('Invalid response from server'));
+          }
+        } else {
+          let detail = 'Upload failed';
+          try { detail = JSON.parse(xhr.responseText).detail || detail; } catch {}
+          console.log('[Upload] Error:', xhr.status, detail);
+          reject(new Error(detail));
+        }
+      };
+
+      xhr.onerror = () => {
+        console.log('[Upload] Network error');
+        reject(new Error('Network request failed. Check your connection and try again.'));
+      };
+
+      xhr.ontimeout = () => {
+        console.log('[Upload] Timeout');
+        reject(new Error('Upload timed out. Try a smaller file.'));
+      };
+
+      xhr.send(formData);
+    });
   };
 
   const handleUpload = async () => {
