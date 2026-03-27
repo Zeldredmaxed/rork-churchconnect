@@ -523,6 +523,7 @@ export default function ShortsScreen() {
 
       {showUploadModal && (
         <View style={[StyleSheet.absoluteFillObject, styles.uploadOverlay]}>
+          <TouchableOpacity style={styles.uploadOverlayDismiss} activeOpacity={1} onPress={resetUploadForm} />
           <View style={[styles.uploadSheet, { paddingBottom: insets.bottom + 20 }]}> 
             <View style={styles.uploadHeader}>
               <TouchableOpacity onPress={resetUploadForm}>
@@ -552,7 +553,7 @@ export default function ShortsScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.uploadScrollView} showsVerticalScrollIndicator={false}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.uploadScrollContent}>
               <View style={styles.uploadForm}>
                 {selectedVideo ? (
                   <View style={styles.selectedVideoContainer}>
@@ -775,12 +776,18 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     justifyContent: 'flex-end',
     zIndex: 20,
   },
+  uploadOverlayDismiss: {
+    flex: 1,
+  },
   uploadSheet: {
     backgroundColor: '#1A1A1A',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
     maxHeight: '85%',
+  },
+  uploadScrollContent: {
+    paddingBottom: 20,
   },
   uploadHeader: {
     flexDirection: 'row',
@@ -798,9 +805,7 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     fontWeight: '600' as const,
     color: theme.colors.accent,
   },
-  uploadScrollView: {
-    flex: 1,
-  },
+
   uploadForm: {
     gap: 14,
     paddingBottom: 20,
