@@ -31,7 +31,7 @@ export default function EditBioScreen() {
 
   const saveMutation = useMutation({
     mutationFn: async (newBio: string) => {
-      await api.put(`/members/${user?.id}`, { bio: newBio });
+      await api.put('/auth/me', { bio: newBio });
       return newBio;
     },
     onSuccess: async (newBio) => {

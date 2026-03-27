@@ -12,6 +12,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Grid3x3, MessageCircle } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
@@ -49,8 +50,8 @@ export default function UserProfileScreen() {
     queryFn: async () => {
       console.log('[UserProfile] Fetching profile for:', id);
       try {
-        const data = await api.get<UserProfileData>(`/members/${id}`);
-        return data;
+        const res = await api.get<{ data: UserProfileData }>(`/social/user/${id}`);
+        return res.data;
       } catch {
         const fallback: UserProfileData = {
           id: id ?? '',
@@ -135,7 +136,16 @@ export default function UserProfileScreen() {
       >
         <View style={styles.profileHeader}>
           <View style={styles.avatarLarge}>
-            <Text style={styles.avatarLargeText}>{initials}</Text>
+            {profile?.avatar_url ? (
+               <Image
+                 source={{ uri: profile.avatar_url }}
+                 style={{ width: '100%', height: '100%', borderRadius: 43 }}
+                 contentFit="cover"
+                 transition={200}
+               />
+            ) : (
+               <Text style={styles.avatarLargeText}>{initials}</Text>
+            )}
           </View>
 
           <View style={styles.statsRow}>
@@ -228,16 +238,33 @@ export default function UserProfileScreen() {
           </View>
         ) : (
           <View style={styles.postsGrid}>
-            {posts.map((post) => (
-              <View key={post.id} style={styles.postTile}>
-                <Text style={styles.postTileText} numberOfLines={3}>
-                  {post.content}
-                </Text>
-                <View style={styles.postTileMeta}>
-                  <Text style={styles.postTileCount}>{post.like_count} likes</Text>
+            {posts.map((post) => {
+              const hasMedia = post.media_urls && post.media_urls.length > 0;
+              const hasOldImage = !!post.image_url;
+              const displayUrl = hasMedia ? post.media_urls![0] : (hasOldImage ? post.image_url : null);
+              
+              return (
+                <View key={post.id} style={styles.postTile}>
+                  {displayUrl ? (
+                    <Image
+                      source={{ uri: displayUrl }}
+                      style={{ width: '100%', height: '100%', position: 'absolute' }}
+                      contentFit="cover"
+                    />
+                  ) : null}
+                  <View style={[styles.postTileOverlay, displayUrl ? styles.postTileOverlayHasMedia : null]}>
+                    <Text style={[styles.postTileText, displayUrl ? styles.postTileTextLight : null]} numberOfLines={3}>
+                      {post.content}
+                    </Text>
+                    <View style={styles.postTileMeta}>
+                      <Text style={[styles.postTileCount, displayUrl ? styles.postTileCountLight : null]}>
+                        {post.like_count || 0} likes
+                      </Text>
+                    </View>
+                  </View>
                 </View>
-              </View>
-            ))}
+              );
+            })}
           </View>
         )}
       </ScrollView>
@@ -380,13 +407,27 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     width: '33%',
     aspectRatio: 1,
     backgroundColor: theme.colors.surfaceElevated,
+    justifyContent: 'flex-start',
+    overflow: 'hidden',
+  },
+  postTileOverlay: {
+    flex: 1,
     padding: 10,
     justifyContent: 'space-between',
+  },
+  postTileOverlayHasMedia: {
+    backgroundColor: 'rgba(0,0,0,0.3)',
   },
   postTileText: {
     fontSize: 11,
     color: theme.colors.textSecondary,
     lineHeight: 15,
+  },
+  postTileTextLight: {
+    color: '#ffffff',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   postTileMeta: {
     flexDirection: 'row',
@@ -395,6 +436,12 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   postTileCount: {
     fontSize: 10,
     color: theme.colors.textTertiary,
+  },
+  postTileCountLight: {
+    color: '#eeeeee',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 });
 

@@ -47,7 +47,7 @@ export default function EditProfileScreen() {
         category: 'image',
       });
       console.log('[Profile] Step 2: Updating profile with avatar URL...');
-      await api.put(`/members/${user?.id}`, { avatar_url: uploadResult.url });
+      await api.put('/auth/me', { avatar_url: uploadResult.url });
       return uploadResult.url;
     },
     onSuccess: (avatarUrl) => {

@@ -27,7 +27,7 @@ export default function EditUsernameScreen() {
 
   const saveMutation = useMutation({
     mutationFn: async (newUsername: string) => {
-      await api.put(`/members/${user?.id}`, { username: newUsername });
+      await api.put('/auth/me', { username: newUsername });
       return newUsername;
     },
     onSuccess: async (newUsername) => {
