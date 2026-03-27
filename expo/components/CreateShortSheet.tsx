@@ -11,7 +11,7 @@ import {
   Platform,
   Image,
 } from 'react-native';
-import { X, Video, Upload, AtSign, ImageIcon } from 'lucide-react-native';
+import { X, Video, Upload, AtSign } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
@@ -41,7 +41,7 @@ export default function CreateShortSheet({ visible, onClose }: CreateShortSheetP
   const [uploadDescription, setUploadDescription] = useState('');
   const [uploadCategory, setUploadCategory] = useState('Worship');
   const [selectedVideo, setSelectedVideo] = useState<ImagePicker.ImagePickerAsset | null>(null);
-  const [selectedThumbnail, setSelectedThumbnail] = useState<ImagePicker.ImagePickerAsset | null>(null);
+
   const [showMentionPicker, setShowMentionPicker] = useState(false);
 
   const resetForm = useCallback(() => {
@@ -49,7 +49,6 @@ export default function CreateShortSheet({ visible, onClose }: CreateShortSheetP
     setUploadDescription('');
     setUploadCategory('Worship');
     setSelectedVideo(null);
-    setSelectedThumbnail(null);
     onClose();
   }, [onClose]);
 
@@ -105,35 +104,11 @@ export default function CreateShortSheet({ visible, onClose }: CreateShortSheetP
     }
   }, []);
 
-  const pickThumbnail = useCallback(async () => {
-    try {
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permissionResult.granted) {
-        Alert.alert('Permission Required', 'Please allow access to your media library.');
-        return;
-      }
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        quality: 0.8,
-        aspect: [9, 16],
-      });
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        setSelectedThumbnail(result.assets[0]);
-        console.log('[CreateShort] Thumbnail selected:', result.assets[0].uri.slice(0, 100));
-      }
-    } catch (error) {
-      console.log('[CreateShort] Thumbnail picker error:', error);
-      Alert.alert('Error', 'Failed to pick thumbnail image.');
-    }
-  }, []);
-
   const createShortMutation = useMutation({
-    mutationFn: async (params: { title: string; description: string; category: string; video: ImagePicker.ImagePickerAsset | null; thumbnail: ImagePicker.ImagePickerAsset | null }) => {
-      console.log('[CreateShort] Creating short with video:', !!params.video, 'thumbnail:', !!params.thumbnail);
+    mutationFn: async (params: { title: string; description: string; category: string; video: ImagePicker.ImagePickerAsset | null }) => {
+      console.log('[CreateShort] Creating short with video:', !!params.video);
 
       let videoUrl = '';
-      let thumbnailUrl = '';
       let durationSeconds: number | undefined;
 
       if (params.video) {
@@ -151,25 +126,13 @@ export default function CreateShortSheet({ visible, onClose }: CreateShortSheetP
         }
       }
 
-      if (params.thumbnail) {
-        console.log('[CreateShort] Step 1b: Uploading thumbnail to CDN...');
-        const thumbResult = await uploadSingleFile({
-          uri: params.thumbnail.uri,
-          mimeType: params.thumbnail.mimeType || 'image/jpeg',
-          category: 'image',
-        });
-        thumbnailUrl = thumbResult.url;
-        console.log('[CreateShort] Thumbnail URL:', thumbnailUrl.slice(0, 80));
-      }
-
-      console.log('[CreateShort] Step 2: Creating short record...');
+      console.log('[CreateShort] Step 2: Creating short record (backend auto-generates thumbnail)...');
       const body: Record<string, unknown> = {
         title: params.title,
         description: params.description,
         category: params.category.toLowerCase(),
       };
       if (videoUrl) body.video_url = videoUrl;
-      if (thumbnailUrl) body.thumbnail_url = thumbnailUrl;
       if (durationSeconds) body.duration_seconds = durationSeconds;
 
       return api.post('/shorts', body);
@@ -209,7 +172,6 @@ export default function CreateShortSheet({ visible, onClose }: CreateShortSheetP
                 description: uploadDescription.trim(),
                 category: uploadCategory,
                 video: selectedVideo,
-                thumbnail: selectedThumbnail,
               });
             }}
             disabled={!uploadTitle.trim() || createShortMutation.isPending}
@@ -298,42 +260,6 @@ export default function CreateShortSheet({ visible, onClose }: CreateShortSheetP
               <AtSign size={15} color={theme.colors.accent} />
               <Text style={styles.mentionBtnText}>Mention Someone</Text>
             </TouchableOpacity>
-
-            <View style={styles.thumbnailSection}>
-              <Text style={styles.uploadCategoryLabel}>Thumbnail (optional)</Text>
-              {selectedThumbnail ? (
-                <View style={styles.thumbnailPreviewRow}>
-                  <Image
-                    source={{ uri: selectedThumbnail.uri }}
-                    style={styles.thumbnailPreview}
-                    resizeMode="cover"
-                  />
-                  <TouchableOpacity
-                    style={styles.thumbnailChangeBtn}
-                    onPress={pickThumbnail}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.thumbnailChangeBtnText}>Change</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.thumbnailRemoveBtn}
-                    onPress={() => setSelectedThumbnail(null)}
-                    activeOpacity={0.7}
-                  >
-                    <X size={14} color={theme.colors.error} />
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={styles.thumbnailPickerBtn}
-                  onPress={pickThumbnail}
-                  activeOpacity={0.7}
-                >
-                  <ImageIcon size={18} color={theme.colors.accent} />
-                  <Text style={styles.thumbnailPickerText}>Pick a thumbnail image</Text>
-                </TouchableOpacity>
-              )}
-            </View>
 
             <Text style={styles.uploadCategoryLabel}>Category</Text>
             <View style={styles.uploadCategoryRow}>
@@ -539,51 +465,5 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     fontWeight: '500' as const,
     color: theme.colors.accent,
   },
-  thumbnailSection: {
-    gap: 8,
-  },
-  thumbnailPreviewRow: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: 10,
-  },
-  thumbnailPreview: {
-    width: 60,
-    height: 80,
-    borderRadius: 8,
-    backgroundColor: theme.colors.surfaceElevated,
-  },
-  thumbnailChangeBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    backgroundColor: theme.colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  thumbnailChangeBtnText: {
-    fontSize: 13,
-    fontWeight: '500' as const,
-    color: theme.colors.accent,
-  },
-  thumbnailRemoveBtn: {
-    padding: 6,
-  },
-  thumbnailPickerBtn: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    backgroundColor: theme.colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderStyle: 'dashed' as const,
-  },
-  thumbnailPickerText: {
-    fontSize: 13,
-    fontWeight: '500' as const,
-    color: theme.colors.accent,
-  },
+
 });
