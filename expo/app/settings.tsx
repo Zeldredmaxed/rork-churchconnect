@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   Alert,
   Image,
 } from 'react-native';
@@ -159,17 +158,16 @@ export default function SettingsScreen() {
       />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.searchBarContainer}>
+        <TouchableOpacity
+          style={styles.searchBarContainer}
+          onPress={() => handleNav('/search')}
+          activeOpacity={0.7}
+        >
           <View style={styles.searchBar}>
             <Search size={16} color={theme.colors.textTertiary} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search"
-              placeholderTextColor={theme.colors.textTertiary}
-              editable={false}
-            />
+            <Text style={styles.searchPlaceholder}>Search</Text>
           </View>
-        </View>
+        </TouchableOpacity>
 
         <View style={styles.section}>
           <Text style={styles.sectionHeader}>Your account</Text>
@@ -473,11 +471,10 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     height: 36,
     gap: 8,
   },
-  searchInput: {
+  searchPlaceholder: {
     flex: 1,
     fontSize: 15,
-    color: theme.colors.text,
-    paddingVertical: 0,
+    color: theme.colors.textTertiary,
   },
   section: {
     paddingTop: 4,
