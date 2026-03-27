@@ -35,6 +35,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
+import { uploadSingleFile, uploadMultipleFiles } from '@/utils/upload';
 import { useAuth } from '@/contexts/AuthContext';
 import MentionInput from '@/components/MentionInput';
 import MentionPicker from '@/components/MentionPicker';
@@ -79,25 +80,39 @@ export default function CreatePostScreen() {
 
   const createPostMutation = useMutation({
     mutationFn: async (params: { content: string; visibility: string; images?: SelectedImage[] }) => {
+      let mediaUrls: string[] = [];
+      let postType = 'text';
+
       if (params.images && params.images.length > 0) {
-        const formData = new FormData();
-        formData.append('content', params.content);
-        formData.append('visibility', params.visibility);
-        params.images.forEach((img, index) => {
-          const uriParts = img.uri.split('.');
-          const fileExtension = uriParts[uriParts.length - 1] || 'jpg';
-          const mimeType = `image/${fileExtension === 'png' ? 'png' : 'jpeg'}`;
-          formData.append('images', {
-            uri: img.uri,
-            name: `photo_${index}.${fileExtension}`,
-            type: mimeType,
-          } as unknown as Blob);
-        });
-        console.log('[CreatePost] Uploading with FormData, images:', params.images.length);
-        return api.post('/feed', formData as unknown as Record<string, unknown>);
+        console.log('[CreatePost] Step 1: Uploading', params.images.length, 'image(s) to CDN...');
+
+        if (params.images.length === 1) {
+          const result = await uploadSingleFile({
+            uri: params.images[0].uri,
+            category: 'image',
+          });
+          mediaUrls = [result.url];
+        } else {
+          const results = await uploadMultipleFiles(
+            params.images.map((img) => ({ uri: img.uri, category: 'image' as const }))
+          );
+          mediaUrls = results.map((r) => r.url);
+        }
+
+        postType = 'photo';
+        console.log('[CreatePost] Step 1 complete. Got', mediaUrls.length, 'CDN URLs');
       }
-      console.log('[CreatePost] Creating text-only post');
-      return api.post('/feed', { content: params.content, visibility: params.visibility });
+
+      console.log('[CreatePost] Step 2: Creating post, type:', postType);
+      const body: Record<string, unknown> = {
+        content: params.content,
+        visibility: params.visibility === 'leaders' ? 'leaders_only' : 'members_only',
+        post_type: postType,
+      };
+      if (mediaUrls.length > 0) {
+        body.media_urls = mediaUrls;
+      }
+      return api.post('/feed', body);
     },
     onSuccess: () => {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

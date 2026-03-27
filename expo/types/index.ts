@@ -43,6 +43,8 @@ export interface FeedPost {
   like_count: number;
   comment_count: number;
   is_liked?: boolean;
+  post_type?: 'text' | 'photo' | 'video';
+  media_urls?: string[];
   created_at: string;
   updated_at?: string;
 }

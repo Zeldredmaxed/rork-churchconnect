@@ -1,22 +1,30 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Image,
+  ActivityIndicator,
+  Alert,
+  Platform,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { ArrowLeft, ChevronRight } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
+import { useMutation } from '@tanstack/react-query';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
+import { api } from '@/utils/api';
+import { uploadSingleFile } from '@/utils/upload';
 
 export default function EditProfileScreen() {
   const { theme } = useTheme();
   const styles = createStyles(theme);
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const router = useRouter();
 
   const initials = user?.full_name
@@ -30,6 +38,63 @@ export default function EditProfileScreen() {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push(route as never);
   };
+
+  const avatarMutation = useMutation({
+    mutationFn: async (uri: string) => {
+      console.log('[Profile] Step 1: Uploading avatar to CDN...');
+      const uploadResult = await uploadSingleFile({
+        uri,
+        category: 'image',
+      });
+      console.log('[Profile] Step 2: Updating profile with avatar URL...');
+      await api.put(`/members/${user?.id}`, { avatar_url: uploadResult.url });
+      return uploadResult.url;
+    },
+    onSuccess: (avatarUrl) => {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      void updateUser({ avatar_url: avatarUrl });
+      console.log('[Profile] Avatar updated successfully');
+    },
+    onError: (error) => {
+      console.log('[Profile] Avatar upload error:', error.message);
+      Alert.alert('Upload Failed', error.message || 'Failed to update profile picture.');
+    },
+  });
+
+  const pickAvatar = useCallback(async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert(
+          'Permission Required',
+          'Please allow access to your photo library to change your profile picture.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => {
+              if (Platform.OS !== 'web') {
+                void import('expo-linking').then((Linking) => Linking.openSettings());
+              }
+            }},
+          ]
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets.length > 0) {
+        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        avatarMutation.mutate(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.log('[Profile] Image picker error:', error);
+    }
+  }, [avatarMutation]);
 
   return (
     <View style={styles.container}>
@@ -51,12 +116,25 @@ export default function EditProfileScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.avatarSection}>
           <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{initials}</Text>
-            </View>
+            <TouchableOpacity onPress={pickAvatar} activeOpacity={0.7} disabled={avatarMutation.isPending}>
+              <View style={styles.avatar}>
+                {user?.avatar_url ? (
+                  <Image source={{ uri: user.avatar_url }} style={styles.avatarImage} />
+                ) : (
+                  <Text style={styles.avatarText}>{initials}</Text>
+                )}
+                {avatarMutation.isPending && (
+                  <View style={styles.avatarLoadingOverlay}>
+                    <ActivityIndicator size="small" color="#fff" />
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity activeOpacity={0.7}>
-            <Text style={styles.editPictureText}>Edit picture or avatar</Text>
+          <TouchableOpacity onPress={pickAvatar} activeOpacity={0.7} disabled={avatarMutation.isPending}>
+            <Text style={styles.editPictureText}>
+              {avatarMutation.isPending ? 'Uploading...' : 'Edit picture or avatar'}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -192,6 +270,18 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     fontSize: 32,
     fontWeight: '700' as const,
     color: theme.colors.accent,
+  },
+  avatarImage: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+  },
+  avatarLoadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    borderRadius: 45,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
   editPictureText: {
     fontSize: 14,

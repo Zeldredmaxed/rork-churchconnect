@@ -21,7 +21,8 @@ import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
-import { api, getToken, API_URL } from '@/utils/api';
+import { api } from '@/utils/api';
+import { uploadSingleFile } from '@/utils/upload';
 import EmptyState from '@/components/EmptyState';
 import CommentsSheet from '@/components/CommentsSheet';
 import PostOptionsSheet, { DeleteConfirmSheet } from '@/components/PostOptionsSheet';
@@ -252,48 +253,35 @@ export default function ShortsScreen() {
   const createShortMutation = useMutation({
     mutationFn: async (params: { title: string; description: string; category: string; video: ImagePicker.ImagePickerAsset | null }) => {
       console.log('[Shorts] Creating short with video:', !!params.video);
-      
+
+      let videoUrl = '';
+      let durationSeconds: number | undefined;
+
       if (params.video) {
-        const formData = new FormData();
-        formData.append('title', params.title);
-        formData.append('description', params.description);
-        formData.append('category', params.category);
-        
-        const videoUri = params.video.uri;
-        const fileName = videoUri.split('/').pop() || 'video.mp4';
-        const fileType = params.video.mimeType || 'video/mp4';
-        
-        formData.append('video', {
-          uri: videoUri,
-          name: fileName,
-          type: fileType,
-        } as unknown as Blob);
-
-        const token = await getToken();
-        console.log('[Shorts] Uploading with FormData, token present:', !!token);
-        
-        const res = await fetch(`${API_URL}/shorts`, {
-          method: 'POST',
-          headers: {
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: formData,
+        console.log('[Shorts] Step 1: Uploading video to CDN...');
+        const videoResult = await uploadSingleFile({
+          uri: params.video.uri,
+          mimeType: params.video.mimeType || 'video/mp4',
+          category: 'video',
         });
+        videoUrl = videoResult.url;
+        console.log('[Shorts] Step 1 complete. Video URL:', videoUrl.slice(0, 80));
 
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => ({}));
-          console.log('[Shorts] Upload error:', res.status, errorData);
-          throw new Error(errorData.message || errorData.detail || `Upload failed: ${res.status}`);
+        if (params.video.duration) {
+          durationSeconds = Math.round(params.video.duration / 1000);
         }
-
-        return res.json();
-      } else {
-        return api.post('/shorts', {
-          title: params.title,
-          description: params.description,
-          category: params.category,
-        });
       }
+
+      console.log('[Shorts] Step 2: Creating short record...');
+      const body: Record<string, unknown> = {
+        title: params.title,
+        description: params.description,
+        category: params.category.toLowerCase(),
+      };
+      if (videoUrl) body.video_url = videoUrl;
+      if (durationSeconds) body.duration_seconds = durationSeconds;
+
+      return api.post('/shorts', body);
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['shorts'] });
