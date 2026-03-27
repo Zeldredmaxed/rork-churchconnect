@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
+import { useIsFocused } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -304,6 +305,7 @@ export default function ShortsScreen() {
   }, []);
 
   const [visibleShortId, setVisibleShortId] = useState<string | null>(null);
+  const isFocused = useIsFocused();
 
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: Array<{ item: Short }> }) => {
@@ -351,7 +353,7 @@ export default function ShortsScreen() {
         <ShortVideoPlayer
           videoUrl={item.video_url}
           thumbnailUrl={item.thumbnail_url}
-          isVisible={visibleShortId === item.id}
+          isVisible={isFocused && visibleShortId === item.id}
         />
         <ShortOverlay
           item={item}
