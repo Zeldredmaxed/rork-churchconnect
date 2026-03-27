@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Stack, useRouter } from 'expo-router';
-import { Plus, X, HandHeart } from 'lucide-react-native';
+import { Plus, X, HandHeart, Leaf } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
@@ -26,6 +26,21 @@ import EmptyState from '@/components/EmptyState';
 import type { Prayer } from '@/types';
 
 const CATEGORIES = ['general', 'health', 'family', 'financial', 'spiritual'] as const;
+
+const DAILY_VERSES = [
+  { text: 'Be still, and know that I am God.', ref: 'Psalm 46:10' },
+  { text: 'Cast all your anxiety on him because he cares for you.', ref: '1 Peter 5:7' },
+  { text: 'The Lord is near to the brokenhearted.', ref: 'Psalm 34:18' },
+  { text: 'Do not be anxious about anything, but in everything by prayer.', ref: 'Philippians 4:6' },
+  { text: 'The prayer of a righteous person is powerful and effective.', ref: 'James 5:16' },
+];
+
+function getDailyVerse() {
+  const dayOfYear = Math.floor(
+    (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
+  );
+  return DAILY_VERSES[dayOfYear % DAILY_VERSES.length];
+}
 
 export default function PrayerWallScreen() {
   const { theme } = useTheme();
@@ -38,6 +53,8 @@ export default function PrayerWallScreen() {
   const [category, setCategory] = useState<string>('general');
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [isUrgent, setIsUrgent] = useState(false);
+
+  const verse = getDailyVerse();
 
   const prayersQuery = useQuery({
     queryKey: ['prayers'],
@@ -107,6 +124,23 @@ export default function PrayerWallScreen() {
     return [];
   }, [rawData]);
 
+  const renderHeader = () => (
+    <View style={styles.headerBanner}>
+      <View style={styles.bannerContent}>
+        <View style={styles.verseSection}>
+          <Text style={styles.verseText}>"{verse.text}"</Text>
+          <Text style={styles.verseRef}>{verse.ref}</Text>
+        </View>
+        <View style={styles.bannerIconWrap}>
+          <Leaf size={36} color={theme.colors.accentLight} strokeWidth={1.2} />
+        </View>
+      </View>
+      <Text style={styles.bannerSubtext}>
+        Carry each other's burdens, and in this way you will fulfill the law of Christ.
+      </Text>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       <Stack.Screen
@@ -119,6 +153,7 @@ export default function PrayerWallScreen() {
       <FlatList
         data={prayers}
         keyExtractor={(item) => item.id}
+        ListHeaderComponent={renderHeader}
         renderItem={({ item }) => (
           <PrayerCard
             prayer={item}
@@ -142,8 +177,8 @@ export default function PrayerWallScreen() {
           ) : (
             <EmptyState
               icon={<HandHeart size={28} color={theme.colors.textTertiary} />}
-              title="No prayer requests"
-              description="Submit a prayer request to start the wall"
+              title="No prayer requests yet"
+              description="Be the first to share a prayer request with the community"
             />
           )
         }
@@ -154,7 +189,7 @@ export default function PrayerWallScreen() {
         onPress={() => setShowNewPrayer(true)}
         activeOpacity={0.8}
       >
-        <Plus size={24} color={theme.colors.background} strokeWidth={2.5} />
+        <Plus size={24} color={theme.colors.textInverse} strokeWidth={2.5} />
       </TouchableOpacity>
 
       <Modal visible={showNewPrayer} animationType="slide" transparent>
@@ -267,12 +302,57 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     letterSpacing: -0.5,
   },
   listContent: {
-    paddingTop: 8,
     paddingBottom: 100,
   },
   loadingContainer: {
     paddingTop: 60,
     alignItems: 'center',
+  },
+  headerBanner: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 18,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
+  },
+  bannerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  verseSection: {
+    flex: 1,
+    marginRight: 16,
+  },
+  verseText: {
+    fontSize: 20,
+    fontWeight: '600' as const,
+    color: theme.colors.accent,
+    lineHeight: 28,
+    fontStyle: 'italic' as const,
+    marginBottom: 6,
+  },
+  verseRef: {
+    fontSize: 13,
+    fontWeight: '500' as const,
+    color: theme.colors.accentLight,
+    fontStyle: 'italic' as const,
+  },
+  bannerIconWrap: {
+    opacity: 0.5,
+    marginTop: 4,
+  },
+  bannerSubtext: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    lineHeight: 20,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderLight,
+    paddingTop: 12,
   },
   fab: {
     position: 'absolute',
@@ -280,14 +360,14 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     right: 20,
     width: 56,
     height: 56,
-    borderRadius: 16,
+    borderRadius: 28,
     backgroundColor: theme.colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: theme.colors.accent,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
     elevation: 8,
   },
   modalOverlay: {
@@ -359,6 +439,8 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   },
   categoryChipActive: {
     backgroundColor: theme.colors.accentMuted,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
   },
   categoryText: {
     fontSize: 13,
@@ -381,4 +463,3 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     color: theme.colors.text,
   },
 });
-
