@@ -58,18 +58,32 @@ export default function ShortViewerScreen() {
       try {
         const data = await api.get<{ data: Short }>(`/shorts/${id}`);
         console.log('[ShortViewer] Short loaded:', JSON.stringify(data).slice(0, 200));
-        return data?.data ?? null;
+        if (data?.data) return data.data;
       } catch (e) {
-        console.log('[ShortViewer] Direct fetch failed, trying trending fallback:', e);
-        try {
-          const all = await api.get<{ data: Short[] }>('/shorts/trending?limit=100');
-          const found = all?.data?.find((s) => s.id === id);
-          return found ?? null;
-        } catch (e2) {
-          console.log('[ShortViewer] Fallback also failed:', e2);
-          return null;
-        }
+        console.log('[ShortViewer] Direct fetch failed, trying fallbacks:', e);
       }
+      try {
+        const all = await api.get<{ data: Short[] }>('/shorts/trending?limit=100');
+        const found = all?.data?.find((s) => String(s.id) === String(id));
+        if (found) {
+          console.log('[ShortViewer] Found in trending');
+          return found;
+        }
+      } catch (e2) {
+        console.log('[ShortViewer] Trending fallback failed:', e2);
+      }
+      try {
+        const myShorts = await api.get<{ data: Short[] }>('/shorts/me?limit=100&offset=0');
+        const found = myShorts?.data?.find((s) => String(s.id) === String(id));
+        if (found) {
+          console.log('[ShortViewer] Found in my shorts');
+          return found;
+        }
+      } catch (e3) {
+        console.log('[ShortViewer] My shorts fallback failed:', e3);
+      }
+      console.log('[ShortViewer] Short not found in any source for id:', id);
+      return null;
     },
     enabled: !!id,
   });
