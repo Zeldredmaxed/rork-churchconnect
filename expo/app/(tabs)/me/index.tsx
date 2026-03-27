@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -87,7 +88,7 @@ function DiscoverPeopleCard({
 export default function ProfileTabScreen() {
   const { theme } = useTheme();
   const styles = createStyles(theme);
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
@@ -293,10 +294,30 @@ export default function ProfileTabScreen() {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={false}
+            onRefresh={() => {
+              console.log('[Profile] Pull to refresh - syncing profile');
+              void refreshProfile();
+              void queryClient.invalidateQueries({ queryKey: ['my-posts'] });
+              void queryClient.invalidateQueries({ queryKey: ['my-shorts'] });
+              void queryClient.invalidateQueries({ queryKey: ['my-flock-stats'] });
+            }}
+            tintColor={theme.colors.accent}
+          />
+        }
+      >
         <View style={styles.profileSection}>
           <View style={styles.avatarLarge}>
-            <Text style={styles.avatarLargeText}>{initials}</Text>
+            {user?.avatar_url ? (
+              <Image source={{ uri: user.avatar_url }} style={styles.avatarLargeImage} />
+            ) : (
+              <Text style={styles.avatarLargeText}>{initials}</Text>
+            )}
             <View style={styles.addStoryBadge}>
               <Plus size={10} color={theme.colors.white} strokeWidth={3} />
             </View>
@@ -657,6 +678,11 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     fontSize: 28,
     fontWeight: '700' as const,
     color: theme.colors.accent,
+  },
+  avatarLargeImage: {
+    width: 82,
+    height: 82,
+    borderRadius: 41,
   },
   addStoryBadge: {
     position: 'absolute' as const,
