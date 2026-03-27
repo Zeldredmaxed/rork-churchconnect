@@ -19,6 +19,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import EmptyState from '@/components/EmptyState';
+import Avatar from '@/components/Avatar';
 import CommentsSheet from '@/components/CommentsSheet';
 import PostOptionsSheet, { DeleteConfirmSheet } from '@/components/PostOptionsSheet';
 import ReportSheet from '@/components/ReportSheet';
@@ -75,11 +76,12 @@ function ShortOverlay({ item, onLike, onComment, onShare, onMore, onSave, isSave
             }}
             activeOpacity={0.7}
           >
-            <View style={styles.authorAvatar}>
-              <Text style={styles.authorAvatarText}>
-                {(item.author_name ?? 'U').charAt(0).toUpperCase()}
-              </Text>
-            </View>
+            <Avatar
+              url={(item as any).author_avatar}
+              name={item.author_name ?? item.church_name}
+              size={28}
+              style={{ borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' }}
+            />
             <Text style={styles.authorName}>{item.author_name ?? item.church_name}</Text>
             {!isOwnShort && !isFollowing && (
               <TouchableOpacity
@@ -531,21 +533,6 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     alignItems: 'center' as const,
     gap: 8,
     marginTop: 8,
-  },
-  authorAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-  authorAvatarText: {
-    fontSize: 11,
-    fontWeight: '700' as const,
-    color: theme.colors.white,
   },
   authorName: {
     fontSize: 13,

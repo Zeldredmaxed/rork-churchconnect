@@ -37,6 +37,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSaved } from '@/contexts/SavedContext';
 import type { SavedItemData as SavedItemType } from '@/contexts/SavedContext';
 import { api } from '@/utils/api';
+import Avatar from '@/components/Avatar';
 import type { FlockUser, FeedPost, Short, LoginStreak, SundayAttendanceStats } from '@/types';
 import type { SavedItemData } from '@/contexts/SavedContext';
 
@@ -62,21 +63,12 @@ function DiscoverPeopleCard({
 }) {
   const { theme } = useTheme();
   const styles = createStyles(theme);
-  const initials = user.full_name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-
   return (
     <View style={styles.discoverCard}>
       <TouchableOpacity style={styles.discoverDismiss} onPress={onDismiss}>
         <X size={14} color={theme.colors.textTertiary} />
       </TouchableOpacity>
-      <View style={styles.discoverAvatar}>
-        <Text style={styles.discoverAvatarText}>{initials}</Text>
-      </View>
+      <Avatar url={user.avatar_url} name={user.full_name} size={56} style={{ alignSelf: 'center', marginBottom: 8 }} />
       <Text style={styles.discoverName} numberOfLines={1}>{user.full_name}</Text>
       {user.mutual_info ? (
         <Text style={styles.discoverMutual} numberOfLines={1}>{user.mutual_info}</Text>
@@ -298,12 +290,6 @@ export default function ProfileTabScreen() {
     );
   }, [toggleSave]);
 
-  const initials = user?.full_name
-    ?.split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2) ?? 'U';
 
   const flockStats = flockQuery.data ?? { followers_count: 0, following_count: 0 };
   const streak = streakQuery.data;
@@ -381,11 +367,7 @@ export default function ProfileTabScreen() {
       >
         <View style={styles.profileSection}>
           <View style={styles.avatarLarge}>
-            {user?.avatar_url ? (
-              <Image source={{ uri: user.avatar_url }} style={styles.avatarLargeImage} />
-            ) : (
-              <Text style={styles.avatarLargeText}>{initials}</Text>
-            )}
+            <Avatar url={user?.avatar_url} name={user?.full_name ?? 'User'} size={82} />
             <View style={styles.addStoryBadge}>
               <Plus size={10} color={theme.colors.white} strokeWidth={3} />
             </View>
@@ -787,25 +769,7 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     gap: 28,
   },
   avatarLarge: {
-    width: 82,
-    height: 82,
-    borderRadius: 41,
-    backgroundColor: theme.colors.accentMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: theme.colors.border,
     position: 'relative' as const,
-  },
-  avatarLargeText: {
-    fontSize: 28,
-    fontWeight: '700' as const,
-    color: theme.colors.accent,
-  },
-  avatarLargeImage: {
-    width: 82,
-    height: 82,
-    borderRadius: 41,
   },
   addStoryBadge: {
     position: 'absolute' as const,
@@ -926,19 +890,7 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     right: 8,
     padding: 4,
   },
-  discoverAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: theme.colors.accentMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  discoverAvatarText: {
-    fontSize: 18,
-    fontWeight: '700' as const,
-    color: theme.colors.accent,
-  },
+
   discoverName: {
     fontSize: 13,
     fontWeight: '600' as const,

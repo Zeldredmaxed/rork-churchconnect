@@ -4,6 +4,7 @@ import { Heart, MessageCircle, MoreVertical, AlertTriangle, CheckCircle2, Flag, 
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
+import Avatar from './Avatar';
 import type { Prayer } from '@/types';
 
 interface PrayerCardProps {
@@ -117,11 +118,7 @@ export default function PrayerCard({ prayer, onPray, onPress, onMarkFulfilled, o
     }
   };
 
-  const initials = authorName
-    .split(' ')
-    .map((n) => n.charAt(0).toUpperCase())
-    .slice(0, 2)
-    .join('');
+  const avatarUrl = prayer.is_anonymous ? undefined : (prayer as any).author_avatar;
 
   return (
     <>
@@ -144,9 +141,7 @@ export default function PrayerCard({ prayer, onPray, onPress, onMarkFulfilled, o
         )}
 
         <View style={styles.authorRow}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials}</Text>
-          </View>
+          <Avatar url={avatarUrl} name={authorName} size={36} />
           <View style={styles.authorInfo}>
             <Text style={styles.authorName}>{authorName}</Text>
             <Text style={styles.timeText}>{formatTimeAgo(prayer.created_at)}</Text>
@@ -308,21 +303,7 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     alignItems: 'center',
     marginBottom: 14,
   },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.accentMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: theme.colors.accent,
-  },
-  avatarText: {
-    fontSize: 14,
-    fontWeight: '700' as const,
-    color: theme.colors.accent,
-  },
+  // 4. Remove styles.avatar and styles.avatarText
   authorInfo: {
     flex: 1,
     marginLeft: 12,

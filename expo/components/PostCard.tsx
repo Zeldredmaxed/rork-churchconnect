@@ -8,6 +8,7 @@ import type { AppTheme } from '@/constants/theme';
 import { useSaved } from '@/contexts/SavedContext';
 import Badge from './Badge';
 import MentionText from './MentionText';
+import Avatar from './Avatar';
 import type { FeedPost } from '@/types';
 
 interface PostCardProps {
@@ -76,13 +77,6 @@ export default function PostCard({ post, onLike, onComment, onShare, onMore }: P
     onLike(post.id);
   };
 
-  const initials = post.author_name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-
   const mediaUrls = useMemo(() => {
     if (post.media_urls && post.media_urls.length > 0) return post.media_urls;
     if (post.image_url) return [post.image_url];
@@ -100,9 +94,7 @@ export default function PostCard({ post, onLike, onComment, onShare, onMore }: P
             router.push(`/user-profile?id=${post.author_id}` as never);
           }}
         >
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials}</Text>
-          </View>
+          <Avatar url={post.author_avatar} name={post.author_name} size={34} style={{ borderWidth: 1, borderColor: theme.colors.border }} />
           <View>
             <View style={styles.nameRow}>
               <Text style={styles.authorName}>{post.author_name}</Text>
@@ -247,21 +239,7 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     gap: 10,
     flex: 1,
   },
-  avatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: theme.colors.accentMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  avatarText: {
-    fontSize: 12,
-    fontWeight: '700' as const,
-    color: theme.colors.accent,
-  },
+
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',

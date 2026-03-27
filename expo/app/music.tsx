@@ -6,8 +6,8 @@ import {
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import {
-  Play, Pause, SkipForward, Heart, Music, Radio, ChevronDown,
-  Upload, User, Search, Disc3, Gift, Crown, X,
+  Play, Pause, SkipForward, SkipBack, Heart, Music, Radio, ChevronDown,
+  Upload, User, Search, Disc3, Gift, Crown, X, MoreHorizontal, Share
 } from 'lucide-react-native';
 import { Audio } from 'expo-av';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -48,6 +48,7 @@ export default function MusicScreen() {
   const [duration, setDuration] = useState(0);
   const [showDonate, setShowDonate] = useState(false);
   const [showQueue, setShowQueue] = useState(false);
+  const [actionMenuVisible, setActionMenuVisible] = useState(false);
   const inactivityTimer = useRef<NodeJS.Timeout | null>(null);
   const appStateRef = useRef(AppState.currentState);
   const backgroundTimeRef = useRef<number>(0);
@@ -251,108 +252,91 @@ export default function MusicScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
-          <ChevronDown size={24} color={theme.colors.text} />
+          <ChevronDown size={28} color={theme.colors.text} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <View style={styles.liveIndicator}>
-            <View style={styles.liveDot} />
-            <Text style={styles.liveText}>LIVE</Text>
-          </View>
-          <Radio size={14} color={theme.colors.accent} />
           <Text style={styles.headerLabel}>GOSPEL RADIO</Text>
         </View>
-        <TouchableOpacity onPress={() => router.push('/upload-song' as never)} style={styles.headerBtn}>
-          <Upload size={20} color={theme.colors.text} />
+        <TouchableOpacity onPress={() => setActionMenuVisible(true)} style={styles.headerBtn}>
+          <MoreHorizontal size={28} color={theme.colors.text} />
         </TouchableOpacity>
       </View>
 
       {/* Album Art */}
       <View style={styles.artContainer}>
-        <View style={styles.albumArt}>
-          {currentSong?.cover_url ? (
-            <Image
-              source={{ uri: currentSong.cover_url }}
-              style={styles.coverImage}
-            />
-          ) : (
-            <View style={styles.albumArtInner}>
-              <Disc3 size={80} color={theme.colors.accent} />
-            </View>
-          )}
-          <View style={styles.vinylRing} />
-        </View>
+        {currentSong?.cover_url ? (
+          <Image
+            source={{ uri: currentSong.cover_url }}
+            style={styles.coverImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={styles.coverImagePlaceholder}>
+            <Radio size={80} color={theme.colors.textTertiary} />
+          </View>
+        )}
       </View>
 
       {/* Song Info */}
-      <View style={styles.songInfo}>
-        <Text style={styles.songTitle} numberOfLines={2}>
-          {currentSong?.title || 'No songs available'}
-        </Text>
-        <TouchableOpacity
-          onPress={() => currentSong && router.push(`/artist/${currentSong.artist_id}` as never)}
-        >
-          <Text style={styles.artistName}>{currentSong?.artist_name || 'Unknown Artist'}</Text>
-        </TouchableOpacity>
-        <View style={styles.statsRow}>
-          <Text style={styles.statText}>
-            {currentSong?.play_count ?? 0} plays
+      <View style={styles.songInfoContainer}>
+        <View style={styles.songTextContainer}>
+          <Text style={styles.songTitle} numberOfLines={1}>
+            {currentSong?.title || 'No songs available'}
           </Text>
-          <Text style={styles.statDot}>·</Text>
-          <Text style={styles.statText}>
-            {currentSong?.donation_count ?? 0} gifts
-          </Text>
+          <TouchableOpacity
+            onPress={() => {
+              if (currentSong) router.push(`/artist/${currentSong.artist_id}` as never);
+            }}
+          >
+            <Text style={styles.artistName}>{currentSong?.artist_name || 'Unknown Artist'}</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
-      {/* Progress Bar */}
+      {/* Scrubber */}
       <View style={styles.progressContainer}>
-        <View style={styles.progressBar}>
+        <View style={styles.progressBarBg}>
           <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+          <View style={[styles.progressKnob, { left: `${progressPercent}%` }]} />
         </View>
         <View style={styles.timeRow}>
           <Text style={styles.timeText}>{formatTime(progress)}</Text>
-          <Text style={styles.timeText}>{formatTime(duration)}</Text>
+          <Text style={styles.timeText}>-{formatTime(duration > progress ? duration - progress : 0)}</Text>
         </View>
       </View>
 
       {/* Controls */}
-      <View style={styles.controls}>
-        <TouchableOpacity
-          style={styles.donateBtn}
-          onPress={() => setShowDonate(true)}
-          activeOpacity={0.7}
+      <View style={styles.controlsContainer}>
+        <TouchableOpacity style={styles.controlIconBtn}>
+          <Heart size={28} color={theme.colors.text} />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.controlIconBtn, { opacity: canSkip ? 1 : 0.5 }]}
+          onPress={() => {
+            currentSongIdRef.current = null;
+            syncToStation();
+          }}
         >
-          <Gift size={22} color={theme.colors.accent} />
+          <SkipBack size={36} color={theme.colors.text} />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.playBtn}
           onPress={handlePlayPause}
-          activeOpacity={0.7}
+          activeOpacity={0.8}
         >
           {isPlaying ? (
-            <Pause size={32} color={theme.colors.textInverse} />
+            <Pause size={36} color={theme.colors.textInverse} fill={theme.colors.textInverse} />
           ) : (
-            <Play size={32} color={theme.colors.textInverse} />
+            <Play size={36} color={theme.colors.textInverse} fill={theme.colors.textInverse} style={{ marginLeft: 4 }} />
           )}
         </TouchableOpacity>
 
-        {canSkip ? (
-          <TouchableOpacity
-            style={styles.skipBtn}
-            onPress={() => {
-              // Force re-sync to skip to whatever the server has next
-              currentSongIdRef.current = null;
-              syncToStation();
-            }}
-            activeOpacity={0.7}
-          >
-            <SkipForward size={22} color={theme.colors.text} />
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={styles.premiumBtn}
-            onPress={() => {
+        <TouchableOpacity 
+          style={styles.controlIconBtn}
+          onPress={() => {
+            if (!canSkip) {
               Alert.alert(
                 '👑 Skip Premium',
                 'Skip any song for $3.99/month.\nNo more waiting — skip freely!',
@@ -361,27 +345,71 @@ export default function MusicScreen() {
                   { text: 'Subscribe $3.99/mo', onPress: () => skipMutation.mutate() },
                 ],
               );
-            }}
-            activeOpacity={0.7}
-          >
-            <Crown size={20} color={theme.colors.warning} />
-          </TouchableOpacity>
-        )}
+            } else {
+              currentSongIdRef.current = null;
+              syncToStation();
+            }
+          }}
+        >
+          <SkipForward size={36} color={theme.colors.text} />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.controlIconBtn}
+          onPress={() => setActionMenuVisible(true)}
+        >
+          <Gift size={28} color={theme.colors.accent} />
+        </TouchableOpacity>
       </View>
 
-      {/* Queue Toggle */}
-      <TouchableOpacity
-        style={styles.queueToggle}
-        onPress={() => setShowQueue(true)}
-        activeOpacity={0.7}
-      >
-        <Music size={16} color={theme.colors.textSecondary} />
-        <Text style={styles.queueToggleText}>
-          Station · Song {queuePosition + 1} of {queueLength}
-        </Text>
-      </TouchableOpacity>
+      {/* Action Menu Bottom Sheet */}
+      <Modal visible={actionMenuVisible} transparent animationType="slide" onRequestClose={() => setActionMenuVisible(false)}>
+        <Pressable style={styles.sheetOverlay} onPress={() => setActionMenuVisible(false)}>
+          <Pressable style={styles.actionSheet} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.actionSheetHeader}>
+              {currentSong?.cover_url ? (
+                <Image source={{ uri: currentSong.cover_url as string }} style={styles.actionSheetImg} />
+              ) : (
+                <View style={styles.actionSheetImgPlaceholder}>
+                  <Radio size={24} color={theme.colors.textTertiary} />
+                </View>
+              )}
+              <View style={styles.actionSheetText}>
+                <Text style={styles.actionSheetTitle} numberOfLines={1}>{currentSong?.title}</Text>
+                <Text style={styles.actionSheetArtist} numberOfLines={1}>{currentSong?.artist_name}</Text>
+              </View>
+            </View>
+            <View style={styles.actionSheetDivider} />
+            
+            <TouchableOpacity style={styles.actionRow} onPress={() => { /* like logic */ }}>
+              <Heart size={24} color={theme.colors.text} />
+              <Text style={styles.actionRowText}>Like</Text>
+            </TouchableOpacity>
 
-      {/* ── Donation Bottom Sheet ─────────────────────── */}
+            <TouchableOpacity style={styles.actionRow} onPress={() => { setActionMenuVisible(false); router.push(`/user-profile?id=${currentSong?.artist_id}` as never); }}>
+              <User size={24} color={theme.colors.text} />
+              <Text style={styles.actionRowText}>View Artist</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionRow} onPress={() => { setActionMenuVisible(false); setShowQueue(true); }}>
+              <Music size={24} color={theme.colors.text} />
+              <Text style={styles.actionRowText}>Up Next</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionRow} onPress={() => { setActionMenuVisible(false); setShowDonate(true); }}>
+              <Gift size={24} color={theme.colors.accent} />
+              <Text style={[styles.actionRowText, { color: theme.colors.accent }]}>Donate / Support Artist</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.actionRow, {justifyContent: 'center', marginTop: 12}]} onPress={() => setActionMenuVisible(false)}>
+              <Text style={styles.actionRowText}>Cancel</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Donation Bottom Sheet */}
       <Modal visible={showDonate} transparent animationType="slide" onRequestClose={() => setShowDonate(false)}>
         <Pressable style={styles.sheetOverlay} onPress={() => setShowDonate(false)}>
           <Pressable style={styles.sheetContainer} onPress={(e) => e.stopPropagation()}>
@@ -410,11 +438,14 @@ export default function MusicScreen() {
             {donateMutation.isPending && (
               <ActivityIndicator size="small" color={theme.colors.accent} style={{ marginTop: 12 }} />
             )}
+            <TouchableOpacity style={[styles.actionRow, {justifyContent: 'center', marginTop: 16}]} onPress={() => setShowDonate(false)}>
+              <Text style={styles.actionRowText}>Cancel</Text>
+            </TouchableOpacity>
           </Pressable>
         </Pressable>
       </Modal>
 
-      {/* ── Queue Bottom Sheet ────────────────────────── */}
+      {/* Queue Bottom Sheet */}
       <Modal visible={showQueue} transparent animationType="slide" onRequestClose={() => setShowQueue(false)}>
         <Pressable style={styles.sheetOverlay} onPress={() => setShowQueue(false)}>
           <Pressable style={styles.queueSheet} onPress={(e) => e.stopPropagation()}>
@@ -441,6 +472,7 @@ export default function MusicScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
     </View>
   );
 }
@@ -449,7 +481,7 @@ const createStyles = (theme: AppTheme) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: '#0D0D15',
+      backgroundColor: '#000000', // Spotify pitch black
     },
     loadingContainer: {
       flex: 1,
@@ -473,10 +505,8 @@ const createStyles = (theme: AppTheme) =>
       paddingBottom: 12,
     },
     headerBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: 'rgba(255,255,255,0.08)',
+      width: 44,
+      height: 44,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -486,181 +516,113 @@ const createStyles = (theme: AppTheme) =>
       gap: 6,
     },
     headerLabel: {
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: '700',
-      color: theme.colors.accent,
-      letterSpacing: 1.5,
-    },
-    liveIndicator: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      backgroundColor: 'rgba(239, 68, 68, 0.15)',
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 10,
-      marginRight: 6,
-    },
-    liveDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: '#EF4444',
-    },
-    liveText: {
-      fontSize: 10,
-      fontWeight: '800',
-      color: '#EF4444',
-      letterSpacing: 0.5,
+      color: theme.colors.text,
+      letterSpacing: 1,
     },
 
     // Album Art
     artContainer: {
       alignItems: 'center',
-      paddingVertical: 24,
-    },
-    albumArt: {
-      width: width * 0.65,
-      height: width * 0.65,
-      borderRadius: width * 0.325,
-      backgroundColor: '#1a1a2e',
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 3,
-      borderColor: 'rgba(212, 165, 116, 0.3)',
-    },
-    albumArtInner: {
-      width: width * 0.4,
-      height: width * 0.4,
-      borderRadius: width * 0.2,
-      backgroundColor: '#16213e',
-      alignItems: 'center',
-      justifyContent: 'center',
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+      width: '100%',
     },
     coverImage: {
-      width: width * 0.6,
-      height: width * 0.6,
-      borderRadius: width * 0.3,
+      width: '100%',
+      aspectRatio: 1, // Make it perfectly square
+      borderRadius: 8,
     },
-    vinylRing: {
-      position: 'absolute',
-      width: width * 0.55,
-      height: width * 0.55,
-      borderRadius: width * 0.275,
-      borderWidth: 1,
-      borderColor: 'rgba(212, 165, 116, 0.15)',
+    coverImagePlaceholder: {
+      width: '100%',
+      aspectRatio: 1,
+      borderRadius: 8,
+      backgroundColor: '#282828',
+      alignItems: 'center',
+      justifyContent: 'center',
     },
 
     // Song Info
-    songInfo: {
-      alignItems: 'center',
-      paddingHorizontal: 32,
-      gap: 4,
+    songInfoContainer: {
+      paddingHorizontal: 24,
+      marginTop: 24,
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+    },
+    songTextContainer: {
+      flex: 1,
+      paddingRight: 16,
     },
     songTitle: {
-      fontSize: 22,
-      fontWeight: '700',
-      color: '#F2F2F2',
-      textAlign: 'center',
+      fontSize: 24,
+      fontWeight: '800',
+      color: '#FFFFFF',
+      marginBottom: 4,
     },
     artistName: {
       fontSize: 16,
-      color: theme.colors.accent,
+      color: '#B3B3B3',
       fontWeight: '500',
     },
-    statsRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      marginTop: 4,
-    },
-    statText: {
-      fontSize: 12,
-      color: theme.colors.textTertiary,
-    },
-    statDot: {
-      color: theme.colors.textTertiary,
-    },
 
-    // Progress
+    // Scrubber
     progressContainer: {
-      paddingHorizontal: 32,
+      paddingHorizontal: 24,
       marginTop: 28,
     },
-    progressBar: {
+    progressBarBg: {
       height: 4,
-      backgroundColor: 'rgba(255,255,255,0.1)',
+      backgroundColor: '#4D4D4D',
       borderRadius: 2,
-      overflow: 'hidden',
+      position: 'relative',
     },
     progressFill: {
       height: '100%',
-      backgroundColor: theme.colors.accent,
+      backgroundColor: '#FFFFFF',
       borderRadius: 2,
+      position: 'absolute',
+      left: 0,
+    },
+    progressKnob: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      backgroundColor: '#FFFFFF',
+      position: 'absolute',
+      top: -4,
+      marginLeft: -6,
     },
     timeRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      marginTop: 6,
+      marginTop: 8,
     },
     timeText: {
-      fontSize: 11,
-      color: theme.colors.textTertiary,
+      fontSize: 12,
+      color: '#B3B3B3',
       fontVariant: ['tabular-nums'],
     },
 
     // Controls
-    controls: {
+    controlsContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
-      gap: 32,
-      marginTop: 28,
+      justifyContent: 'space-between',
+      paddingHorizontal: 24,
+      marginTop: 20,
+    },
+    controlIconBtn: {
+      padding: 8,
     },
     playBtn: {
       width: 72,
       height: 72,
       borderRadius: 36,
-      backgroundColor: theme.colors.accent,
+      backgroundColor: '#FFFFFF',
       alignItems: 'center',
       justifyContent: 'center',
-    },
-    donateBtn: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      backgroundColor: 'rgba(212, 165, 116, 0.15)',
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    skipBtn: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      backgroundColor: 'rgba(255,255,255,0.08)',
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    premiumBtn: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      backgroundColor: 'rgba(251, 191, 36, 0.15)',
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-
-    // Queue Toggle
-    queueToggle: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      marginTop: 28,
-    },
-    queueToggleText: {
-      fontSize: 13,
-      color: theme.colors.textSecondary,
     },
 
     // Sheets
@@ -670,7 +632,7 @@ const createStyles = (theme: AppTheme) =>
       justifyContent: 'flex-end',
     },
     sheetContainer: {
-      backgroundColor: '#1a1a2e',
+      backgroundColor: '#282828',
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
       paddingHorizontal: 24,
@@ -681,7 +643,7 @@ const createStyles = (theme: AppTheme) =>
       width: 36,
       height: 4,
       borderRadius: 2,
-      backgroundColor: theme.colors.border,
+      backgroundColor: '#4D4D4D',
       alignSelf: 'center',
       marginBottom: 20,
     },
@@ -693,11 +655,69 @@ const createStyles = (theme: AppTheme) =>
     },
     sheetSubtitle: {
       fontSize: 14,
-      color: theme.colors.textSecondary,
+      color: '#B3B3B3',
       textAlign: 'center',
       marginTop: 8,
       marginBottom: 20,
       lineHeight: 20,
+    },
+
+    // Action Menu Bottom Sheet
+    actionSheet: {
+      backgroundColor: '#282828',
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      paddingHorizontal: 20,
+      paddingTop: 12,
+      paddingBottom: 40,
+    },
+    actionSheetHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    actionSheetImg: {
+      width: 48,
+      height: 48,
+      borderRadius: 4,
+    },
+    actionSheetImgPlaceholder: {
+      width: 48,
+      height: 48,
+      borderRadius: 4,
+      backgroundColor: '#4D4D4D',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    actionSheetText: {
+      marginLeft: 12,
+      flex: 1,
+    },
+    actionSheetTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: '#FFFFFF',
+    },
+    actionSheetArtist: {
+      fontSize: 14,
+      color: '#B3B3B3',
+      marginTop: 2,
+    },
+    actionSheetDivider: {
+      height: 1,
+      backgroundColor: '#4D4D4D',
+      marginBottom: 16,
+    },
+    actionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 16,
+    },
+    actionRowText: {
+      fontSize: 16,
+      color: '#FFFFFF',
+      fontWeight: '500',
+      marginLeft: 16,
     },
 
     // Donation Tiers
@@ -727,12 +747,13 @@ const createStyles = (theme: AppTheme) =>
 
     // Queue Sheet
     queueSheet: {
-      backgroundColor: '#1a1a2e',
+      backgroundColor: '#282828',
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
       paddingHorizontal: 20,
       paddingTop: 12,
       maxHeight: '65%',
+      paddingBottom: 40,
     },
     queueHeader: {
       flexDirection: 'row',
@@ -769,7 +790,7 @@ const createStyles = (theme: AppTheme) =>
     },
     queueArtist: {
       fontSize: 13,
-      color: theme.colors.textSecondary,
+      color: '#B3B3B3',
       marginTop: 1,
     },
     emptyQueue: {

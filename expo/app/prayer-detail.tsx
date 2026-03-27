@@ -17,6 +17,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import Badge from '@/components/Badge';
+import Avatar from '@/components/Avatar';
 import type { Prayer, PrayerResponse } from '@/types';
 
 export default function PrayerDetailScreen() {
@@ -166,11 +167,7 @@ export default function PrayerDetailScreen() {
           {responses.map((r) => (
             <View key={r.id} style={styles.responseItem}>
               <View style={styles.responseHeader}>
-                <View style={styles.responseAvatar}>
-                  <Text style={styles.responseAvatarText}>
-                    {r.author_name.charAt(0).toUpperCase()}
-                  </Text>
-                </View>
+                <Avatar url={r.author_avatar} name={r.author_name} size={30} />
                 <View style={styles.responseInfo}>
                   <Text style={styles.responseName}>{r.author_name}</Text>
                   <Text style={styles.responseDate}>
@@ -333,19 +330,6 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     marginBottom: 8,
-  },
-  responseAvatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 10,
-    backgroundColor: theme.colors.accentMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  responseAvatarText: {
-    fontSize: 12,
-    fontWeight: '700' as const,
-    color: theme.colors.accent,
   },
   responseInfo: {
     flex: 1,

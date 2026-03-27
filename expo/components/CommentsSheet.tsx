@@ -23,6 +23,7 @@ import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
 import MentionText from '@/components/MentionText';
+import Avatar from '@/components/Avatar';
 import type { Comment, Member } from '@/types';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -56,12 +57,7 @@ function CommentRow({ comment }: { comment: Comment }) {
   const [likeCount, setLikeCount] = useState(comment.like_count ?? 0);
   const heartScale = useRef(new Animated.Value(1)).current;
 
-  const initials = comment.author_name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
+
 
   const handleLike = () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -76,9 +72,7 @@ function CommentRow({ comment }: { comment: Comment }) {
   return (
     <View style={rowStyles.container}>
       <View style={rowStyles.avatarContainer}>
-        <View style={rowStyles.avatar}>
-          <Text style={rowStyles.avatarText}>{initials}</Text>
-        </View>
+        <Avatar url={(comment as any).author_avatar} name={comment.author_name} size={36} />
       </View>
       <View style={rowStyles.body}>
         <View style={rowStyles.headerRow}>
@@ -252,12 +246,7 @@ export default function CommentsSheet({ visible, onClose, postId, source }: Comm
   const rawData = commentsQuery.data;
   const comments: Comment[] = Array.isArray(rawData) ? rawData : (rawData as { data?: Comment[] })?.data ?? [];
 
-  const userInitials = user?.full_name
-    ?.split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2) ?? 'U';
+
 
   const QUICK_EMOJIS = ['\u2764\uFE0F', '\uD83D\uDE4C', '\uD83D\uDD25', '\uD83D\uDC4F', '\uD83E\uDD7A', '\uD83D\uDE0D', '\uD83D\uDE33', '\uD83D\uDE02'];
 
@@ -333,7 +322,6 @@ export default function CommentsSheet({ visible, onClose, postId, source }: Comm
                     <ActivityIndicator size="small" color={theme.colors.accent} style={{ padding: 10 }} />
                   ) : (
                     mentionMembers.map((member) => {
-                      const initials = member.full_name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
                       return (
                         <TouchableOpacity
                           key={member.id}
@@ -341,9 +329,7 @@ export default function CommentsSheet({ visible, onClose, postId, source }: Comm
                           onPress={() => handleSelectMention(member)}
                           activeOpacity={0.6}
                         >
-                          <View style={sheetStyles.mentionAvatar}>
-                            <Text style={sheetStyles.mentionAvatarText}>{initials}</Text>
-                          </View>
+                          <Avatar url={member.avatar_url} name={member.full_name} size={30} />
                           <View style={sheetStyles.mentionInfo}>
                             <Text style={sheetStyles.mentionName} numberOfLines={1}>{member.full_name}</Text>
                             <Text style={sheetStyles.mentionEmail} numberOfLines={1}>{member.email}</Text>
@@ -356,9 +342,7 @@ export default function CommentsSheet({ visible, onClose, postId, source }: Comm
               )}
 
               <View style={sheetStyles.inputRow}>
-                <View style={sheetStyles.inputAvatar}>
-                  <Text style={sheetStyles.inputAvatarText}>{userInitials}</Text>
-                </View>
+                <Avatar url={user?.avatar_url} name={user?.full_name ?? 'User'} size={32} />
                 <TextInput
                   ref={inputRef}
                   style={sheetStyles.textInput}
@@ -407,21 +391,6 @@ const createRowStyles = (theme: AppTheme) => StyleSheet.create({
   },
   avatarContainer: {
     marginRight: 12,
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: theme.colors.surfaceElevated,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  avatarText: {
-    fontSize: 12,
-    fontWeight: '700' as const,
-    color: theme.colors.accent,
   },
   body: {
     flex: 1,
@@ -566,21 +535,6 @@ const createSheetStyles = (theme: AppTheme) => StyleSheet.create({
     paddingVertical: 8,
     gap: 10,
   },
-  inputAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: theme.colors.surfaceElevated,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  inputAvatarText: {
-    fontSize: 11,
-    fontWeight: '700' as const,
-    color: theme.colors.accent,
-  },
   textInput: {
     flex: 1,
     fontSize: 14,
@@ -620,19 +574,6 @@ const createSheetStyles = (theme: AppTheme) => StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
     gap: 10,
-  },
-  mentionAvatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: theme.colors.accentMuted,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-  },
-  mentionAvatarText: {
-    fontSize: 10,
-    fontWeight: '700' as const,
-    color: theme.colors.accent,
   },
   mentionInfo: {
     flex: 1,

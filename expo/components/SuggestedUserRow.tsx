@@ -6,6 +6,7 @@ import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 import FollowButton from './FollowButton';
+import Avatar from '@/components/Avatar';
 import type { FlockUser } from '@/types';
 
 interface SuggestedUserRowProps {
@@ -21,13 +22,6 @@ export default function SuggestedUserRow({ user, subtitle, onDismiss, showDismis
   const router = useRouter();
   const [isFollowing, setIsFollowing] = useState(user.is_following ?? false);
 
-  const initials = user.full_name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-
   return (
     <View style={styles.row}>
       <TouchableOpacity
@@ -38,9 +32,7 @@ export default function SuggestedUserRow({ user, subtitle, onDismiss, showDismis
         }}
         activeOpacity={0.6}
       >
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initials}</Text>
-        </View>
+        <Avatar url={user.avatar_url} name={user.full_name} size={48} />
         <View style={styles.textContainer}>
           <Text style={styles.userName} numberOfLines={1}>{user.full_name}</Text>
           <Text style={styles.userSubtitle} numberOfLines={1}>
@@ -83,21 +75,6 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     marginRight: 12,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: theme.colors.accentMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  avatarText: {
-    fontSize: 16,
-    fontWeight: '700' as const,
-    color: theme.colors.accent,
   },
   textContainer: {
     flex: 1,

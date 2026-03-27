@@ -30,6 +30,7 @@ import {
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
+import Avatar from '@/components/Avatar';
 
 interface MenuItemProps {
   icon: React.ReactNode;
@@ -62,12 +63,7 @@ export default function MoreScreen() {
   const { user, logout } = useAuth();
   const router = useRouter();
 
-  const initials = user?.full_name
-    ?.split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2) ?? 'U';
+
 
   const handleLogout = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -98,9 +94,7 @@ export default function MoreScreen() {
           activeOpacity={0.7}
           onPress={() => router.push('/profile' as never)}
         >
-          <View style={styles.profileAvatar}>
-            <Text style={styles.profileAvatarText}>{initials}</Text>
-          </View>
+          <Avatar url={user?.avatar_url} name={user?.full_name ?? 'User'} size={48} style={{ marginRight: 16 }} />
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{user?.full_name ?? 'User'}</Text>
             <Text style={styles.profileEmail}>{user?.email ?? ''}</Text>
@@ -277,19 +271,6 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
     gap: 14,
-  },
-  profileAvatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: theme.colors.accentMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  profileAvatarText: {
-    fontSize: 18,
-    fontWeight: '700' as const,
-    color: theme.colors.accent,
   },
   profileInfo: {
     flex: 1,

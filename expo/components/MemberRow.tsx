@@ -4,6 +4,7 @@ import { ChevronRight } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 import Badge from './Badge';
+import Avatar from '@/components/Avatar';
 import type { Member } from '@/types';
 
 interface MemberRowProps {
@@ -20,18 +21,9 @@ const statusVariant: Record<string, 'success' | 'warning' | 'info'> = {
 export default function MemberRow({ member, onPress }: MemberRowProps) {
   const { theme } = useTheme();
   const styles = createStyles(theme);
-  const initials = member.full_name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-
   return (
     <TouchableOpacity style={styles.row} onPress={() => onPress(member)} activeOpacity={0.6}>
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>{initials}</Text>
-      </View>
+      <Avatar url={member.avatar_url} name={member.full_name} size={40} />
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>{member.full_name}</Text>
         <Text style={styles.email} numberOfLines={1}>{member.email}</Text>
@@ -53,19 +45,6 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 10,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: theme.colors.accentMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: 14,
-    fontWeight: '700' as const,
-    color: theme.colors.accent,
   },
   info: {
     flex: 1,
