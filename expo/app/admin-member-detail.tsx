@@ -264,3 +264,4 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   },
   deleteText: { fontSize: 15, fontWeight: '600' as const, color: theme.colors.error },
 });
+

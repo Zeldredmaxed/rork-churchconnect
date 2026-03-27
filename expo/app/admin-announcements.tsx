@@ -145,3 +145,4 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   sendButtonDisabled: { opacity: 0.5 },
   sendButtonText: { fontSize: 17, fontWeight: '600' as const, color: theme.colors.background },
 });
+

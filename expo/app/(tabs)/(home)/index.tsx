@@ -467,3 +467,4 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     alignItems: 'center',
   },
 });
+

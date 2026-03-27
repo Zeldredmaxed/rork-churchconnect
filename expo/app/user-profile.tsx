@@ -397,3 +397,4 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     color: theme.colors.textTertiary,
   },
 });
+

@@ -266,3 +266,4 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     marginLeft: 54,
   },
 });
+

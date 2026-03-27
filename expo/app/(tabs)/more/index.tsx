@@ -360,3 +360,4 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     height: 20,
   },
 });
+

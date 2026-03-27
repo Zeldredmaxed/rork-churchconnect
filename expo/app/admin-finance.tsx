@@ -217,3 +217,4 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   budgetFill: { height: '100%', backgroundColor: theme.colors.accent, borderRadius: 4 },
   budgetText: { fontSize: 12, color: theme.colors.textTertiary },
 });
+

@@ -156,3 +156,4 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     backgroundColor: '#0095F6',
   },
 });
+

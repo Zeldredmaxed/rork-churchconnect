@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Image, Dimensions, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal, Pin } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -17,8 +17,6 @@ interface PostCardProps {
   onShare?: (id: string) => void;
   onMore?: (id: string) => void;
 }
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 function formatTimeAgo(date: string): string {
   const now = new Date();
@@ -39,7 +37,6 @@ export default function PostCard({ post, onLike, onComment, onShare, onMore }: P
   const bookmarkScaleAnim = useRef(new Animated.Value(1)).current;
   const savedBannerAnim = useRef(new Animated.Value(0)).current;
   const [showSavedBanner, setShowSavedBanner] = useState(false);
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
   const { isItemSaved, toggleSave } = useSaved();
   const isSaved = isItemSaved(post.id, 'post');
 
@@ -84,9 +81,6 @@ export default function PostCard({ post, onLike, onComment, onShare, onMore }: P
     .toUpperCase()
     .slice(0, 2);
 
-  const mediaUrls = post.media_urls?.filter((url) => url && url.length > 0) ?? [];
-  const hasMedia = mediaUrls.length > 0;
-
   return (
     <View style={styles.card}>
       <View style={styles.header}>
@@ -128,56 +122,7 @@ export default function PostCard({ post, onLike, onComment, onShare, onMore }: P
         </View>
       )}
 
-      {/* ── Media (images) ── */}
-      {hasMedia && (
-        <View style={styles.mediaContainer}>
-          {mediaUrls.length === 1 ? (
-            <Image
-              source={{ uri: mediaUrls[0] }}
-              style={styles.singleImage}
-              resizeMode="cover"
-            />
-          ) : (
-            <View>
-              <ScrollView
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                onMomentumScrollEnd={(e) => {
-                  const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-                  setActiveImageIndex(index);
-                }}
-              >
-                {mediaUrls.map((url, idx) => (
-                  <Image
-                    key={idx}
-                    source={{ uri: url }}
-                    style={styles.carouselImage}
-                    resizeMode="cover"
-                  />
-                ))}
-              </ScrollView>
-              {mediaUrls.length > 1 && (
-                <View style={styles.dotsContainer}>
-                  {mediaUrls.map((_, idx) => (
-                    <View
-                      key={idx}
-                      style={[
-                        styles.dot,
-                        idx === activeImageIndex && styles.dotActive,
-                      ]}
-                    />
-                  ))}
-                </View>
-              )}
-            </View>
-          )}
-        </View>
-      )}
-
-      {post.content ? (
-        <MentionText style={styles.content}>{post.content}</MentionText>
-      ) : null}
+      <MentionText style={styles.content}>{post.content}</MentionText>
 
       <View style={styles.actionsRow}>
         <View style={styles.actionsLeft}>
@@ -317,39 +262,7 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     color: theme.colors.text,
     lineHeight: 21,
     paddingHorizontal: 14,
-    marginTop: 8,
     marginBottom: 10,
-  },
-  mediaContainer: {
-    marginBottom: 2,
-  },
-  singleImage: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_WIDTH,
-    backgroundColor: theme.colors.surface,
-  },
-  carouselImage: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_WIDTH,
-    backgroundColor: theme.colors.surface,
-  },
-  dotsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 8,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: theme.colors.textTertiary,
-    opacity: 0.4,
-  },
-  dotActive: {
-    backgroundColor: theme.colors.accent,
-    opacity: 1,
   },
   actionsRow: {
     flexDirection: 'row',

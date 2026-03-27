@@ -173,3 +173,4 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   },
   saveText: { fontSize: 17, fontWeight: '600' as const, color: theme.colors.background },
 });
+

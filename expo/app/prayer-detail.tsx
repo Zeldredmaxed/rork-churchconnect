@@ -377,3 +377,4 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     opacity: 0.5,
   },
 });
+

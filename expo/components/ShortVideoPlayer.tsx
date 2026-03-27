@@ -1,8 +1,7 @@
-import React, { useRef, useCallback, useState } from 'react';
-import { View, StyleSheet, TouchableWithoutFeedback, ActivityIndicator, Platform, Text } from 'react-native';
-import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
+import React, { useRef, useCallback, useState, useEffect } from 'react';
+import { View, StyleSheet, TouchableWithoutFeedback, ActivityIndicator, Platform, Text, Animated } from 'react-native';
+import { Video, ResizeMode, AVPlaybackStatus, Audio } from 'expo-av';
 import { Play, Pause } from 'lucide-react-native';
-import { Animated } from 'react-native';
 
 interface ShortVideoPlayerProps {
   videoUrl: string;
@@ -15,13 +14,34 @@ export default function ShortVideoPlayer({ videoUrl, thumbnailUrl, isVisible }: 
   const [isPlaying, setIsPlaying] = useState(true);
   const [isBuffering, setIsBuffering] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const pauseIconOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const setupAudio = async () => {
+      try {
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: false,
+          shouldDuckAndroid: true,
+        });
+      } catch (e) {
+        console.log('[ShortVideoPlayer] Audio mode setup error:', e);
+      }
+    };
+    void setupAudio();
+  }, []);
 
   const handlePlaybackStatusUpdate = useCallback((status: AVPlaybackStatus) => {
     if (status.isLoaded) {
       setIsPlaying(status.isPlaying);
       setIsBuffering(status.isBuffering);
       setHasError(false);
+
+      if (status.didJustFinish && !status.isLooping) {
+        console.log('[ShortVideoPlayer] Video finished, replaying...');
+        videoRef.current?.replayAsync().catch(() => {});
+      }
     } else if ('error' in status && status.error) {
       console.log('[ShortVideoPlayer] Playback error:', status.error);
       setHasError(true);
@@ -72,12 +92,22 @@ export default function ShortVideoPlayer({ videoUrl, thumbnailUrl, isVisible }: 
     void updatePlayback();
   }, [isVisible]);
 
+  const handleRetry = useCallback(() => {
+    console.log('[ShortVideoPlayer] Retrying video load, attempt:', retryCount + 1);
+    setHasError(false);
+    setIsBuffering(true);
+    setRetryCount((c) => c + 1);
+  }, [retryCount]);
+
   if (hasError) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Unable to load video</Text>
-        <Text style={styles.errorSubtext}>Please try again later</Text>
-      </View>
+      <TouchableWithoutFeedback onPress={handleRetry}>
+        <View style={styles.errorContainer}>
+          <Play size={36} color="rgba(255,255,255,0.5)" />
+          <Text style={styles.errorText}>Unable to load video</Text>
+          <Text style={styles.errorSubtext}>Tap to retry</Text>
+        </View>
+      </TouchableWithoutFeedback>
     );
   }
 
@@ -85,6 +115,7 @@ export default function ShortVideoPlayer({ videoUrl, thumbnailUrl, isVisible }: 
     <TouchableWithoutFeedback onPress={togglePlayPause}>
       <View style={styles.container}>
         <Video
+          key={`video-${retryCount}`}
           ref={videoRef}
           source={{ uri: videoUrl }}
           posterSource={thumbnailUrl ? { uri: thumbnailUrl } : undefined}
@@ -92,15 +123,21 @@ export default function ShortVideoPlayer({ videoUrl, thumbnailUrl, isVisible }: 
           posterStyle={styles.poster}
           style={styles.video}
           resizeMode={ResizeMode.COVER}
-          isLooping
+          isLooping={true}
           shouldPlay={isVisible}
           isMuted={false}
+          volume={1.0}
+          rate={1.0}
           onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+          onLoad={() => {
+            console.log('[ShortVideoPlayer] Video loaded successfully:', videoUrl.slice(0, 80));
+            setIsBuffering(false);
+          }}
           onError={(error) => {
-            console.log('[ShortVideoPlayer] Video error:', error);
+            console.log('[ShortVideoPlayer] Video error:', error, 'URL:', videoUrl.slice(0, 80));
             setHasError(true);
           }}
-          {...(Platform.OS === 'web' ? { useNativeControls: false } : {})}
+          {...(Platform.OS === 'web' ? { useNativeControls: true } : {})}
         />
 
         {isBuffering && (

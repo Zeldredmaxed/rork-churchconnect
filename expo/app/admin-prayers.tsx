@@ -99,3 +99,4 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   listContent: { paddingTop: 8, paddingBottom: 40 },
 });
+

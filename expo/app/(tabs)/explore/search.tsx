@@ -376,3 +376,4 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     paddingBottom: 40,
   },
 });
+

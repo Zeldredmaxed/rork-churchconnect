@@ -15,3 +15,4 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
 });
+

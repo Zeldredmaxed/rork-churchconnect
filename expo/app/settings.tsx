@@ -590,3 +590,4 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     borderColor: theme.colors.accent,
   },
 });
+

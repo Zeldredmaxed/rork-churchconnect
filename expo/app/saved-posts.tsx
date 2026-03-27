@@ -286,3 +286,4 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     padding: 8,
   },
 });
+

@@ -145,3 +145,4 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     lineHeight: 20,
   },
 });
+

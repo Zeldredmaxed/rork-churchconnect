@@ -231,3 +231,4 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     fontWeight: '500' as const,
   },
 });
+

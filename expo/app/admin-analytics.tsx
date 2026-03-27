@@ -178,3 +178,4 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   attendanceEvent: { fontSize: 12, color: theme.colors.textTertiary, marginTop: 1 },
   attendanceTime: { fontSize: 12, color: theme.colors.textTertiary },
 });
+

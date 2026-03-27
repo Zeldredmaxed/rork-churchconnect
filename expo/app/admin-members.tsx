@@ -262,3 +262,4 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   statusText: { fontSize: 13, color: theme.colors.textSecondary, fontWeight: '500' as const },
   statusTextActive: { color: theme.colors.accent },
 });
+

@@ -6,3 +6,4 @@ export default function MeLayout() {
     <Stack screenOptions={{ headerShown: false }} />
   );
 }
+

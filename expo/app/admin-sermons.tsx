@@ -200,3 +200,4 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   submitText: { fontSize: 16, fontWeight: '600' as const, color: theme.colors.accent },
   input: { backgroundColor: theme.colors.surfaceElevated, borderRadius: theme.radius.md, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: theme.colors.text, marginBottom: 2 },
 });
+

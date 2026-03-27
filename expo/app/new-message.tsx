@@ -261,3 +261,4 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     textAlign: 'center' as const,
   },
 });
+

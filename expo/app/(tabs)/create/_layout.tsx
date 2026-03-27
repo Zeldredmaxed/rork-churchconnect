@@ -6,3 +6,4 @@ export default function CreateLayout() {
     <Stack screenOptions={{ headerShown: false }} />
   );
 }
+

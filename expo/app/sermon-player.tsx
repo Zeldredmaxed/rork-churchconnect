@@ -380,3 +380,4 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     paddingVertical: 20,
   },
 });
+

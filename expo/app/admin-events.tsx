@@ -205,3 +205,4 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderTopWidth: 1, borderTopColor: theme.colors.borderLight },
   toggleLabel: { fontSize: 15, color: theme.colors.text },
 });
+
