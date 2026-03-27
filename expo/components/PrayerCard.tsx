@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Modal, Alert } from 'react-native';
 import { Heart, MessageCircle, MoreVertical, AlertTriangle, CheckCircle2, Flag, Trash2, PartyPopper } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
@@ -40,12 +40,21 @@ export default function PrayerCard({ prayer, onPray, onPress, onMarkFulfilled, o
   const styles = createStyles(theme);
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const [showMenu, setShowMenu] = useState(false);
-  const [localHasPrayed, setLocalHasPrayed] = useState<boolean | null>(null);
-  const [localPrayCount, setLocalPrayCount] = useState<number | null>(null);
+  const isPrayedByMe = (prayer as unknown as Record<string, unknown>).is_prayed_by_me;
+  const initialPrayed = isPrayedByMe != null ? Boolean(isPrayedByMe) : (prayer.has_prayed ?? false);
+  const [localHasPrayed, setLocalHasPrayed] = useState<boolean>(initialPrayed);
+  const [localPrayCount, setLocalPrayCount] = useState<number>(prayer.pray_count ?? 0);
+
+  useEffect(() => {
+    const newIsPrayed = (prayer as unknown as Record<string, unknown>).is_prayed_by_me;
+    const newVal = newIsPrayed != null ? Boolean(newIsPrayed) : (prayer.has_prayed ?? false);
+    setLocalHasPrayed(newVal);
+    setLocalPrayCount(prayer.pray_count ?? 0);
+  }, [prayer]);
 
   const { description } = getPrayerContent(prayer);
-  const prayCount = localPrayCount ?? prayer.pray_count ?? 0;
-  const hasPrayed = localHasPrayed ?? prayer.has_prayed ?? false;
+  const prayCount = localPrayCount;
+  const hasPrayed = localHasPrayed;
   const authorName = prayer.is_anonymous ? 'Anonymous' : (prayer.author_name || 'Member');
   const responseCount = prayer.response_count ?? 0;
 
@@ -56,9 +65,8 @@ export default function PrayerCard({ prayer, onPray, onPress, onMarkFulfilled, o
       Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, friction: 3 }),
     ]).start();
 
-    const newHasPrayed = !hasPrayed;
-    setLocalHasPrayed(newHasPrayed);
-    setLocalPrayCount(newHasPrayed ? prayCount + 1 : Math.max(0, prayCount - 1));
+    setLocalHasPrayed(!hasPrayed);
+    setLocalPrayCount(!hasPrayed ? prayCount + 1 : Math.max(0, prayCount - 1));
     onPray(prayer.id);
   };
 

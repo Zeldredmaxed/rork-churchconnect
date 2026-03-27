@@ -31,6 +31,8 @@ import PostOptionsSheet, { DeleteConfirmSheet } from '@/components/PostOptionsSh
 import ReportSheet from '@/components/ReportSheet';
 import { useSaved } from '@/contexts/SavedContext';
 import ShareSheet from '@/components/ShareSheet';
+import StreakBanner from '@/components/StreakBanner';
+import SundayCheckin from '@/components/SundayCheckin';
 import type { FeedPost, ActiveScripture } from '@/types';
 
 type FeedFilter = 'all' | 'following' | 'favourites';
@@ -257,6 +259,8 @@ export default function HomeFeedScreen() {
               <Text style={styles.composePlaceholder}>Share something with your church...</Text>
             </TouchableOpacity>
             <QuickNavTabs />
+            <StreakBanner />
+            <SundayCheckin />
           </View>
         }
         renderItem={({ item }) => (

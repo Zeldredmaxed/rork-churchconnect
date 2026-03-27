@@ -24,6 +24,10 @@ import {
   Film,
   Trash2,
   Play,
+  Flame,
+  Trophy,
+  Church,
+  TrendingUp,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -33,7 +37,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSaved } from '@/contexts/SavedContext';
 import type { SavedItemData as SavedItemType } from '@/contexts/SavedContext';
 import { api } from '@/utils/api';
-import type { FlockUser, FeedPost, Short } from '@/types';
+import type { FlockUser, FeedPost, Short, LoginStreak, SundayAttendanceStats } from '@/types';
 import type { SavedItemData } from '@/contexts/SavedContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -96,6 +100,33 @@ export default function ProfileTabScreen() {
   const [activeTab, setActiveTab] = useState<'grid' | 'shorts' | 'saved'>('grid');
   const [dismissedSuggestions, setDismissedSuggestions] = useState<string[]>([]);
   const { savedItems, toggleSave } = useSaved();
+
+  const streakQuery = useQuery({
+    queryKey: ['login-streak'],
+    queryFn: async () => {
+      try {
+        const data = await api.get<{ data: LoginStreak }>('/auth/streak');
+        return data?.data ?? null;
+      } catch {
+        return null;
+      }
+    },
+    staleTime: 60000,
+  });
+
+  const attendanceQuery = useQuery({
+    queryKey: ['my-sundays', new Date().getFullYear()],
+    queryFn: async () => {
+      try {
+        const year = new Date().getFullYear();
+        const data = await api.get<{ data: SundayAttendanceStats }>(`/attendance/my-sundays?year=${year}`);
+        return data?.data ?? null;
+      } catch {
+        return null;
+      }
+    },
+    staleTime: 60000,
+  });
 
   const flockQuery = useQuery({
     queryKey: ['my-flock-stats'],
@@ -275,6 +306,8 @@ export default function ProfileTabScreen() {
     .slice(0, 2) ?? 'U';
 
   const flockStats = flockQuery.data ?? { followers_count: 0, following_count: 0 };
+  const streak = streakQuery.data;
+  const attendance = attendanceQuery.data;
   const myPosts = postsQuery.data ?? [];
   const myShorts = shortsQuery.data ?? [];
   const suggestedUsers = (suggestedQuery.data ?? []).filter(
@@ -391,6 +424,59 @@ export default function ProfileTabScreen() {
             </View>
           )}
         </View>
+
+        {(streak || attendance) && (
+          <View style={styles.faithStatsSection}>
+            {streak && streak.current_streak > 0 && (
+              <View style={styles.faithStatCard}>
+                <View style={styles.faithStatIconWrap}>
+                  <Flame size={18} color="#FF6B35" fill="#FF6B35" />
+                </View>
+                <Text style={styles.faithStatValue}>{streak.current_streak}</Text>
+                <Text style={styles.faithStatLabel}>Day Streak</Text>
+                {streak.current_streak >= streak.longest_streak && streak.current_streak > 1 && (
+                  <View style={styles.faithBestBadge}>
+                    <Trophy size={8} color="#FFB800" />
+                    <Text style={styles.faithBestText}>Best</Text>
+                  </View>
+                )}
+              </View>
+            )}
+            {streak && streak.longest_streak > 0 && streak.current_streak < streak.longest_streak && (
+              <View style={styles.faithStatCard}>
+                <View style={styles.faithStatIconWrap}>
+                  <TrendingUp size={18} color={theme.colors.accent} />
+                </View>
+                <Text style={styles.faithStatValue}>{streak.longest_streak}</Text>
+                <Text style={styles.faithStatLabel}>Best Streak</Text>
+              </View>
+            )}
+            {attendance && (
+              <View style={styles.faithStatCard}>
+                <View style={styles.faithStatIconWrap}>
+                  <Church size={18} color={theme.colors.accent} />
+                </View>
+                <Text style={styles.faithStatValue}>{attendance.sundays_attended}</Text>
+                <Text style={styles.faithStatLabel}>Sundays</Text>
+                {attendance.on_track_to_beat_last_year && (
+                  <View style={[styles.faithBestBadge, { backgroundColor: 'rgba(52, 211, 153, 0.12)' }]}>
+                    <TrendingUp size={8} color={theme.colors.success} />
+                    <Text style={[styles.faithBestText, { color: theme.colors.success }]}>On Track</Text>
+                  </View>
+                )}
+              </View>
+            )}
+            {streak && (
+              <View style={styles.faithStatCard}>
+                <View style={styles.faithStatIconWrap}>
+                  <Flame size={18} color={theme.colors.textTertiary} />
+                </View>
+                <Text style={styles.faithStatValue}>{streak.total_logins}</Text>
+                <Text style={styles.faithStatLabel}>Total Visits</Text>
+              </View>
+            )}
+          </View>
+        )}
 
         <View style={styles.actionButtons}>
           <TouchableOpacity
@@ -1062,5 +1148,49 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     color: theme.colors.textSecondary,
     marginTop: 2,
     lineHeight: 18,
+  },
+  faithStatsSection: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    gap: 8,
+    marginBottom: 14,
+  },
+  faithStatCard: {
+    flex: 1,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    gap: 2,
+  },
+  faithStatIconWrap: {
+    marginBottom: 2,
+  },
+  faithStatValue: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: theme.colors.text,
+  },
+  faithStatLabel: {
+    fontSize: 10,
+    fontWeight: '500' as const,
+    color: theme.colors.textTertiary,
+    textAlign: 'center' as const,
+  },
+  faithBestBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(255, 184, 0, 0.12)',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+    marginTop: 2,
+  },
+  faithBestText: {
+    fontSize: 8,
+    fontWeight: '600' as const,
+    color: '#FFB800',
   },
 });

@@ -332,6 +332,39 @@ export interface SavedItem {
   saved_at: string;
 }
 
+export interface LoginStreak {
+  current_streak: number;
+  longest_streak: number;
+  total_logins: number;
+  last_login_date: string;
+}
+
+export interface SundayCheckinResponse {
+  message: string;
+  distance_miles?: number;
+  sundays_this_year?: number;
+}
+
+export interface SundayAttendanceStats {
+  year: number;
+  sundays_attended: number;
+  last_year_total: number;
+  best_year: number;
+  best_year_count: number;
+  on_track_to_beat_last_year: boolean;
+  dates: string[];
+}
+
+export interface MemberAttendanceStats {
+  user_id: number;
+  user_name: string;
+  year: number;
+  sundays_attended: number;
+  last_year_total: number;
+  on_track: boolean;
+  dates: string[];
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   page: number;

@@ -9,13 +9,15 @@ import {
   Switch,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
 import { Stack } from 'expo-router';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { Save, Settings } from 'lucide-react-native';
+import { Save, Settings, MapPin, Navigation } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ChurchAbout {
   id: string;
@@ -43,6 +45,10 @@ export default function AdminSettingsScreen() {
   const [shortsEnabled, setShortsEnabled] = useState(true);
   const [prayerWallEnabled, setPrayerWallEnabled] = useState(true);
   const [givingEnabled, setGivingEnabled] = useState(true);
+  const [latitude, setLatitude] = useState('');
+  const [longitude, setLongitude] = useState('');
+  const [locationLoading, setLocationLoading] = useState(false);
+  const { user } = useAuth();
 
   const aboutQuery = useQuery({
     queryKey: ['church-about'],
@@ -61,6 +67,59 @@ export default function AdminSettingsScreen() {
       console.log('[AdminSettings] Loaded church data:', church.name);
     }
   }, [aboutQuery.data]);
+
+  const locationMutation = useMutation({
+    mutationFn: (coords: { latitude: number; longitude: number }) => {
+      const churchId = user?.church_id;
+      if (!churchId) throw new Error('No church ID found');
+      return api.put(`/churches/${churchId}/settings`, coords as unknown as Record<string, unknown>);
+    },
+    onSuccess: () => Alert.alert('Success', 'Church location saved for Sunday check-ins.'),
+    onError: (error) => Alert.alert('Error', error.message),
+  });
+
+  const handleUseMyLocation = async () => {
+    setLocationLoading(true);
+    try {
+      if (Platform.OS === 'web') {
+        await new Promise<void>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              setLatitude(String(pos.coords.latitude));
+              setLongitude(String(pos.coords.longitude));
+              resolve();
+            },
+            (err) => reject(new Error(err.message))
+          );
+        });
+      } else {
+        const Location = await import('expo-location');
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission Required', 'Location permission is needed to set the church location.');
+          return;
+        }
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        setLatitude(String(loc.coords.latitude));
+        setLongitude(String(loc.coords.longitude));
+      }
+    } catch (e) {
+      console.log('[AdminSettings] Location error:', e);
+      Alert.alert('Error', 'Could not get your location.');
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+
+  const handleSaveLocation = () => {
+    const lat = parseFloat(latitude);
+    const lng = parseFloat(longitude);
+    if (isNaN(lat) || isNaN(lng)) {
+      Alert.alert('Invalid', 'Please enter valid latitude and longitude values.');
+      return;
+    }
+    locationMutation.mutate({ latitude: lat, longitude: lng });
+  };
 
   const saveMutation = useMutation({
     mutationFn: (params: Record<string, unknown>) =>
@@ -107,6 +166,59 @@ export default function AdminSettingsScreen() {
             <TextInput style={styles.input} value={churchWebsite} onChangeText={setChurchWebsite} placeholder="Website" placeholderTextColor={theme.colors.textTertiary} autoCapitalize="none" />
           </View>
         )}
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>CHURCH LOCATION (SUNDAY CHECK-IN)</Text>
+          <Text style={styles.locationHint}>Set your church's GPS coordinates so members can check in on Sundays.</Text>
+          <View style={styles.locationRow}>
+            <TextInput
+              style={[styles.input, styles.locationInput]}
+              value={latitude}
+              onChangeText={setLatitude}
+              placeholder="Latitude"
+              placeholderTextColor={theme.colors.textTertiary}
+              keyboardType="numeric"
+            />
+            <TextInput
+              style={[styles.input, styles.locationInput]}
+              value={longitude}
+              onChangeText={setLongitude}
+              placeholder="Longitude"
+              placeholderTextColor={theme.colors.textTertiary}
+              keyboardType="numeric"
+            />
+          </View>
+          <TouchableOpacity
+            style={styles.useLocationBtn}
+            onPress={() => void handleUseMyLocation()}
+            disabled={locationLoading}
+            activeOpacity={0.7}
+          >
+            {locationLoading ? (
+              <ActivityIndicator size="small" color={theme.colors.accent} />
+            ) : (
+              <>
+                <Navigation size={16} color={theme.colors.accent} />
+                <Text style={styles.useLocationText}>Use My Current Location</Text>
+              </>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.saveLocationBtn}
+            onPress={handleSaveLocation}
+            disabled={locationMutation.isPending || !latitude || !longitude}
+            activeOpacity={0.8}
+          >
+            {locationMutation.isPending ? (
+              <ActivityIndicator size="small" color={theme.colors.textInverse} />
+            ) : (
+              <>
+                <MapPin size={16} color={theme.colors.textInverse} />
+                <Text style={styles.saveLocationText}>Save Church Location</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>FEATURE TOGGLES</Text>
@@ -172,5 +284,29 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     backgroundColor: theme.colors.accent, borderRadius: theme.radius.md, paddingVertical: 16,
   },
   saveText: { fontSize: 17, fontWeight: '600' as const, color: theme.colors.background },
+  locationHint: {
+    fontSize: 13, color: theme.colors.textTertiary, lineHeight: 18, marginBottom: 4,
+  },
+  locationRow: {
+    flexDirection: 'row', gap: 10,
+  },
+  locationInput: {
+    flex: 1,
+  },
+  useLocationBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: theme.colors.accentMuted, borderRadius: theme.radius.md, paddingVertical: 12,
+    borderWidth: 1, borderColor: theme.colors.accent,
+  },
+  useLocationText: {
+    fontSize: 14, fontWeight: '600' as const, color: theme.colors.accent,
+  },
+  saveLocationBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: theme.colors.accent, borderRadius: theme.radius.md, paddingVertical: 12,
+  },
+  saveLocationText: {
+    fontSize: 14, fontWeight: '600' as const, color: theme.colors.textInverse,
+  },
 });
 

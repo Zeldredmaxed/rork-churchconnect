@@ -11,12 +11,12 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { User, Mail, Phone, Trash2, Send } from 'lucide-react-native';
+import { User, Mail, Phone, Trash2, Send, Church, TrendingUp, Calendar } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import Badge from '@/components/Badge';
-import type { Member, MemberNote, MemberEngagement } from '@/types';
+import type { Member, MemberNote, MemberEngagement, MemberAttendanceStats } from '@/types';
 
 export default function AdminMemberDetailScreen() {
   const { theme } = useTheme();
@@ -24,6 +24,7 @@ export default function AdminMemberDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
   const [noteText, setNoteText] = useState('');
+  const [attendanceYear, setAttendanceYear] = useState(new Date().getFullYear());
 
   const memberQuery = useQuery({
     queryKey: ['member', id],
@@ -42,6 +43,21 @@ export default function AdminMemberDetailScreen() {
     queryFn: () => api.get<{ data: MemberEngagement }>(`/members/${id}/engagement`),
     enabled: !!id,
   });
+
+  const attendanceQuery = useQuery({
+    queryKey: ['member-attendance', id, attendanceYear],
+    queryFn: async () => {
+      try {
+        const data = await api.get<{ data: MemberAttendanceStats }>(`/attendance/sunday-stats/${id}?year=${attendanceYear}`);
+        return data?.data ?? null;
+      } catch {
+        return null;
+      }
+    },
+    enabled: !!id,
+  });
+
+  const memberAttendance = attendanceQuery.data;
 
   const addNoteMutation = useMutation({
     mutationFn: (content: string) =>
@@ -157,6 +173,63 @@ export default function AdminMemberDetailScreen() {
           </View>
         )}
 
+        <View style={styles.attendanceSection}>
+          <View style={styles.attendanceHeader}>
+            <Text style={styles.sectionTitle}>SUNDAY ATTENDANCE</Text>
+            <View style={styles.yearPicker}>
+              <TouchableOpacity onPress={() => setAttendanceYear((y) => y - 1)}>
+                <Text style={styles.yearArrow}>‹</Text>
+              </TouchableOpacity>
+              <Text style={styles.yearText}>{attendanceYear}</Text>
+              <TouchableOpacity onPress={() => setAttendanceYear((y) => Math.min(y + 1, new Date().getFullYear()))}>
+                <Text style={styles.yearArrow}>›</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          {attendanceQuery.isLoading ? (
+            <ActivityIndicator size="small" color={theme.colors.accent} />
+          ) : memberAttendance ? (
+            <View>
+              <View style={styles.engagementGrid}>
+                <View style={styles.engagementItem}>
+                  <Church size={16} color={theme.colors.accent} />
+                  <Text style={styles.engagementValue}>{memberAttendance.sundays_attended}</Text>
+                  <Text style={styles.engagementLabel}>Sundays {attendanceYear}</Text>
+                </View>
+                <View style={styles.engagementItem}>
+                  <Calendar size={16} color={theme.colors.textTertiary} />
+                  <Text style={styles.engagementValue}>{memberAttendance.last_year_total}</Text>
+                  <Text style={styles.engagementLabel}>Last Year</Text>
+                </View>
+                <View style={styles.engagementItem}>
+                  {memberAttendance.on_track ? (
+                    <TrendingUp size={16} color={theme.colors.success} />
+                  ) : (
+                    <TrendingUp size={16} color={theme.colors.textTertiary} />
+                  )}
+                  <Text style={[styles.engagementValue, memberAttendance.on_track && { color: theme.colors.success }]}>
+                    {memberAttendance.on_track ? 'Yes' : 'No'}
+                  </Text>
+                  <Text style={styles.engagementLabel}>On Track</Text>
+                </View>
+              </View>
+              {memberAttendance.dates && memberAttendance.dates.length > 0 && (
+                <View style={styles.datesList}>
+                  <Text style={styles.datesLabel}>Recent Sundays:</Text>
+                  <Text style={styles.datesText}>
+                    {memberAttendance.dates.slice(0, 8).map((d) => {
+                      const dt = new Date(d + 'T00:00:00');
+                      return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    }).join(', ')}
+                  </Text>
+                </View>
+              )}
+            </View>
+          ) : (
+            <Text style={styles.noAttendanceText}>No attendance data for {attendanceYear}</Text>
+          )}
+        </View>
+
         <View style={styles.notesSection}>
           <Text style={styles.sectionTitle}>NOTES</Text>
           <View style={styles.noteInputRow}>
@@ -263,5 +336,22 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     marginTop: 24, borderWidth: 1, borderColor: 'rgba(248,113,113,0.3)',
   },
   deleteText: { fontSize: 15, fontWeight: '600' as const, color: theme.colors.error },
+  attendanceSection: { marginTop: 20 },
+  attendanceHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10,
+  },
+  yearPicker: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: theme.colors.surfaceElevated, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4,
+  },
+  yearArrow: { fontSize: 22, fontWeight: '600' as const, color: theme.colors.accent, lineHeight: 26 },
+  yearText: { fontSize: 14, fontWeight: '600' as const, color: theme.colors.text },
+  datesList: {
+    marginTop: 10, backgroundColor: theme.colors.surface, borderRadius: theme.radius.md,
+    padding: 12, borderWidth: 1, borderColor: theme.colors.borderLight,
+  },
+  datesLabel: { fontSize: 11, fontWeight: '600' as const, color: theme.colors.textTertiary, marginBottom: 4 },
+  datesText: { fontSize: 13, color: theme.colors.textSecondary, lineHeight: 20 },
+  noAttendanceText: { fontSize: 14, color: theme.colors.textTertiary, textAlign: 'center' as const, paddingVertical: 16 },
 });
 

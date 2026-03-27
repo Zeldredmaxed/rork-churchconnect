@@ -42,9 +42,14 @@ export default function PrayerDetailScreen() {
   const [localPrayCount, setLocalPrayCount] = useState<number | null>(null);
 
   const prayMutation = useMutation({
-    mutationFn: () => api.post(`/prayers/${id}/pray`),
-    onSuccess: () => {
+    mutationFn: () => api.post<{ data: { has_prayed: boolean; pray_count: number } }>(`/prayers/${id}/pray`),
+    onSuccess: (data) => {
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const result = (data as unknown as Record<string, unknown>)?.data as { has_prayed?: boolean; pray_count?: number } | undefined;
+      if (result) {
+        if (result.has_prayed != null) setLocalHasPrayed(result.has_prayed);
+        if (result.pray_count != null) setLocalPrayCount(result.pray_count);
+      }
       void queryClient.invalidateQueries({ queryKey: ['prayer', id] });
       void queryClient.invalidateQueries({ queryKey: ['prayers'] });
     },
@@ -134,7 +139,9 @@ export default function PrayerDetailScreen() {
           <TouchableOpacity
             style={[styles.prayButton, (localHasPrayed ?? prayer.has_prayed) && styles.prayButtonActive]}
             onPress={() => {
-              const current = localHasPrayed ?? prayer.has_prayed ?? false;
+              const rp = prayer as unknown as Record<string, unknown>;
+              const isPrayedByMe = rp.is_prayed_by_me;
+              const current = localHasPrayed ?? (isPrayedByMe != null ? Boolean(isPrayedByMe) : (prayer.has_prayed ?? false));
               const currentCount = localPrayCount ?? prayer.pray_count ?? 0;
               setLocalHasPrayed(!current);
               setLocalPrayCount(!current ? currentCount + 1 : Math.max(0, currentCount - 1));
