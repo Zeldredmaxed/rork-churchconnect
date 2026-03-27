@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { SavedProvider } from "@/contexts/SavedContext";
 import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
+import { QuickNavProvider } from "@/contexts/QuickNavContext";
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -52,6 +53,8 @@ function RootLayoutNav() {
       <Stack.Screen name="prayer-detail" options={{ title: 'Prayer Request' }} />
       <Stack.Screen name="bible" options={{ title: 'Bible' }} />
       <Stack.Screen name="giving" options={{ title: 'Giving' }} />
+      <Stack.Screen name="ai-assistant" options={{ title: 'AI Assistant' }} />
+      <Stack.Screen name="customize-tabs" options={{ title: 'Customize Quick Access' }} />
       <Stack.Screen name="groups" options={{ title: 'Groups' }} />
       <Stack.Screen name="group-detail" options={{ title: 'Group' }} />
       <Stack.Screen name="chat" options={{ title: 'Fellowship Chat' }} />
@@ -102,7 +105,9 @@ export default function RootLayout() {
         <ThemeProvider>
           <AuthProvider>
             <SavedProvider>
-              <RootLayoutNav />
+              <QuickNavProvider>
+                <RootLayoutNav />
+              </QuickNavProvider>
             </SavedProvider>
           </AuthProvider>
         </ThemeProvider>

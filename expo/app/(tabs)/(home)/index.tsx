@@ -25,6 +25,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import PostCard from '@/components/PostCard';
 import EmptyState from '@/components/EmptyState';
 import ScriptureCard from '@/components/ScriptureCard';
+import QuickNavTabs from '@/components/QuickNavTabs';
 import CommentsSheet from '@/components/CommentsSheet';
 import PostOptionsSheet, { DeleteConfirmSheet } from '@/components/PostOptionsSheet';
 import ReportSheet from '@/components/ReportSheet';
@@ -255,6 +256,7 @@ export default function HomeFeedScreen() {
               </View>
               <Text style={styles.composePlaceholder}>Share something with your church...</Text>
             </TouchableOpacity>
+            <QuickNavTabs />
           </View>
         }
         renderItem={({ item }) => (
