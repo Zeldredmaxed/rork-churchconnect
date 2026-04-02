@@ -67,10 +67,30 @@ export default function SavedPostsScreen() {
   const handleTapItem = useCallback((item: SavedItemData) => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     console.log('[SavedPosts] Tapped item:', item.item_type, item.item_id);
-    if (item.item_type === 'short') {
-      router.push(`/short-viewer?id=${item.item_id}` as never);
-    } else {
-      router.push('/(tabs)/(home)' as never);
+    switch (item.item_type) {
+      case 'short':
+      case 'clip':
+        router.push(`/short-viewer?id=${item.item_id}` as never);
+        break;
+      case 'post':
+        router.push('/(tabs)/(home)' as never);
+        break;
+      case 'song':
+        router.push('/music' as never);
+        break;
+      case 'event':
+        router.push(`/event-detail?id=${item.item_id}` as never);
+        break;
+      case 'sermon':
+        router.push(`/sermon-player?id=${item.item_id}` as never);
+        break;
+      case 'prayer':
+        router.push(`/prayer-detail?id=${item.item_id}` as never);
+        break;
+      default:
+        console.warn('[SavedPosts] Unknown bookmark type:', item.item_type);
+        router.push('/(tabs)/(home)' as never);
+        break;
     }
   }, [router]);
 

@@ -198,6 +198,9 @@ export interface Fund {
   id: string;
   name: string;
   description?: string;
+  fund_type?: 'general' | 'designated';
+  is_tax_deductible?: boolean;
+  is_active?: boolean;
   goal_amount?: number;
   current_amount?: number;
 }

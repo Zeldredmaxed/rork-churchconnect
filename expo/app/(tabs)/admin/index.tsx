@@ -29,6 +29,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import StatCard from '@/components/StatCard';
 import type { AnalyticsOverview } from '@/types';
 
+interface DashboardMetrics {
+  members: { total: number; trend: number; label: string };
+  giving: { total: number; trend: number; label: string };
+  prayers: { total: number; trend: number; label: string };
+}
+
 interface AdminLinkProps {
   icon: React.ReactNode;
   label: string;
@@ -88,11 +94,36 @@ export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const router = useRouter();
 
+  const metricsQuery = useQuery({
+    queryKey: ['admin', 'dashboard-metrics'],
+    queryFn: async () => {
+      try {
+        const res = await api.get<DashboardMetrics | { data: DashboardMetrics }>('/dashboard/metrics');
+        const metrics = (res as { data: DashboardMetrics }).data ?? res;
+        console.log('[Admin] Dashboard metrics:', JSON.stringify(metrics).slice(0, 300));
+        return metrics as DashboardMetrics;
+      } catch (e) {
+        console.log('[Admin] /dashboard/metrics failed, trying fallback:', e);
+        try {
+          const fallback = await api.get<AnalyticsOverview>('/reports/analytics/overview');
+          return {
+            members: { total: fallback?.total_members ?? 0, trend: 0, label: '' },
+            giving: { total: fallback?.giving_this_month ?? 0, trend: 0, label: '' },
+            prayers: { total: fallback?.active_prayers ?? 0, trend: 0, label: '' },
+          } as DashboardMetrics;
+        } catch {
+          return { members: { total: 0, trend: 0, label: '' }, giving: { total: 0, trend: 0, label: '' }, prayers: { total: 0, trend: 0, label: '' } } as DashboardMetrics;
+        }
+      }
+    },
+  });
+
   const overviewQuery = useQuery({
     queryKey: ['admin', 'overview'],
     queryFn: () => api.get<AnalyticsOverview>('/reports/analytics/overview'),
   });
 
+  const metrics = metricsQuery.data;
   const data = overviewQuery.data;
 
   return (
@@ -114,7 +145,7 @@ export default function AdminDashboard() {
           />
         }
       >
-        {overviewQuery.isLoading ? (
+        {(overviewQuery.isLoading && metricsQuery.isLoading) ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={theme.colors.accent} />
           </View>
@@ -123,17 +154,17 @@ export default function AdminDashboard() {
             <View style={styles.statsGrid}>
               <StatCard
                 icon={<Users size={18} color={theme.colors.accent} />}
-                value={data?.total_members ?? 0}
+                value={metrics?.members?.total ?? data?.total_members ?? 0}
                 label="Total Members"
-                trend="up"
-                trendValue="+12%"
+                trend={metrics?.members?.trend && metrics.members.trend > 0 ? 'up' : undefined}
+                trendValue={metrics?.members?.trend ? `${metrics.members.trend > 0 ? '+' : ''}${metrics.members.trend} ${metrics.members.label}` : '+12%'}
               />
               <StatCard
                 icon={<DollarSign size={18} color={theme.colors.success} />}
-                value={`$${(data?.giving_this_month ?? 0).toLocaleString()}`}
+                value={`${(metrics?.giving?.total ?? data?.giving_this_month ?? 0).toLocaleString()}`}
                 label="Giving This Month"
-                trend="up"
-                trendValue="+8%"
+                trend={metrics?.giving?.trend && metrics.giving.trend > 0 ? 'up' : undefined}
+                trendValue={metrics?.giving?.trend ? `${metrics.giving.trend > 0 ? '+' : ''}${metrics.giving.trend}% ${metrics.giving.label}` : '+8%'}
               />
             </View>
             <View style={styles.statsGrid}>
@@ -144,7 +175,7 @@ export default function AdminDashboard() {
               />
               <StatCard
                 icon={<HandHeart size={18} color={theme.colors.warning} />}
-                value={data?.active_prayers ?? 0}
+                value={metrics?.prayers?.total ?? data?.active_prayers ?? 0}
                 label="Active Prayers"
               />
             </View>

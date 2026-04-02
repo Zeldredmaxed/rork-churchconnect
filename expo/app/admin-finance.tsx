@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,16 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+  Switch,
 } from 'react-native';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
-import { DollarSign, Download } from 'lucide-react-native';
+import { DollarSign, Download, Plus, X } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
@@ -54,6 +60,12 @@ export default function AdminFinanceScreen() {
   const { theme } = useTheme();
   const styles = createStyles(theme);
   const queryClient = useQueryClient();
+  const [showCreateFund, setShowCreateFund] = useState(false);
+  const [fundName, setFundName] = useState('');
+  const [fundDescription, setFundDescription] = useState('');
+  const [fundType, setFundType] = useState<'general' | 'designated'>('general');
+  const [isTaxDeductible, setIsTaxDeductible] = useState(true);
+  const [goalAmount, setGoalAmount] = useState('');
 
   const trendsQuery = useQuery({
     queryKey: ['admin', 'giving-trends'],
@@ -69,6 +81,49 @@ export default function AdminFinanceScreen() {
     queryKey: ['admin', 'funds'],
     queryFn: () => api.get<{ data: Fund[] }>('/funds'),
   });
+
+  const createFundMutation = useMutation({
+    mutationFn: (params: Record<string, unknown>) => api.post('/funds', params),
+    onSuccess: () => {
+      console.log('[AdminFinance] Fund created successfully');
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'funds'] });
+      void queryClient.invalidateQueries({ queryKey: ['funds'] });
+      resetFundForm();
+      Alert.alert('Success', 'Fund created successfully.');
+    },
+    onError: (error) => {
+      console.log('[AdminFinance] Create fund error:', error.message);
+      Alert.alert('Error', error.message || 'Failed to create fund.');
+    },
+  });
+
+  const resetFundForm = useCallback(() => {
+    setShowCreateFund(false);
+    setFundName('');
+    setFundDescription('');
+    setFundType('general');
+    setIsTaxDeductible(true);
+    setGoalAmount('');
+  }, []);
+
+  const handleCreateFund = useCallback(() => {
+    if (!fundName.trim()) {
+      Alert.alert('Required', 'Please enter a fund name.');
+      return;
+    }
+    const goalNum = goalAmount ? parseFloat(goalAmount) : undefined;
+    if (goalAmount && (isNaN(goalNum!) || goalNum! <= 0)) {
+      Alert.alert('Invalid Amount', 'Please enter a valid goal amount.');
+      return;
+    }
+    createFundMutation.mutate({
+      name: fundName.trim(),
+      description: fundDescription.trim() || undefined,
+      fund_type: fundType,
+      is_tax_deductible: isTaxDeductible,
+      goal_amount: goalNum ?? undefined,
+    });
+  }, [fundName, fundDescription, fundType, isTaxDeductible, goalAmount, createFundMutation]);
 
   const handleRefresh = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['admin'] });
@@ -119,7 +174,29 @@ export default function AdminFinanceScreen() {
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>FUNDS</Text>
+              <View style={styles.fundsSectionHeader}>
+                <Text style={styles.sectionTitle}>FUNDS</Text>
+                <TouchableOpacity
+                  style={styles.addFundBtn}
+                  onPress={() => setShowCreateFund(true)}
+                  activeOpacity={0.7}
+                >
+                  <Plus size={14} color={theme.colors.accent} />
+                  <Text style={styles.addFundBtnText}>Create Fund</Text>
+                </TouchableOpacity>
+              </View>
+              {funds.length === 0 && (
+                <View style={styles.emptyFunds}>
+                  <DollarSign size={24} color={theme.colors.textTertiary} />
+                  <Text style={styles.emptyFundsText}>No funds created yet</Text>
+                  <TouchableOpacity
+                    style={styles.emptyFundsBtn}
+                    onPress={() => setShowCreateFund(true)}
+                  >
+                    <Text style={styles.emptyFundsBtnText}>Create your first fund</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
               {funds.map((f) => (
                 <View key={f.id} style={styles.fundRow}>
                   <View style={styles.fundIcon}>
@@ -165,6 +242,91 @@ export default function AdminFinanceScreen() {
           </>
         )}
       </ScrollView>
+
+      <Modal visible={showCreateFund} animationType="slide" transparent>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={resetFundForm} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <X size={22} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>Create Fund</Text>
+              <TouchableOpacity
+                onPress={handleCreateFund}
+                disabled={!fundName.trim() || createFundMutation.isPending}
+              >
+                {createFundMutation.isPending ? (
+                  <ActivityIndicator size="small" color={theme.colors.accent} />
+                ) : (
+                  <Text style={[styles.modalSubmitText, !fundName.trim() && styles.modalSubmitDisabled]}>
+                    Create
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <TextInput
+              style={styles.modalInput}
+              value={fundName}
+              onChangeText={setFundName}
+              placeholder="Fund Name (e.g. Building Fund)"
+              placeholderTextColor={theme.colors.textTertiary}
+              autoFocus
+            />
+
+            <TextInput
+              style={[styles.modalInput, styles.modalTextArea]}
+              value={fundDescription}
+              onChangeText={setFundDescription}
+              placeholder="Description (optional)"
+              placeholderTextColor={theme.colors.textTertiary}
+              multiline
+              numberOfLines={3}
+            />
+
+            <Text style={styles.modalFieldLabel}>Fund Type</Text>
+            <View style={styles.typeRow}>
+              {(['general', 'designated'] as const).map((t) => (
+                <TouchableOpacity
+                  key={t}
+                  style={[styles.typeChip, fundType === t && styles.typeChipActive]}
+                  onPress={() => setFundType(t)}
+                >
+                  <Text style={[styles.typeChipText, fundType === t && styles.typeChipTextActive]}>
+                    {t.charAt(0).toUpperCase() + t.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.goalRow}>
+              <Text style={styles.goalCurrency}>$</Text>
+              <TextInput
+                style={styles.goalInput}
+                value={goalAmount}
+                onChangeText={setGoalAmount}
+                placeholder="Goal amount (optional)"
+                placeholderTextColor={theme.colors.textTertiary}
+                keyboardType="decimal-pad"
+              />
+            </View>
+
+            <View style={styles.switchRow}>
+              <Text style={styles.switchLabel}>Tax Deductible</Text>
+              <Switch
+                value={isTaxDeductible}
+                onValueChange={setIsTaxDeductible}
+                trackColor={{ false: theme.colors.surfaceElevated, true: theme.colors.accentMuted }}
+                thumbColor={isTaxDeductible ? theme.colors.accent : theme.colors.textTertiary}
+              />
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -216,5 +378,70 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   },
   budgetFill: { height: '100%', backgroundColor: theme.colors.accent, borderRadius: 4 },
   budgetText: { fontSize: 12, color: theme.colors.textTertiary },
+  fundsSectionHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10,
+  },
+  addFundBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: theme.colors.accentMuted,
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8,
+  },
+  addFundBtnText: { fontSize: 13, fontWeight: '600' as const, color: theme.colors.accent },
+  emptyFunds: {
+    alignItems: 'center', paddingVertical: 30, gap: 8,
+    backgroundColor: theme.colors.surface, borderRadius: theme.radius.md,
+    borderWidth: 1, borderColor: theme.colors.borderLight,
+  },
+  emptyFundsText: { fontSize: 14, color: theme.colors.textTertiary },
+  emptyFundsBtn: {
+    backgroundColor: theme.colors.accentMuted, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, marginTop: 4,
+  },
+  emptyFundsBtnText: { fontSize: 13, fontWeight: '600' as const, color: theme.colors.accent },
+  modalOverlay: { flex: 1, backgroundColor: theme.colors.overlay, justifyContent: 'flex-end' },
+  modalContent: {
+    backgroundColor: theme.colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    padding: 20, paddingTop: 12, gap: 12,
+  },
+  modalHandle: {
+    width: 36, height: 4, borderRadius: 2, backgroundColor: theme.colors.borderLight,
+    alignSelf: 'center', marginBottom: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8,
+  },
+  modalTitle: { fontSize: 17, fontWeight: '600' as const, color: theme.colors.text },
+  modalSubmitText: { fontSize: 16, fontWeight: '600' as const, color: theme.colors.accent },
+  modalSubmitDisabled: { opacity: 0.4 },
+  modalInput: {
+    backgroundColor: theme.colors.surfaceElevated, borderRadius: theme.radius.md,
+    paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: theme.colors.text,
+  },
+  modalTextArea: { minHeight: 70, textAlignVertical: 'top' as const },
+  modalFieldLabel: {
+    fontSize: 13, fontWeight: '600' as const, color: theme.colors.textTertiary,
+    textTransform: 'uppercase' as const, letterSpacing: 0.5, marginTop: 4,
+  },
+  typeRow: { flexDirection: 'row', gap: 8 },
+  typeChip: {
+    paddingHorizontal: 16, paddingVertical: 9, borderRadius: 8,
+    backgroundColor: theme.colors.surfaceElevated,
+  },
+  typeChipActive: { backgroundColor: theme.colors.accentMuted },
+  typeChipText: { fontSize: 14, color: theme.colors.textSecondary, fontWeight: '500' as const },
+  typeChipTextActive: { color: theme.colors.accent, fontWeight: '600' as const },
+  goalRow: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.radius.md, paddingHorizontal: 14,
+  },
+  goalCurrency: { fontSize: 20, fontWeight: '700' as const, color: theme.colors.accent },
+  goalInput: {
+    flex: 1, fontSize: 18, fontWeight: '600' as const, color: theme.colors.text,
+    paddingVertical: 12, paddingLeft: 8,
+  },
+  switchRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: theme.colors.surfaceElevated, borderRadius: theme.radius.md,
+    paddingHorizontal: 14, paddingVertical: 10,
+  },
+  switchLabel: { fontSize: 15, color: theme.colors.text, fontWeight: '500' as const },
 });
 

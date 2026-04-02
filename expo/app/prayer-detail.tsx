@@ -60,12 +60,16 @@ export default function PrayerDetailScreen() {
 
   const respondMutation = useMutation({
     mutationFn: (content: string) =>
-      api.post(`/prayers/${id}/respond`, { content } as unknown as Record<string, unknown>),
+      api.post(`/prayers/${id}/responses`, { content, is_anonymous: false } as unknown as Record<string, unknown>),
     onSuccess: () => {
+      console.log('[PrayerDetail] Response submitted successfully');
       void queryClient.invalidateQueries({ queryKey: ['prayer-responses', id] });
       setResponseText('');
     },
-    onError: (error) => Alert.alert('Error', error.message),
+    onError: (error) => {
+      console.log('[PrayerDetail] Response submit error:', error.message);
+      Alert.alert('Error', error.message);
+    },
   });
 
   const rawPrayer = prayerQuery.data;

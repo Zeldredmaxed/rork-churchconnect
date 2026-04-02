@@ -164,13 +164,13 @@ export default function ProfileTabScreen() {
     queryKey: ['my-clips', user?.id],
     queryFn: async () => {
       try {
-        const raw = await api.get<Clip[] | { data: Clip[] }>('/clips/me?limit=50&offset=0');
+        const raw = await api.get<Clip[] | { data: Clip[] }>(`/clips?author_id=${user?.id}`);
         console.log('[Profile] My clips raw response:', JSON.stringify(raw).slice(0, 300));
         const clips = Array.isArray(raw) ? raw : (raw as { data: Clip[] })?.data ?? [];
         console.log('[Profile] Parsed my clips count:', clips.length);
         return clips;
       } catch (e: unknown) {
-        console.log('[Profile] /clips/me failed:', e);
+        console.log('[Profile] /clips?author_id failed:', e);
         return [] as Clip[];
       }
     },
@@ -258,10 +258,30 @@ export default function ProfileTabScreen() {
   const handleTapSavedItem = useCallback((item: SavedItemType) => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     console.log('[Profile] Tapped saved item:', item.item_type, item.item_id);
-    if (item.item_type === 'short') {
-      router.push(`/short-viewer?id=${item.item_id}` as never);
-    } else {
-      router.push('/(tabs)/(home)' as never);
+    switch (item.item_type) {
+      case 'short':
+      case 'clip':
+        router.push(`/short-viewer?id=${item.item_id}` as never);
+        break;
+      case 'post':
+        router.push('/(tabs)/(home)' as never);
+        break;
+      case 'song':
+        router.push('/music' as never);
+        break;
+      case 'event':
+        router.push(`/event-detail?id=${item.item_id}` as never);
+        break;
+      case 'sermon':
+        router.push(`/sermon-player?id=${item.item_id}` as never);
+        break;
+      case 'prayer':
+        router.push(`/prayer-detail?id=${item.item_id}` as never);
+        break;
+      default:
+        console.warn('[Profile] Unknown saved type:', item.item_type);
+        router.push('/(tabs)/(home)' as never);
+        break;
     }
   }, [router]);
 
