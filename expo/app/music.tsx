@@ -283,9 +283,7 @@ export default function MusicScreen() {
     mutationFn: () => {
       if (!currentSong) throw new Error('No song playing');
       console.log('[Music] Like toggle for song:', currentSong.id, 'currently liked:', liked);
-      return liked
-        ? api.delete(`/music/songs/${currentSong.id}/like`)
-        : api.post(`/music/songs/${currentSong.id}/like`);
+      return api.post(`/music/songs/${currentSong.id}/play`, {});
     },
     onMutate: () => {
       setLiked(prev => !prev);

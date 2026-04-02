@@ -75,7 +75,7 @@ export default function ShortViewerScreen() {
         console.log('[ShortViewer] Trending fallback failed:', e2);
       }
       try {
-        const rawMy = await api.get<Clip[] | { data: Clip[] }>('/clips/me?limit=100&offset=0');
+        const rawMy = await api.get<Clip[] | { data: Clip[] }>(`/clips?author_id=${user?.id}&limit=100`);
         const myClips = Array.isArray(rawMy) ? rawMy : (rawMy as { data: Clip[] })?.data ?? [];
         const found = myClips.find((s) => String(s.id) === String(id));
         if (found) {
@@ -94,8 +94,8 @@ export default function ShortViewerScreen() {
   const likeMutation = useMutation({
     mutationFn: (params: { id: string; liked: boolean }) =>
       params.liked
-        ? api.delete(`/clips/${params.id}/like`)
-        : api.post(`/clips/${params.id}/like`),
+        ? api.delete(`/clips/${params.id}/amen`)
+        : api.post(`/clips/${params.id}/amen`),
     onMutate: async (params) => {
       await queryClient.cancelQueries({ queryKey: ['short-detail', id] });
       const prev = queryClient.getQueryData<Clip>(['short-detail', id]);

@@ -121,9 +121,7 @@ export default function HomeFeedScreen() {
       const post = (queryClient.getQueryData<{ data: FeedPost[] }>(['feed', feedFilter]))?.data?.find((p) => String(p.id) === postId);
       const isCurrentlyLiked = post?.is_liked;
       console.log('[Feed] Like toggle for post:', postId, 'currently liked:', isCurrentlyLiked);
-      return isCurrentlyLiked
-        ? api.delete(`/feed/${postId}/likes`)
-        : api.post(`/feed/${postId}/likes`);
+      return api.post(`/feed/${postId}/like`);
     },
     onMutate: async (postId: string) => {
       await queryClient.cancelQueries({ queryKey: ['feed'] });

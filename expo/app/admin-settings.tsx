@@ -72,7 +72,7 @@ export default function AdminSettingsScreen() {
     mutationFn: (coords: { latitude: number; longitude: number }) => {
       const churchId = user?.church_id;
       if (!churchId) throw new Error('No church ID found');
-      return api.put(`/churches/${churchId}/settings`, coords as unknown as Record<string, unknown>);
+      return api.put('/churches/settings', coords as unknown as Record<string, unknown>);
     },
     onSuccess: () => Alert.alert('Success', 'Church location saved for Sunday check-ins.'),
     onError: (error) => Alert.alert('Error', error.message),

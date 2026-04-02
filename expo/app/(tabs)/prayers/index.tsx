@@ -79,7 +79,7 @@ export default function PrayerWallScreen() {
   const fulfillMutation = useMutation({
     mutationFn: (id: string) => {
       console.log('[Prayers] Marking prayer as fulfilled:', id);
-      return api.put(`/prayers/${id}`, { is_answered: true, status: 'answered' });
+      return api.put(`/prayers/${id}/answered`, {});
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['prayers'] });

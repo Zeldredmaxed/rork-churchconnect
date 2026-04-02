@@ -34,7 +34,7 @@ export default function AdminPrayersScreen() {
   const markAnsweredMutation = useMutation({
     mutationFn: (id: string) => {
       console.log('[AdminPrayers] Marking prayer as answered:', id);
-      return api.put(`/prayers/${id}`, { is_answered: true, status: 'answered' });
+      return api.put(`/prayers/${id}/answered`, {});
     },
     onSuccess: () => {
       console.log('[AdminPrayers] Prayer marked as answered');

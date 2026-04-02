@@ -35,7 +35,14 @@ export default function PrayerDetailScreen() {
 
   const responsesQuery = useQuery({
     queryKey: ['prayer-responses', id],
-    queryFn: () => api.get<{ data: PrayerResponse[] }>(`/prayers/${id}/responses`),
+    queryFn: async () => {
+      const res = await api.get<unknown>(`/prayers/${id}`);
+      console.log('[PrayerDetail] Fetching comments from prayer object');
+      const parsed = res as Record<string, unknown>;
+      const prayerData = (parsed.data ?? res) as Record<string, unknown>;
+      const comments = prayerData.comments ?? prayerData.responses ?? [];
+      return { data: comments as PrayerResponse[] };
+    },
     enabled: !!id,
   });
 
@@ -60,7 +67,7 @@ export default function PrayerDetailScreen() {
 
   const respondMutation = useMutation({
     mutationFn: (content: string) =>
-      api.post(`/prayers/${id}/responses`, { content, is_anonymous: false } as unknown as Record<string, unknown>),
+      api.post(`/prayers/${id}/comments`, { content, is_anonymous: false } as unknown as Record<string, unknown>),
     onSuccess: () => {
       console.log('[PrayerDetail] Response submitted successfully');
       void queryClient.invalidateQueries({ queryKey: ['prayer-responses', id] });

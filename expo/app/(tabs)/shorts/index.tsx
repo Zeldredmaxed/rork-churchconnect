@@ -167,8 +167,8 @@ export default function ShortsScreen() {
   const likeMutation = useMutation({
     mutationFn: (params: { id: string; liked: boolean }) =>
       params.liked
-        ? api.delete(`/clips/${params.id}/like`)
-        : api.post(`/clips/${params.id}/like`),
+        ? api.delete(`/clips/${params.id}/amen`)
+        : api.post(`/clips/${params.id}/amen`),
     onMutate: async (params) => {
       await queryClient.cancelQueries({ queryKey: ['clips'] });
       const tabs: FeedTab[] = ['trending', 'my-church'];

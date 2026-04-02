@@ -37,7 +37,7 @@ export default function ChangePasswordScreen() {
 
   const changeMutation = useMutation({
     mutationFn: async () => {
-      return api.put('/auth/change-password', {
+      return api.post('/auth/change-password', {
         current_password: currentPassword,
         new_password: newPassword,
       });

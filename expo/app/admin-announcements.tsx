@@ -26,17 +26,7 @@ export default function AdminAnnouncementsScreen() {
   const broadcastMutation = useMutation({
     mutationFn: async (params: Record<string, unknown>) => {
       console.log('[Announcements] Sending broadcast:', JSON.stringify(params));
-      try {
-        return await api.post('/announcements', params);
-      } catch {
-        console.log('[Announcements] /announcements failed, trying /notifications/broadcast');
-        try {
-          return await api.post('/notifications/broadcast', params);
-        } catch {
-          console.log('[Announcements] /notifications/broadcast also failed, trying /notifications');
-          return await api.post('/notifications', params);
-        }
-      }
+      return await api.post('/notifications/broadcast', params);
     },
     onSuccess: () => {
       console.log('[Announcements] Broadcast sent successfully');

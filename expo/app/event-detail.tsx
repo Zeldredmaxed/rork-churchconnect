@@ -50,7 +50,7 @@ export default function EventDetailScreen() {
   });
 
   const cancelRsvpMutation = useMutation({
-    mutationFn: () => api.delete(`/events/${id}/rsvp`),
+    mutationFn: () => api.post(`/events/${id}/rsvp`),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['event', id] });
       void queryClient.invalidateQueries({ queryKey: ['events'] });

@@ -49,7 +49,7 @@ export default function OrdersPaymentsScreen() {
 
   const historyQuery = useQuery({
     queryKey: ['donations', 'my'],
-    queryFn: () => api.get<{ data: Donation[] }>('/donations/my'),
+    queryFn: () => api.get<{ data: Donation[] }>('/donations'),
   });
 
   const donations = historyQuery.data?.data ?? [];

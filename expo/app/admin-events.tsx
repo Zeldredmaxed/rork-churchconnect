@@ -66,7 +66,7 @@ export default function AdminEventsScreen() {
   });
 
   const cancelMutation = useMutation({
-    mutationFn: (eventId: string) => api.put(`/events/${eventId}/cancel`),
+    mutationFn: (eventId: string) => api.put(`/events/${eventId}`, { status: 'cancelled' }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['admin', 'events'] });
       void queryClient.invalidateQueries({ queryKey: ['events'] });

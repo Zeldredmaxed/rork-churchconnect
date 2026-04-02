@@ -46,9 +46,7 @@ export default function SermonPlayerScreen() {
       const current = queryClient.getQueryData<{ data: Sermon }>(['sermon', id]);
       const isCurrentlyLiked = current?.data?.is_liked;
       console.log('[Sermon] Like toggle for sermon:', id, 'currently liked:', isCurrentlyLiked);
-      return isCurrentlyLiked
-        ? api.delete(`/sermons/${id}/like`)
-        : api.post(`/sermons/${id}/like`);
+      return api.post(`/sermons/${id}/like`);
     },
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: ['sermon', id] });

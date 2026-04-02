@@ -50,7 +50,7 @@ export default function AdminMembersScreen() {
   });
 
   const addMemberMutation = useMutation({
-    mutationFn: (params: Record<string, unknown>) => api.post('/members', params),
+    mutationFn: (params: Record<string, unknown>) => api.post('/admin/users', params),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['admin', 'members'] });
       resetForm();
