@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -77,7 +77,7 @@ function ShortOverlay({ item, onLike, onComment, onShare, onMore, onSave, isSave
             activeOpacity={0.7}
           >
             <Avatar
-              url={(item as any).author_avatar}
+              url={item.author_avatar}
               name={item.author_name ?? item.church_name}
               size={28}
               style={{ borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' }}
@@ -163,6 +163,16 @@ export default function ShortsScreen() {
       return { data: clips };
     },
   });
+
+  const enrichedShorts = useMemo(() => {
+    const raw = [...(shortsQuery.data?.data ?? [])].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    return raw.map((clip) => {
+      if (!clip.author_avatar && user?.id && String(clip.author_id) === String(user.id) && user.avatar_url) {
+        return { ...clip, author_avatar: user.avatar_url };
+      }
+      return clip;
+    });
+  }, [shortsQuery.data, user]);
 
   const likeMutation = useMutation({
     mutationFn: (params: { id: string; liked: boolean }) =>
@@ -259,10 +269,10 @@ export default function ShortsScreen() {
     [viewMutation]
   );
 
-  const shorts = [...(shortsQuery.data?.data ?? [])].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const shorts = enrichedShorts;
   const itemHeight = SCREEN_HEIGHT;
 
-  const selectedShort = optionsShortId ? shorts.find((s) => String(s.id) === optionsShortId) : null;
+  const selectedShort = optionsShortId ? shorts.find((s: Clip) => String(s.id) === optionsShortId) : null;
   const isShortOwner = selectedShort?.author_id != null && user?.id != null && String(selectedShort.author_id) === String(user.id);
 
   const handleOpenShortOptions = useCallback((shortId: string) => {
@@ -453,8 +463,8 @@ export default function ShortsScreen() {
         content={shareShortId ? {
           id: shareShortId,
           type: 'clip',
-          title: shorts.find((s) => s.id === shareShortId)?.title ?? '',
-          authorName: shorts.find((s) => s.id === shareShortId)?.author_name,
+          title: shorts.find((s: Clip) => s.id === shareShortId)?.title ?? '',
+          authorName: shorts.find((s: Clip) => s.id === shareShortId)?.author_name,
         } : null}
       />
 
