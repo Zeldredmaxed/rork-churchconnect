@@ -67,6 +67,8 @@ function FollowerSuggestionRow({ user }: { user: FlockUser }) {
   const styles = createStyles(theme);
   const router = useRouter();
   const [isFollowing, setIsFollowing] = useState(user.is_following ?? false);
+  const { user: currentUser } = useAuth();
+  const isOwnUser = currentUser?.id != null && String(currentUser.id) === String(user.id);
 
   const initials = user.full_name
     .split(' ')
@@ -90,12 +92,14 @@ function FollowerSuggestionRow({ user }: { user: FlockUser }) {
           <Text style={styles.followerUsername} numberOfLines={1}>{user.username ?? user.church_name ?? ''}</Text>
         </View>
       </TouchableOpacity>
-      <FollowButton
-        userId={user.id}
-        isFollowing={isFollowing}
-        size="medium"
-        onToggle={(s) => setIsFollowing(s)}
-      />
+      {!isOwnUser && (
+        <FollowButton
+          userId={user.id}
+          isFollowing={isFollowing}
+          size="medium"
+          onToggle={(s) => setIsFollowing(s)}
+        />
+      )}
     </View>
   );
 }

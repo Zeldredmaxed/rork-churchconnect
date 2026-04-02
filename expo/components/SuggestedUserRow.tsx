@@ -7,6 +7,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 import FollowButton from './FollowButton';
 import Avatar from '@/components/Avatar';
+import { useAuth } from '@/contexts/AuthContext';
 import type { FlockUser } from '@/types';
 
 interface SuggestedUserRowProps {
@@ -21,6 +22,8 @@ export default function SuggestedUserRow({ user, subtitle, onDismiss, showDismis
   const styles = createStyles(theme);
   const router = useRouter();
   const [isFollowing, setIsFollowing] = useState(user.is_following ?? false);
+  const { user: currentUser } = useAuth();
+  const isOwnUser = currentUser?.id != null && String(currentUser.id) === String(user.id);
 
   return (
     <View style={styles.row}>
@@ -42,12 +45,14 @@ export default function SuggestedUserRow({ user, subtitle, onDismiss, showDismis
       </TouchableOpacity>
 
       <View style={styles.actions}>
-        <FollowButton
-          userId={user.id}
-          isFollowing={isFollowing}
-          size="medium"
-          onToggle={(newState) => setIsFollowing(newState)}
-        />
+        {!isOwnUser && (
+          <FollowButton
+            userId={user.id}
+            isFollowing={isFollowing}
+            size="medium"
+            onToggle={(newState) => setIsFollowing(newState)}
+          />
+        )}
         {showDismiss && onDismiss && (
           <TouchableOpacity
             style={styles.dismissBtn}

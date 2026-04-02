@@ -502,7 +502,7 @@ export default function ProfileTabScreen() {
               </TouchableOpacity>
             </View>
             <FlatList
-              data={suggestedUsers.slice(0, 10)}
+              data={suggestedUsers.filter((s) => String(s.id) !== String(user?.id)).slice(0, 10)}
               keyExtractor={(item) => String(item.id)}
               horizontal
               showsHorizontalScrollIndicator={false}

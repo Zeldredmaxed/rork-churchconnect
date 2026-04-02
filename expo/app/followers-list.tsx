@@ -15,6 +15,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import FollowButton from '@/components/FollowButton';
+import { useAuth } from '@/contexts/AuthContext';
 import EmptyState from '@/components/EmptyState';
 import { Users } from 'lucide-react-native';
 import type { FlockUser } from '@/types';
@@ -26,6 +27,8 @@ function UserRow({ user }: { user: FlockUser }) {
   const styles = createStyles(theme);
   const router = useRouter();
   const [isFollowing, setIsFollowing] = useState(user.is_following ?? false);
+  const { user: currentUser } = useAuth();
+  const isOwnUser = currentUser?.id != null && String(currentUser.id) === String(user.id);
 
   const initials = user.full_name
     .split(' ')
@@ -54,12 +57,14 @@ function UserRow({ user }: { user: FlockUser }) {
           ) : null}
         </View>
       </TouchableOpacity>
-      <FollowButton
-        userId={user.id}
-        isFollowing={isFollowing}
-        size="small"
-        onToggle={(newState) => setIsFollowing(newState)}
-      />
+      {!isOwnUser && (
+        <FollowButton
+          userId={user.id}
+          isFollowing={isFollowing}
+          size="small"
+          onToggle={(newState) => setIsFollowing(newState)}
+        />
+      )}
     </View>
   );
 }
