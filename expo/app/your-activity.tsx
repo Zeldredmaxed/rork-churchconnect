@@ -1,20 +1,22 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { Heart, MessageSquare, Clock, Eye, Trash2, ChevronRight, Activity } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 
 export default function YourActivityScreen() {
   const { theme } = useTheme();
   const s = createStyles(theme);
+  const router = useRouter();
 
   const items = [
-    { icon: <Heart size={22} color={theme.colors.textSecondary} />, label: 'Interactions', sub: 'Likes, comments, and shares' },
-    { icon: <MessageSquare size={22} color={theme.colors.textSecondary} />, label: 'Comments', sub: 'Review and delete comments' },
-    { icon: <Clock size={22} color={theme.colors.textSecondary} />, label: 'Time spent', sub: 'View daily average' },
-    { icon: <Eye size={22} color={theme.colors.textSecondary} />, label: 'Content you\'ve viewed', sub: 'Posts and shorts viewed' },
-    { icon: <Trash2 size={22} color={theme.colors.textSecondary} />, label: 'Recently deleted', sub: 'Posts, shorts, and stories' },
+    { icon: <Heart size={22} color={theme.colors.textSecondary} />, label: 'Interactions', sub: 'Likes, comments, and shares', route: '/activity-interactions' },
+    { icon: <MessageSquare size={22} color={theme.colors.textSecondary} />, label: 'Comments', sub: 'Review and delete comments', route: '/activity-comments' },
+    { icon: <Clock size={22} color={theme.colors.textSecondary} />, label: 'Time spent', sub: 'View daily average', route: '/time-spent' },
+    { icon: <Eye size={22} color={theme.colors.textSecondary} />, label: 'Content you\'ve viewed', sub: 'Posts and shorts viewed', route: '/activity-content-viewed' },
+    { icon: <Trash2 size={22} color={theme.colors.textSecondary} />, label: 'Recently deleted', sub: 'Posts, shorts, and stories', route: '/activity-recently-deleted' },
   ];
 
   return (
@@ -37,7 +39,7 @@ export default function YourActivityScreen() {
         </Text>
         <View style={s.divider} />
         {items.map((item, idx) => (
-          <TouchableOpacity key={idx} style={s.row} activeOpacity={0.6}>
+          <TouchableOpacity key={idx} style={s.row} activeOpacity={0.6} onPress={() => { void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push(item.route as never); }}>
             <View style={s.rowIcon}>{item.icon}</View>
             <View style={s.rowContent}>
               <Text style={s.rowLabel}>{item.label}</Text>

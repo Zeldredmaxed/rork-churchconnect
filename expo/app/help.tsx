@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { HelpCircle, BookOpen, MessageCircle, Flag, ChevronRight, FileText } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
@@ -8,13 +9,14 @@ import type { AppTheme } from '@/constants/theme';
 export default function HelpScreen() {
   const { theme } = useTheme();
   const s = createStyles(theme);
+  const router = useRouter();
 
   const items = [
-    { icon: <BookOpen size={22} color={theme.colors.textSecondary} />, label: 'Help Centre', sub: 'Get answers to common questions' },
-    { icon: <MessageCircle size={22} color={theme.colors.textSecondary} />, label: 'Support requests', sub: 'View your open support cases' },
-    { icon: <Flag size={22} color={theme.colors.textSecondary} />, label: 'Report a problem', sub: 'Let us know about bugs or issues' },
-    { icon: <FileText size={22} color={theme.colors.textSecondary} />, label: 'Terms of Service', sub: 'Review our terms and policies' },
-    { icon: <FileText size={22} color={theme.colors.textSecondary} />, label: 'Privacy Policy', sub: 'How we handle your data' },
+    { icon: <BookOpen size={22} color={theme.colors.textSecondary} />, label: 'Help Centre', sub: 'Get answers to common questions', route: '/help-centre' },
+    { icon: <MessageCircle size={22} color={theme.colors.textSecondary} />, label: 'Support requests', sub: 'View your open support cases', route: '/support-requests' },
+    { icon: <Flag size={22} color={theme.colors.textSecondary} />, label: 'Report a problem', sub: 'Let us know about bugs or issues', route: '/report-problem' },
+    { icon: <FileText size={22} color={theme.colors.textSecondary} />, label: 'Terms of Service', sub: 'Review our terms and policies', route: '/terms-of-service' },
+    { icon: <FileText size={22} color={theme.colors.textSecondary} />, label: 'Privacy Policy', sub: 'How we handle your data', route: '/privacy-policy' },
   ];
 
   return (
@@ -33,7 +35,7 @@ export default function HelpScreen() {
           <Text style={s.heroTitle}>How can we help?</Text>
         </View>
         {items.map((item, idx) => (
-          <TouchableOpacity key={idx} style={s.row} activeOpacity={0.6}>
+          <TouchableOpacity key={idx} style={s.row} activeOpacity={0.6} onPress={() => { void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push(item.route as never); }}>
             <View style={s.rowIcon}>{item.icon}</View>
             <View style={s.rowContent}>
               <Text style={s.rowLabel}>{item.label}</Text>

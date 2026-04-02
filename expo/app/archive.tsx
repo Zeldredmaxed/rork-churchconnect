@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { Clock, Image, Film, Grid3x3, ChevronRight } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
@@ -8,11 +9,12 @@ import type { AppTheme } from '@/constants/theme';
 export default function ArchiveScreen() {
   const { theme } = useTheme();
   const s = createStyles(theme);
+  const router = useRouter();
 
   const sections = [
-    { icon: <Grid3x3 size={22} color={theme.colors.textSecondary} />, label: 'Posts', count: 0 },
-    { icon: <Film size={22} color={theme.colors.textSecondary} />, label: 'Shorts', count: 0 },
-    { icon: <Image size={22} color={theme.colors.textSecondary} />, label: 'Stories', count: 0 },
+    { icon: <Grid3x3 size={22} color={theme.colors.textSecondary} />, label: 'Posts', count: 0, route: '/archive-posts' },
+    { icon: <Film size={22} color={theme.colors.textSecondary} />, label: 'Shorts', count: 0, route: '/archive-shorts' },
+    { icon: <Image size={22} color={theme.colors.textSecondary} />, label: 'Stories', count: 0, route: '/archive-stories' },
   ];
 
   return (
@@ -33,7 +35,7 @@ export default function ArchiveScreen() {
           When you archive posts, shorts, or stories, they'll appear here. Only you can see your archived content.
         </Text>
         {sections.map((item, idx) => (
-          <TouchableOpacity key={idx} style={s.row} activeOpacity={0.6}>
+          <TouchableOpacity key={idx} style={s.row} activeOpacity={0.6} onPress={() => { void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push(item.route as never); }}>
             <View style={s.rowIcon}>{item.icon}</View>
             <Text style={s.rowLabel}>{item.label}</Text>
             <View style={s.rowRight}>

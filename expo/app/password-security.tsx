@@ -67,13 +67,13 @@ export default function PasswordSecurityScreen() {
             <SecurityRow
               icon={<Smartphone size={20} color={theme.colors.textSecondary} />}
               label="Where you're logged in"
-              onPress={() => console.log('Active sessions')}
+              onPress={() => router.push('/active-sessions' as never)}
             />
             <View style={styles.divider} />
             <SecurityRow
               icon={<Shield size={20} color={theme.colors.textSecondary} />}
               label="Security checkup"
-              onPress={() => console.log('Security checkup')}
+              onPress={() => router.push('/security-checkup' as never)}
             />
           </View>
         </View>

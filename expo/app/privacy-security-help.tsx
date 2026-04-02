@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { Shield, Lock, Eye, AlertTriangle, UserX, ChevronRight } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
@@ -8,12 +9,13 @@ import type { AppTheme } from '@/constants/theme';
 export default function PrivacySecurityHelpScreen() {
   const { theme } = useTheme();
   const s = createStyles(theme);
+  const router = useRouter();
 
   const items = [
-    { icon: <Lock size={22} color={theme.colors.textSecondary} />, label: 'Account security', sub: 'Tips to keep your account safe' },
-    { icon: <Eye size={22} color={theme.colors.textSecondary} />, label: 'Privacy checkup', sub: 'Review your privacy settings' },
-    { icon: <AlertTriangle size={22} color={theme.colors.textSecondary} />, label: 'Report something', sub: 'Report harassment, abuse, or scams' },
-    { icon: <UserX size={22} color={theme.colors.textSecondary} />, label: 'Hacked accounts', sub: 'Steps to recover your account' },
+    { icon: <Lock size={22} color={theme.colors.textSecondary} />, label: 'Account security', sub: 'Tips to keep your account safe', route: '/security-tips' },
+    { icon: <Eye size={22} color={theme.colors.textSecondary} />, label: 'Privacy checkup', sub: 'Review your privacy settings', route: '/privacy-checkup' },
+    { icon: <AlertTriangle size={22} color={theme.colors.textSecondary} />, label: 'Report something', sub: 'Report harassment, abuse, or scams', route: '/report-abuse' },
+    { icon: <UserX size={22} color={theme.colors.textSecondary} />, label: 'Hacked accounts', sub: 'Steps to recover your account', route: '/hacked-account' },
   ];
 
   return (
@@ -37,7 +39,7 @@ export default function PrivacySecurityHelpScreen() {
           </Text>
         </View>
         {items.map((item, idx) => (
-          <TouchableOpacity key={idx} style={s.row} activeOpacity={0.6}>
+          <TouchableOpacity key={idx} style={s.row} activeOpacity={0.6} onPress={() => { void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push(item.route as never); }}>
             <View style={s.rowIcon}>{item.icon}</View>
             <View style={s.rowContent}>
               <Text style={s.rowLabel}>{item.label}</Text>

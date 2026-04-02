@@ -117,6 +117,24 @@ function RootLayoutNav() {
       <Stack.Screen name="account-status" options={{ title: 'Account Status' }} />
       <Stack.Screen name="about" options={{ title: 'About' }} />
       <Stack.Screen name="about-church" options={{ title: 'About This Church' }} />
+      <Stack.Screen name="activity-interactions" options={{ title: 'Interactions' }} />
+      <Stack.Screen name="activity-comments" options={{ title: 'Your Comments' }} />
+      <Stack.Screen name="activity-content-viewed" options={{ title: 'Content Viewed' }} />
+      <Stack.Screen name="activity-recently-deleted" options={{ title: 'Recently Deleted' }} />
+      <Stack.Screen name="archive-posts" options={{ title: 'Archived Posts' }} />
+      <Stack.Screen name="archive-shorts" options={{ title: 'Archived Shorts' }} />
+      <Stack.Screen name="archive-stories" options={{ title: 'Archived Stories' }} />
+      <Stack.Screen name="help-centre" options={{ title: 'Help Centre' }} />
+      <Stack.Screen name="support-requests" options={{ title: 'Support Requests' }} />
+      <Stack.Screen name="report-problem" options={{ title: 'Report a Problem' }} />
+      <Stack.Screen name="terms-of-service" options={{ title: 'Terms of Service' }} />
+      <Stack.Screen name="privacy-policy" options={{ title: 'Privacy Policy' }} />
+      <Stack.Screen name="security-tips" options={{ title: 'Account Security' }} />
+      <Stack.Screen name="privacy-checkup" options={{ title: 'Privacy Checkup' }} />
+      <Stack.Screen name="report-abuse" options={{ title: 'Report Abuse' }} />
+      <Stack.Screen name="hacked-account" options={{ title: 'Hacked Account' }} />
+      <Stack.Screen name="active-sessions" options={{ title: 'Active Sessions' }} />
+      <Stack.Screen name="security-checkup" options={{ title: 'Security Checkup' }} />
       <Stack.Screen name="+not-found" />
     </Stack>
   );
