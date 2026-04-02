@@ -77,14 +77,17 @@ export default function PrayerWallScreen() {
   });
 
   const fulfillMutation = useMutation({
-    mutationFn: (id: string) => api.put(`/prayers/${id}`, { is_answered: true }),
+    mutationFn: (id: string) => {
+      console.log('[Prayers] Marking prayer as fulfilled:', id);
+      return api.put(`/prayers/${id}`, { is_answered: true, status: 'answered' });
+    },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['prayers'] });
       Alert.alert('Praise!', 'Your prayer has been marked as fulfilled. Thank you for sharing!');
     },
     onError: (error) => {
       console.log('[Prayers] Fulfill error:', error.message);
-      Alert.alert('Error', 'Could not mark prayer as fulfilled.');
+      Alert.alert('Error', error.message || 'Could not mark prayer as fulfilled.');
     },
   });
 

@@ -98,18 +98,39 @@ export default function AdminDashboard() {
     queryKey: ['admin', 'dashboard-metrics'],
     queryFn: async () => {
       try {
-        const res = await api.get<DashboardMetrics | { data: DashboardMetrics }>('/dashboard/metrics');
-        const metrics = (res as { data: DashboardMetrics }).data ?? res;
-        console.log('[Admin] Dashboard metrics:', JSON.stringify(metrics).slice(0, 300));
-        return metrics as DashboardMetrics;
+        const res = await api.get<unknown>('/dashboard/metrics');
+        console.log('[Admin] Dashboard metrics raw:', JSON.stringify(res).slice(0, 500));
+        const parsed = res as Record<string, unknown>;
+        const metricsData = (parsed.data ?? res) as Record<string, unknown>;
+        const members = metricsData.members as DashboardMetrics['members'] | undefined;
+        const giving = metricsData.giving as DashboardMetrics['giving'] | undefined;
+        const prayers = metricsData.prayers as DashboardMetrics['prayers'] | undefined;
+        if (members || giving || prayers) {
+          return {
+            members: members ?? { total: 0, trend: 0, label: '' },
+            giving: giving ?? { total: 0, trend: 0, label: '' },
+            prayers: prayers ?? { total: 0, trend: 0, label: '' },
+          } as DashboardMetrics;
+        }
+        const totalMembers = (metricsData.total_members ?? metricsData.member_count ?? 0) as number;
+        const totalGiving = (metricsData.giving_this_month ?? metricsData.total_giving ?? 0) as number;
+        const totalPrayers = (metricsData.active_prayers ?? metricsData.prayer_count ?? 0) as number;
+        return {
+          members: { total: totalMembers, trend: 0, label: '' },
+          giving: { total: totalGiving, trend: 0, label: '' },
+          prayers: { total: totalPrayers, trend: 0, label: '' },
+        } as DashboardMetrics;
       } catch (e) {
         console.log('[Admin] /dashboard/metrics failed, trying fallback:', e);
         try {
-          const fallback = await api.get<AnalyticsOverview>('/reports/analytics/overview');
+          const fallbackRaw = await api.get<unknown>('/reports/analytics/overview');
+          console.log('[Admin] Overview fallback raw:', JSON.stringify(fallbackRaw).slice(0, 500));
+          const fb = fallbackRaw as Record<string, unknown>;
+          const fallback = (fb.data ?? fallbackRaw) as Record<string, unknown>;
           return {
-            members: { total: fallback?.total_members ?? 0, trend: 0, label: '' },
-            giving: { total: fallback?.giving_this_month ?? 0, trend: 0, label: '' },
-            prayers: { total: fallback?.active_prayers ?? 0, trend: 0, label: '' },
+            members: { total: (fallback.total_members ?? 0) as number, trend: 0, label: '' },
+            giving: { total: (fallback.giving_this_month ?? 0) as number, trend: 0, label: '' },
+            prayers: { total: (fallback.active_prayers ?? 0) as number, trend: 0, label: '' },
           } as DashboardMetrics;
         } catch {
           return { members: { total: 0, trend: 0, label: '' }, giving: { total: 0, trend: 0, label: '' }, prayers: { total: 0, trend: 0, label: '' } } as DashboardMetrics;
@@ -120,7 +141,24 @@ export default function AdminDashboard() {
 
   const overviewQuery = useQuery({
     queryKey: ['admin', 'overview'],
-    queryFn: () => api.get<AnalyticsOverview>('/reports/analytics/overview'),
+    queryFn: async () => {
+      try {
+        const res = await api.get<unknown>('/reports/analytics/overview');
+        console.log('[Admin] Overview raw:', JSON.stringify(res).slice(0, 500));
+        const parsed = res as Record<string, unknown>;
+        const data = (parsed.data ?? res) as AnalyticsOverview;
+        return data;
+      } catch (e) {
+        console.log('[Admin] Overview query failed:', e);
+        return {
+          total_members: 0,
+          giving_this_month: 0,
+          upcoming_events: 0,
+          active_prayers: 0,
+          engagement_score: 0,
+        } as AnalyticsOverview;
+      }
+    },
   });
 
   const metrics = metricsQuery.data;

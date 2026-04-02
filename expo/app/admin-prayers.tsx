@@ -24,25 +24,44 @@ export default function AdminPrayersScreen() {
 
   const prayersQuery = useQuery({
     queryKey: ['admin', 'prayers'],
-    queryFn: () => api.get<Prayer[] | { data: Prayer[] }>('/prayers'),
+    queryFn: async () => {
+      const res = await api.get<unknown>('/prayers');
+      console.log('[AdminPrayers] Raw response:', JSON.stringify(res).slice(0, 500));
+      return res;
+    },
   });
 
   const markAnsweredMutation = useMutation({
-    mutationFn: (id: string) => api.put(`/prayers/${id}/answered`),
+    mutationFn: (id: string) => {
+      console.log('[AdminPrayers] Marking prayer as answered:', id);
+      return api.put(`/prayers/${id}`, { is_answered: true, status: 'answered' });
+    },
     onSuccess: () => {
+      console.log('[AdminPrayers] Prayer marked as answered');
       void queryClient.invalidateQueries({ queryKey: ['admin', 'prayers'] });
       void queryClient.invalidateQueries({ queryKey: ['prayers'] });
+      Alert.alert('Success', 'Prayer marked as answered!');
     },
-    onError: (error) => Alert.alert('Error', error.message),
+    onError: (error) => {
+      console.log('[AdminPrayers] Mark answered error:', error.message);
+      Alert.alert('Error', error.message || 'Failed to mark prayer as answered');
+    },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/prayers/${id}`),
+    mutationFn: (id: string) => {
+      console.log('[AdminPrayers] Deleting prayer:', id);
+      return api.delete(`/prayers/${id}`);
+    },
     onSuccess: () => {
+      console.log('[AdminPrayers] Prayer deleted');
       void queryClient.invalidateQueries({ queryKey: ['admin', 'prayers'] });
       void queryClient.invalidateQueries({ queryKey: ['prayers'] });
     },
-    onError: (error) => Alert.alert('Error', error.message),
+    onError: (error) => {
+      console.log('[AdminPrayers] Delete error:', error.message);
+      Alert.alert('Error', error.message || 'Failed to delete prayer');
+    },
   });
 
   const handleRefresh = useCallback(() => {
@@ -50,10 +69,17 @@ export default function AdminPrayersScreen() {
   }, [queryClient]);
 
   const prayers = React.useMemo(() => {
-    const raw = prayersQuery.data;
+    const raw = prayersQuery.data as unknown;
     if (!raw) return [];
     if (Array.isArray(raw)) return raw as Prayer[];
-    if (typeof raw === 'object' && 'data' in raw && Array.isArray((raw as { data: Prayer[] }).data)) return (raw as { data: Prayer[] }).data;
+    if (typeof raw === 'object' && raw !== null) {
+      const obj = raw as Record<string, unknown>;
+      if (Array.isArray(obj.data)) return obj.data as Prayer[];
+      if (Array.isArray(obj.prayers)) return obj.prayers as Prayer[];
+      if (Array.isArray(obj.items)) return obj.items as Prayer[];
+      if (Array.isArray(obj.results)) return obj.results as Prayer[];
+    }
+    console.log('[AdminPrayers] Could not parse:', JSON.stringify(raw).slice(0, 300));
     return [];
   }, [prayersQuery.data]);
 

@@ -40,17 +40,29 @@ export default function AdminEventsScreen() {
 
   const eventsQuery = useQuery({
     queryKey: ['admin', 'events'],
-    queryFn: () => api.get<Event[] | { data: Event[] }>('/events'),
+    queryFn: async () => {
+      const res = await api.get<unknown>('/events');
+      console.log('[AdminEvents] Raw response:', JSON.stringify(res).slice(0, 500));
+      return res;
+    },
   });
 
   const createMutation = useMutation({
-    mutationFn: (params: Record<string, unknown>) => api.post('/events', params),
+    mutationFn: (params: Record<string, unknown>) => {
+      console.log('[AdminEvents] Creating event with:', JSON.stringify(params));
+      return api.post('/events', params);
+    },
     onSuccess: () => {
+      console.log('[AdminEvents] Event created successfully');
       void queryClient.invalidateQueries({ queryKey: ['admin', 'events'] });
       void queryClient.invalidateQueries({ queryKey: ['events'] });
       resetForm();
+      Alert.alert('Success', 'Event created successfully!');
     },
-    onError: (error) => Alert.alert('Error', error.message),
+    onError: (error) => {
+      console.log('[AdminEvents] Create error:', error.message);
+      Alert.alert('Error', error.message || 'Failed to create event');
+    },
   });
 
   const cancelMutation = useMutation({
@@ -79,14 +91,14 @@ export default function AdminEventsScreen() {
     const tomorrow = new Date(now.getTime() + 86400000);
     createMutation.mutate({
       title: title.trim(),
-      description: description.trim(),
+      description: description.trim() || 'No description provided',
       type: eventType,
-      location: location.trim(),
+      location: location.trim() || 'TBD',
       start_date: tomorrow.toISOString(),
       end_date: new Date(tomorrow.getTime() + 7200000).toISOString(),
       registration_required: regRequired,
       is_recurring: recurring,
-      max_capacity: maxCapacity ? parseInt(maxCapacity, 10) : null,
+      ...(maxCapacity ? { max_capacity: parseInt(maxCapacity, 10) } : {}),
     });
   };
 
@@ -95,10 +107,17 @@ export default function AdminEventsScreen() {
   }, [queryClient]);
 
   const events = React.useMemo(() => {
-    const raw = eventsQuery.data;
+    const raw = eventsQuery.data as unknown;
     if (!raw) return [];
-    if (Array.isArray(raw)) return raw;
-    if (typeof raw === 'object' && 'data' in raw && Array.isArray((raw as { data: Event[] }).data)) return (raw as { data: Event[] }).data;
+    if (Array.isArray(raw)) return raw as Event[];
+    if (typeof raw === 'object' && raw !== null) {
+      const obj = raw as Record<string, unknown>;
+      if (Array.isArray(obj.data)) return obj.data as Event[];
+      if (Array.isArray(obj.events)) return obj.events as Event[];
+      if (Array.isArray(obj.items)) return obj.items as Event[];
+      if (Array.isArray(obj.results)) return obj.results as Event[];
+    }
+    console.log('[AdminEvents] Could not parse:', JSON.stringify(raw).slice(0, 300));
     return [];
   }, [eventsQuery.data]);
 

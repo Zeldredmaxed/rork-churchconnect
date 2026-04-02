@@ -34,17 +34,29 @@ export default function AdminGroupsScreen() {
 
   const groupsQuery = useQuery({
     queryKey: ['admin', 'groups'],
-    queryFn: () => api.get<Group[] | { data: Group[] }>('/groups'),
+    queryFn: async () => {
+      const res = await api.get<unknown>('/groups');
+      console.log('[AdminGroups] Raw response:', JSON.stringify(res).slice(0, 500));
+      return res;
+    },
   });
 
   const createMutation = useMutation({
-    mutationFn: (params: Record<string, unknown>) => api.post('/groups', params),
+    mutationFn: (params: Record<string, unknown>) => {
+      console.log('[AdminGroups] Creating group with:', JSON.stringify(params));
+      return api.post('/groups', params);
+    },
     onSuccess: () => {
+      console.log('[AdminGroups] Group created successfully');
       void queryClient.invalidateQueries({ queryKey: ['admin', 'groups'] });
       void queryClient.invalidateQueries({ queryKey: ['groups'] });
       resetForm();
+      Alert.alert('Success', 'Group created successfully!');
     },
-    onError: (error) => Alert.alert('Error', error.message),
+    onError: (error) => {
+      console.log('[AdminGroups] Create error:', error.message);
+      Alert.alert('Error', error.message || 'Failed to create group');
+    },
   });
 
   const resetForm = () => {
@@ -56,7 +68,12 @@ export default function AdminGroupsScreen() {
 
   const handleCreate = () => {
     if (!name.trim()) return;
-    createMutation.mutate({ name: name.trim(), description: description.trim(), type: groupType });
+    createMutation.mutate({
+      name: name.trim(),
+      description: description.trim() || 'No description provided',
+      group_type: groupType,
+      type: groupType,
+    });
   };
 
   const handleRefresh = useCallback(() => {
@@ -64,10 +81,17 @@ export default function AdminGroupsScreen() {
   }, [queryClient]);
 
   const groups = React.useMemo(() => {
-    const raw = groupsQuery.data;
+    const raw = groupsQuery.data as unknown;
     if (!raw) return [];
-    if (Array.isArray(raw)) return raw;
-    if (typeof raw === 'object' && 'data' in raw && Array.isArray((raw as { data: Group[] }).data)) return (raw as { data: Group[] }).data;
+    if (Array.isArray(raw)) return raw as Group[];
+    if (typeof raw === 'object' && raw !== null) {
+      const obj = raw as Record<string, unknown>;
+      if (Array.isArray(obj.data)) return obj.data as Group[];
+      if (Array.isArray(obj.groups)) return obj.groups as Group[];
+      if (Array.isArray(obj.items)) return obj.items as Group[];
+      if (Array.isArray(obj.results)) return obj.results as Group[];
+    }
+    console.log('[AdminGroups] Could not parse:', JSON.stringify(raw).slice(0, 300));
     return [];
   }, [groupsQuery.data]);
 

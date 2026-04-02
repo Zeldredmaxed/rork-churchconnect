@@ -23,7 +23,7 @@ import SearchBar from '@/components/SearchBar';
 import MemberRow from '@/components/MemberRow';
 import EmptyState from '@/components/EmptyState';
 import { Users } from 'lucide-react-native';
-import type { Member, PaginatedResponse } from '@/types';
+import type { Member } from '@/types';
 
 export default function AdminMembersScreen() {
   const { theme } = useTheme();
@@ -40,10 +40,13 @@ export default function AdminMembersScreen() {
 
   const membersQuery = useQuery({
     queryKey: ['admin', 'members', search],
-    queryFn: () =>
-      api.get<PaginatedResponse<Member>>(
+    queryFn: async () => {
+      const res = await api.get<unknown>(
         `/members?page=1&per_page=50${search ? `&search=${encodeURIComponent(search)}` : ''}`
-      ),
+      );
+      console.log('[AdminMembers] Raw response:', JSON.stringify(res).slice(0, 500));
+      return res;
+    },
   });
 
   const addMemberMutation = useMutation({
@@ -80,10 +83,17 @@ export default function AdminMembersScreen() {
   }, [queryClient]);
 
   const members = React.useMemo(() => {
-    const raw = membersQuery.data;
+    const raw = membersQuery.data as unknown;
     if (!raw) return [];
-    if ('items' in raw && Array.isArray((raw as any).items)) return (raw as any).items as Member[];
-    if ('data' in raw && Array.isArray((raw as any).data)) return (raw as any).data as Member[];
+    if (Array.isArray(raw)) return raw as Member[];
+    if (typeof raw === 'object' && raw !== null) {
+      const obj = raw as Record<string, unknown>;
+      if (Array.isArray(obj.items)) return obj.items as Member[];
+      if (Array.isArray(obj.data)) return obj.data as Member[];
+      if (Array.isArray(obj.members)) return obj.members as Member[];
+      if (Array.isArray(obj.results)) return obj.results as Member[];
+    }
+    console.log('[AdminMembers] Could not parse response:', JSON.stringify(raw).slice(0, 300));
     return [];
   }, [membersQuery.data]);
 

@@ -24,32 +24,90 @@ export default function AdminAnalyticsScreen() {
 
   const overviewQuery = useQuery({
     queryKey: ['admin', 'analytics', 'overview'],
-    queryFn: () => api.get<{ data: AnalyticsOverview }>('/reports/analytics/overview'),
+    queryFn: async () => {
+      try {
+        const res = await api.get<unknown>('/reports/analytics/overview');
+        console.log('[Analytics] Overview raw:', JSON.stringify(res).slice(0, 500));
+        return res;
+      } catch (e) {
+        console.log('[Analytics] Overview failed:', e);
+        return null;
+      }
+    },
   });
 
   const engagementQuery = useQuery({
     queryKey: ['admin', 'analytics', 'engagement'],
-    queryFn: () => api.get<{ data: EngagementData[] }>('/reports/analytics/engagement'),
+    queryFn: async () => {
+      try {
+        const res = await api.get<unknown>('/reports/analytics/engagement');
+        console.log('[Analytics] Engagement raw:', JSON.stringify(res).slice(0, 500));
+        return res;
+      } catch (e) {
+        console.log('[Analytics] Engagement failed:', e);
+        return null;
+      }
+    },
   });
 
   const growthQuery = useQuery({
     queryKey: ['admin', 'analytics', 'growth'],
-    queryFn: () => api.get<{ data: GrowthData[] }>('/reports/analytics/growth'),
+    queryFn: async () => {
+      try {
+        const res = await api.get<unknown>('/reports/analytics/growth');
+        console.log('[Analytics] Growth raw:', JSON.stringify(res).slice(0, 500));
+        return res;
+      } catch (e) {
+        console.log('[Analytics] Growth failed:', e);
+        return null;
+      }
+    },
   });
 
   const attendanceQuery = useQuery({
     queryKey: ['admin', 'analytics', 'attendance'],
-    queryFn: () => api.get<{ data: AttendanceRecord[] }>('/reports/attendance'),
+    queryFn: async () => {
+      try {
+        const res = await api.get<unknown>('/reports/attendance');
+        console.log('[Analytics] Attendance raw:', JSON.stringify(res).slice(0, 500));
+        return res;
+      } catch (e) {
+        console.log('[Analytics] Attendance failed:', e);
+        return null;
+      }
+    },
   });
 
   const handleRefresh = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['admin', 'analytics'] });
   }, [queryClient]);
 
-  const overview = overviewQuery.data?.data;
-  const engagement = engagementQuery.data?.data ?? [];
-  const growth = growthQuery.data?.data ?? [];
-  const attendance = attendanceQuery.data?.data ?? [];
+  const overview = React.useMemo(() => {
+    const raw = overviewQuery.data as unknown;
+    if (!raw) return undefined;
+    if (typeof raw === 'object' && raw !== null) {
+      const obj = raw as Record<string, unknown>;
+      if (obj.data && typeof obj.data === 'object') return obj.data as AnalyticsOverview;
+      if ('total_members' in obj || 'engagement_score' in obj) return obj as unknown as AnalyticsOverview;
+    }
+    return undefined;
+  }, [overviewQuery.data]);
+
+  const parseArray = <T,>(raw: unknown): T[] => {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw as T[];
+    if (typeof raw === 'object' && raw !== null) {
+      const obj = raw as Record<string, unknown>;
+      if (Array.isArray(obj.data)) return obj.data as T[];
+      if (Array.isArray(obj.items)) return obj.items as T[];
+      if (Array.isArray(obj.results)) return obj.results as T[];
+    }
+    return [];
+  };
+
+  const engagement = parseArray<EngagementData>(engagementQuery.data);
+  const growth = parseArray<GrowthData>(growthQuery.data);
+  const attendance = parseArray<AttendanceRecord>(attendanceQuery.data);
   const isLoading = overviewQuery.isLoading;
 
   return (

@@ -107,8 +107,10 @@ async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Pr
 
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
-    console.log(`[API] Error ${res.status}:`, errorData);
-    throw new Error(errorData.message || errorData.detail || `Request failed: ${res.status}`);
+    console.log(`[API] Error ${res.status}:`, JSON.stringify(errorData));
+    const msg = errorData.message || errorData.detail || errorData.error;
+    const errorMessage = typeof msg === 'string' ? msg : (msg ? JSON.stringify(msg) : `Request failed: ${res.status}`);
+    throw new Error(errorMessage);
   }
 
   if (res.status === 204) {
