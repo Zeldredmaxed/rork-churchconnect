@@ -72,11 +72,11 @@ export default function FollowersListScreen() {
   const [activeTab, setActiveTab] = useState<TabType>((tab as TabType) ?? 'followers');
 
   const followersQuery = useQuery({
-    queryKey: ['flock', 'followers', id],
+    queryKey: ['followers', 'list', id],
     queryFn: async () => {
       console.log('[FollowersList] Fetching followers for:', id);
       try {
-        const data = await api.get<{ data: FlockUser[] }>(`/social/flock/${id}/followers`);
+        const data = await api.get<{ data: FlockUser[] }>(`/social/followers/${id}`);
         return data;
       } catch {
         return { data: [] as FlockUser[] };
@@ -86,11 +86,11 @@ export default function FollowersListScreen() {
   });
 
   const followingQuery = useQuery({
-    queryKey: ['flock', 'following', id],
+    queryKey: ['following', 'list', id],
     queryFn: async () => {
       console.log('[FollowersList] Fetching following for:', id);
       try {
-        const data = await api.get<{ data: FlockUser[] }>(`/social/shepherding/${id}/following`);
+        const data = await api.get<{ data: FlockUser[] }>(`/social/following/${id}`);
         return data;
       } catch {
         return { data: [] as FlockUser[] };
@@ -100,7 +100,8 @@ export default function FollowersListScreen() {
   });
 
   const handleRefresh = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ['flock'] });
+    void queryClient.invalidateQueries({ queryKey: ['followers'] });
+    void queryClient.invalidateQueries({ queryKey: ['following'] });
   }, [queryClient]);
 
   const activeData = activeTab === 'followers'

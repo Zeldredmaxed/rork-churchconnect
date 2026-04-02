@@ -23,7 +23,7 @@ interface PostOptionsSheetProps {
   onSave?: () => void;
   isSaved?: boolean;
   isDeleting?: boolean;
-  itemType?: 'post' | 'short';
+  itemType?: 'post' | 'short' | 'clip';
 }
 
 export default function PostOptionsSheet({
@@ -158,7 +158,7 @@ interface DeleteConfirmSheetProps {
   onClose: () => void;
   onConfirm: () => void;
   isDeleting: boolean;
-  itemType?: 'post' | 'short';
+  itemType?: 'post' | 'short' | 'clip';
 }
 
 export function DeleteConfirmSheet({

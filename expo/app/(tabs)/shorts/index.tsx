@@ -28,13 +28,13 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSaved } from '@/contexts/SavedContext';
 import ShareSheet from '@/components/ShareSheet';
-import type { Short } from '@/types';
+import type { Clip } from '@/types';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 type FeedTab = 'trending' | 'my-church';
 
-function ShortOverlay({ item, onLike, onComment, onShare, onMore, onSave, isSaved, currentUserId }: { item: Short; onLike: () => void; onComment: () => void; onShare: () => void; onMore: () => void; onSave: () => void; isSaved: boolean; currentUserId?: string }) {
+function ShortOverlay({ item, onLike, onComment, onShare, onMore, onSave, isSaved, currentUserId }: { item: Clip; onLike: () => void; onComment: () => void; onShare: () => void; onMore: () => void; onSave: () => void; isSaved: boolean; currentUserId?: string }) {
   const { theme } = useTheme();
   const styles = createStyles(theme);
   const router = useRouter();
@@ -43,10 +43,10 @@ function ShortOverlay({ item, onLike, onComment, onShare, onMore, onSave, isSave
   const queryClient = useQueryClient();
 
   const followMutation = useMutation({
-    mutationFn: () => api.post(`/social/flock/${item.author_id}`),
+    mutationFn: () => api.post(`/social/follow/${item.author_id}`),
     onSuccess: () => {
       setIsFollowing(true);
-      void queryClient.invalidateQueries({ queryKey: ['flock'] });
+      void queryClient.invalidateQueries({ queryKey: ['followers'] });
     },
   });
 
@@ -104,7 +104,7 @@ function ShortOverlay({ item, onLike, onComment, onShare, onMore, onSave, isSave
               <Heart
                 size={26}
                 color={theme.colors.white}
-                fill={item.is_liked ? theme.colors.error : 'transparent'}
+                fill={item.is_liked_by_me ? theme.colors.error : 'transparent'}
               />
             </Animated.View>
             <Text style={styles.actionCount}>{item.like_count}</Text>
@@ -152,33 +152,33 @@ export default function ShortsScreen() {
   const { isItemSaved, toggleSave } = useSaved();
 
   const shortsQuery = useQuery({
-    queryKey: ['shorts', activeTab],
+    queryKey: ['clips', activeTab],
     queryFn: () =>
-      api.get<{ data: Short[] }>(
-        activeTab === 'trending' ? '/glory_clips/trending' : '/glory_clips/my-church'
+      api.get<{ data: Clip[] }>(
+        activeTab === 'trending' ? '/clips/trending' : '/clips/my-church'
       ),
   });
 
   const likeMutation = useMutation({
     mutationFn: (params: { id: string; liked: boolean }) =>
       params.liked
-        ? api.delete(`/glory_clips/${params.id}/amen`)
-        : api.post(`/glory_clips/${params.id}/amen`),
+        ? api.delete(`/clips/${params.id}/likes`)
+        : api.post(`/clips/${params.id}/likes`),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['glory_clips'] });
+      void queryClient.invalidateQueries({ queryKey: ['clips'] });
     },
   });
 
   const viewMutation = useMutation({
-    mutationFn: (id: string) => api.post(`/glory_clips/${id}/view`),
+    mutationFn: (id: string) => api.post(`/clips/${id}/view`),
   });
 
   const deleteShortMutation = useMutation({
-    mutationFn: (shortId: string) => api.delete(`/glory_clips/${shortId}`),
+    mutationFn: (shortId: string) => api.delete(`/clips/${shortId}`),
     onSuccess: () => {
-      console.log('[Shorts] Short deleted successfully, cascade invalidating...');
-      void queryClient.invalidateQueries({ queryKey: ['glory_clips'] });
-      void queryClient.invalidateQueries({ queryKey: ['my-glory-clips'] });
+      console.log('[Shorts] Clip deleted successfully, cascade invalidating...');
+      void queryClient.invalidateQueries({ queryKey: ['clips'] });
+      void queryClient.invalidateQueries({ queryKey: ['my-clips'] });
       setShowDeleteConfirm(false);
       setShowOptions(false);
       setOptionsShortId(null);
@@ -209,7 +209,7 @@ export default function ShortsScreen() {
   );
 
   const onViewableItemsChanged = useCallback(
-    ({ viewableItems }: { viewableItems: Array<{ item: Short }> }) => {
+    ({ viewableItems }: { viewableItems: Array<{ item: Clip }> }) => {
       if (viewableItems.length > 0) {
         const item = viewableItems[0].item;
         setVisibleShortId(String(item.id));
@@ -249,16 +249,16 @@ export default function ShortsScreen() {
   }, [optionsShortId, deleteShortMutation]);
 
   const renderItem = useCallback(
-    ({ item }: { item: Short }) => (
+    ({ item }: { item: Clip }) => (
       <View style={[styles.shortItem, { height: itemHeight }]}>
         <ShortVideoPlayer
           videoUrl={item.video_url}
-          thumbnailUrl={item.thumbnail_url}
+          thumbnailUrl={item.thumbnail_url ?? undefined}
           isVisible={isScreenFocused && visibleShortId === String(item.id)}
         />
         <ShortOverlay
           item={item}
-          onLike={() => likeMutation.mutate({ id: String(item.id), liked: !!item.is_liked })}
+          onLike={() => likeMutation.mutate({ id: String(item.id), liked: !!item.is_liked_by_me })}
           onComment={() => {
             setCommentsShortId(String(item.id));
             setShowComments(true);
@@ -273,16 +273,16 @@ export default function ShortsScreen() {
             void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             toggleSave({
               itemId: String(item.id),
-              itemType: 'short',
+              itemType: 'clip',
               title: item.title,
               preview: item.description ?? item.title,
-              authorName: item.author_name ?? item.church_name,
+              authorName: item.author_name ?? item.church_name ?? '',
               authorId: String(item.author_id ?? ''),
-              thumbnailUrl: item.thumbnail_url,
+              thumbnailUrl: item.thumbnail_url ?? undefined,
               mediaUrl: item.video_url,
             });
           }}
-          isSaved={isItemSaved(String(item.id), 'short')}
+          isSaved={isItemSaved(String(item.id), 'clip')}
           currentUserId={user?.id}
         />
       </View>
@@ -351,7 +351,7 @@ export default function ShortsScreen() {
           setCommentsShortId(null);
         }}
         postId={commentsShortId}
-        source="shorts"
+        source="clips"
       />
 
 
@@ -369,18 +369,18 @@ export default function ShortsScreen() {
           if (selectedShort) {
             toggleSave({
               itemId: String(selectedShort.id),
-              itemType: 'short',
+              itemType: 'clip',
               title: selectedShort.title,
               preview: selectedShort.description ?? selectedShort.title,
-              authorName: selectedShort.author_name ?? selectedShort.church_name,
+              authorName: selectedShort.author_name ?? selectedShort.church_name ?? '',
               authorId: String(selectedShort.author_id ?? ''),
-              thumbnailUrl: selectedShort.thumbnail_url,
+              thumbnailUrl: selectedShort.thumbnail_url ?? undefined,
               mediaUrl: selectedShort.video_url,
             });
           }
         }}
-        isSaved={selectedShort ? isItemSaved(String(selectedShort.id), 'short') : false}
-        itemType="short"
+        isSaved={selectedShort ? isItemSaved(String(selectedShort.id), 'clip') : false}
+        itemType="clip"
       />
 
       <ReportSheet
@@ -390,7 +390,7 @@ export default function ShortsScreen() {
           setOptionsShortId(null);
         }}
         contentId={optionsShortId}
-        contentType="short"
+        contentType="clip"
         authorName={selectedShort?.author_name}
         authorId={selectedShort?.author_id != null ? String(selectedShort.author_id) : undefined}
       />
@@ -403,7 +403,7 @@ export default function ShortsScreen() {
         }}
         onConfirm={handleConfirmDeleteShort}
         isDeleting={deleteShortMutation.isPending}
-        itemType="short"
+        itemType="clip"
       />
 
       <ShareSheet
@@ -414,7 +414,7 @@ export default function ShortsScreen() {
         }}
         content={shareShortId ? {
           id: shareShortId,
-          type: 'short',
+          type: 'clip',
           title: shorts.find((s) => s.id === shareShortId)?.title ?? '',
           authorName: shorts.find((s) => s.id === shareShortId)?.author_name,
         } : null}

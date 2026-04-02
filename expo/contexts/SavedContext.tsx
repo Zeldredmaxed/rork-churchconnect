@@ -9,7 +9,7 @@ const SAVED_STORAGE_KEY = 'shepherd_saved_items';
 export interface SavedItemData {
   id: string;
   item_id: string;
-  item_type: 'post' | 'short';
+  item_type: 'post' | 'short' | 'clip';
   title: string;
   preview: string;
   author_name: string;
@@ -53,9 +53,9 @@ function useSavedValue() {
   }, []);
 
   const saveMutation = useMutation({
-    mutationFn: async (params: { itemId: string; itemType: 'post' | 'short'; title: string; preview: string; authorName: string; authorId: string; mediaUrl?: string; thumbnailUrl?: string }) => {
+    mutationFn: async (params: { itemId: string; itemType: 'post' | 'short' | 'clip'; title: string; preview: string; authorName: string; authorId: string; mediaUrl?: string; thumbnailUrl?: string }) => {
       try {
-        await api.post('/social/saved', {
+        await api.post('/saved', {
           item_id: params.itemId,
           item_type: params.itemType,
         });
@@ -85,9 +85,9 @@ function useSavedValue() {
   });
 
   const unsaveMutation = useMutation({
-    mutationFn: async (params: { itemId: string; itemType: 'post' | 'short' }) => {
+    mutationFn: async (params: { itemId: string; itemType: 'post' | 'short' | 'clip' }) => {
       try {
-        await api.delete(`/social/saved/${params.itemId}?type=${params.itemType}`);
+        await api.delete(`/saved/${params.itemId}?type=${params.itemType}`);
       } catch {
         console.log('[Saved] API unsave failed, removing locally only');
       }
@@ -102,14 +102,14 @@ function useSavedValue() {
   });
 
   const isItemSaved = useCallback(
-    (itemId: string, itemType: 'post' | 'short') => {
+    (itemId: string, itemType: 'post' | 'short' | 'clip') => {
       return savedItems.some((i) => i.item_id === itemId && i.item_type === itemType);
     },
     [savedItems]
   );
 
   const toggleSave = useCallback(
-    (params: { itemId: string; itemType: 'post' | 'short'; title: string; preview: string; authorName: string; authorId: string; mediaUrl?: string; thumbnailUrl?: string }) => {
+    (params: { itemId: string; itemType: 'post' | 'short' | 'clip'; title: string; preview: string; authorName: string; authorId: string; mediaUrl?: string; thumbnailUrl?: string }) => {
       if (isItemSaved(params.itemId, params.itemType)) {
         unsaveMutation.mutate({ itemId: params.itemId, itemType: params.itemType });
         return false;

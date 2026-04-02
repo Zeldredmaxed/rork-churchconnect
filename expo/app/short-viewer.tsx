@@ -31,7 +31,7 @@ import type { AppTheme } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSaved } from '@/contexts/SavedContext';
 import { api } from '@/utils/api';
-import type { Short } from '@/types';
+import type { Clip } from '@/types';
 
 
 
@@ -56,14 +56,14 @@ export default function ShortViewerScreen() {
     queryKey: ['short-detail', id],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: Short }>(`/glory_clips/${id}`);
+        const data = await api.get<{ data: Clip }>(`/clips/${id}`);
         console.log('[ShortViewer] Short loaded:', JSON.stringify(data).slice(0, 200));
         if (data?.data) return data.data;
       } catch (e) {
         console.log('[ShortViewer] Direct fetch failed, trying fallbacks:', e);
       }
       try {
-        const all = await api.get<{ data: Short[] }>('/glory_clips/trending?limit=100');
+        const all = await api.get<{ data: Clip[] }>('/clips/trending?limit=100');
         const found = all?.data?.find((s) => String(s.id) === String(id));
         if (found) {
           console.log('[ShortViewer] Found in trending');
@@ -73,14 +73,14 @@ export default function ShortViewerScreen() {
         console.log('[ShortViewer] Trending fallback failed:', e2);
       }
       try {
-        const myShorts = await api.get<{ data: Short[] }>('/glory_clips/me?limit=100&offset=0');
-        const found = myShorts?.data?.find((s) => String(s.id) === String(id));
+        const myClips = await api.get<{ data: Clip[] }>('/clips/me?limit=100&offset=0');
+        const found = myClips?.data?.find((s) => String(s.id) === String(id));
         if (found) {
-          console.log('[ShortViewer] Found in my shorts');
+          console.log('[ShortViewer] Found in my clips');
           return found;
         }
       } catch (e3) {
-        console.log('[ShortViewer] My shorts fallback failed:', e3);
+        console.log('[ShortViewer] My clips fallback failed:', e3);
       }
       console.log('[ShortViewer] Short not found in any source for id:', id);
       return null;
@@ -91,20 +91,20 @@ export default function ShortViewerScreen() {
   const likeMutation = useMutation({
     mutationFn: (params: { id: string; liked: boolean }) =>
       params.liked
-        ? api.delete(`/glory_clips/${params.id}/amen`)
-        : api.post(`/glory_clips/${params.id}/amen`),
+        ? api.delete(`/clips/${params.id}/likes`)
+        : api.post(`/clips/${params.id}/likes`),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['short-detail', id] });
-      void queryClient.invalidateQueries({ queryKey: ['glory_clips'] });
+      void queryClient.invalidateQueries({ queryKey: ['clips'] });
     },
   });
 
   const deleteShortMutation = useMutation({
-    mutationFn: (shortId: string) => api.delete(`/glory_clips/${shortId}`),
+    mutationFn: (shortId: string) => api.delete(`/clips/${shortId}`),
     onSuccess: () => {
       console.log('[ShortViewer] Short deleted successfully');
-      void queryClient.invalidateQueries({ queryKey: ['glory_clips'] });
-      void queryClient.invalidateQueries({ queryKey: ['my-glory-clips'] });
+      void queryClient.invalidateQueries({ queryKey: ['clips'] });
+      void queryClient.invalidateQueries({ queryKey: ['my-clips'] });
       setShowDeleteConfirm(false);
       setShowOptions(false);
       Alert.alert('Deleted', 'Short has been deleted.', [
@@ -119,7 +119,7 @@ export default function ShortViewerScreen() {
 
   const short = shortQuery.data;
   const isOwner = short?.author_id === user?.id;
-  const saved = short ? isItemSaved(String(short.id), 'short') : false;
+  const saved = short ? isItemSaved(String(short.id), 'clip') : false;
 
   const handleLike = useCallback(() => {
     if (!short) return;
@@ -128,7 +128,7 @@ export default function ShortViewerScreen() {
       Animated.spring(scaleAnim, { toValue: 1.4, useNativeDriver: true, friction: 3 }),
       Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, friction: 3 }),
     ]).start();
-    likeMutation.mutate({ id: String(short.id), liked: !!short.is_liked });
+    likeMutation.mutate({ id: String(short.id), liked: !!short.is_liked_by_me });
   }, [short, likeMutation, scaleAnim]);
 
   const handleSave = useCallback(() => {
@@ -136,12 +136,12 @@ export default function ShortViewerScreen() {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     toggleSave({
       itemId: String(short.id),
-      itemType: 'short',
+      itemType: 'clip',
       title: short.title,
       preview: short.description ?? short.title,
-      authorName: short.author_name ?? short.church_name,
+      authorName: short.author_name ?? short.church_name ?? '',
       authorId: String(short.author_id ?? ''),
-      thumbnailUrl: short.thumbnail_url,
+      thumbnailUrl: short.thumbnail_url ?? undefined,
       mediaUrl: short.video_url,
     });
   }, [short, toggleSave]);
@@ -165,7 +165,7 @@ export default function ShortViewerScreen() {
         <>
           <ShortVideoPlayer
             videoUrl={short.video_url}
-            thumbnailUrl={short.thumbnail_url}
+            thumbnailUrl={short.thumbnail_url ?? undefined}
             isVisible={true}
           />
 
@@ -207,7 +207,7 @@ export default function ShortViewerScreen() {
                     <Heart
                       size={26}
                       color="#fff"
-                      fill={short.is_liked ? theme.colors.error : 'transparent'}
+                      fill={short.is_liked_by_me ? theme.colors.error : 'transparent'}
                     />
                   </Animated.View>
                   <Text style={styles.actionCount}>{short.like_count}</Text>
@@ -239,7 +239,7 @@ export default function ShortViewerScreen() {
         visible={showComments}
         onClose={() => setShowComments(false)}
         postId={id ?? null}
-        source="shorts"
+        source="clips"
       />
 
       <PostOptionsSheet
@@ -256,7 +256,7 @@ export default function ShortViewerScreen() {
         }}
         onSave={handleSave}
         isSaved={saved}
-        itemType="short"
+        itemType="clip"
       />
 
       <DeleteConfirmSheet
@@ -266,14 +266,14 @@ export default function ShortViewerScreen() {
           if (id) deleteShortMutation.mutate(id);
         }}
         isDeleting={deleteShortMutation.isPending}
-        itemType="short"
+        itemType="clip"
       />
 
       <ReportSheet
         visible={showReport}
         onClose={() => setShowReport(false)}
         contentId={id ?? null}
-        contentType="short"
+        contentType="clip"
         authorName={short?.author_name}
         authorId={short?.author_id != null ? String(short.author_id) : undefined}
       />
@@ -283,7 +283,7 @@ export default function ShortViewerScreen() {
         onClose={() => setShowShare(false)}
         content={short ? {
           id: String(short.id),
-          type: 'short' as const,
+          type: 'clip' as const,
           title: short.title,
           authorName: short.author_name,
         } : null}

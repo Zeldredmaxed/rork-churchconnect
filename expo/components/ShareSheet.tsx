@@ -26,7 +26,7 @@ import type { FlockUser } from '@/types';
 
 interface ShareableContent {
   id: string;
-  type: 'post' | 'short';
+  type: 'post' | 'short' | 'clip';
   title: string;
   authorName?: string;
 }
@@ -87,7 +87,7 @@ export default function ShareSheet({ visible, onClose, content }: ShareSheetProp
   const contactsQuery = useQuery({
     queryKey: ['share-contacts'],
     queryFn: async () => {
-      try { const data = await api.get<{ data: FlockUser[] }>('/social/flock/suggestions'); return data; }
+      try { const data = await api.get<{ data: FlockUser[] }>('/social/followers/suggestions'); return data; }
       catch { return { data: [] as FlockUser[] }; }
     },
     enabled: visible,

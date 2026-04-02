@@ -72,7 +72,7 @@ interface ReportSheetProps {
   visible: boolean;
   onClose: () => void;
   contentId: string | null;
-  contentType: 'post' | 'short' | 'comment' | 'prayer';
+  contentType: 'post' | 'short' | 'clip' | 'comment' | 'prayer';
   authorName?: string;
   authorId?: string;
 }

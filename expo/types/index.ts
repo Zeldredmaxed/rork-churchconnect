@@ -42,13 +42,11 @@ export interface FeedPost {
   visibility: 'all' | 'leaders' | 'members_only';
   is_pinned: boolean;
   like_count: number;
-  amen_count?: number;
   comment_count: number;
   comments_count?: number;
   share_count?: number;
   shares_count?: number;
   is_liked?: boolean;
-  is_amened_by_me?: boolean;
   post_type?: 'text' | 'photo' | 'video';
   media_urls?: string[];
   image_url?: string;
@@ -104,25 +102,29 @@ export interface PrayerResponse {
   created_at: string;
 }
 
-export interface Short {
-  id: number | string;
+export interface Clip {
+  id: string;
   title: string;
-  description?: string;
+  description: string | null;
   video_url: string;
-  thumbnail_url?: string;
-  author_id?: number | string;
+  thumbnail_url: string | null;
+  duration: number;
+  author_id: string;
+  church_id: string;
+  is_published: boolean;
+  view_count: number;
+  like_count: number;
+  is_liked_by_me: boolean;
+  created_at: string;
   author_name?: string;
   author_avatar?: string;
-  church_name: string;
-  church_id: number | string;
-  like_count: number;
-  comment_count: number;
-  view_count: number;
+  church_name?: string;
+  comment_count?: number;
   share_count?: number;
-  is_liked?: boolean;
   category?: string;
-  created_at: string;
 }
+
+export type Short = Clip;
 
 export interface Sermon {
   id: string;
@@ -342,6 +344,8 @@ export interface FlockUser {
   following_count?: number;
 }
 
+export type FollowerUser = FlockUser;
+
 export interface FollowNotification {
   id: string;
   type: 'follow';
@@ -355,7 +359,7 @@ export interface FollowNotification {
 export interface SavedItem {
   id: string;
   item_id: string;
-  item_type: 'post' | 'short';
+  item_type: 'post' | 'short' | 'clip';
   title: string;
   preview: string;
   author_name: string;

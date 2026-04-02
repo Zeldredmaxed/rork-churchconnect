@@ -127,7 +127,12 @@ export default function MusicScreen() {
 
       const { sound } = await Audio.Sound.createAsync(
         { uri: song.audio_url },
-        { shouldPlay: true, positionMillis: seekMs },
+        {
+          shouldPlay: true,
+          positionMillis: seekMs,
+          progressUpdateIntervalMillis: 500,
+          androidImplementation: 'MediaPlayer',
+        },
         onPlaybackStatusUpdate,
       );
 
@@ -144,13 +149,26 @@ export default function MusicScreen() {
   }, []);
 
   const onPlaybackStatusUpdate = useCallback((status: any) => {
-    if (!status.isLoaded) return;
+    if (!status.isLoaded) {
+      if (status.error) {
+        console.log('[Radio] Playback error:', status.error);
+      }
+      return;
+    }
 
-    setProgress(status.positionMillis || 0);
-    setDuration(status.durationMillis || 0);
+    const pos = status.positionMillis || 0;
+    const dur = status.durationMillis || 0;
+    setProgress(pos);
+    if (dur > 0) {
+      setDuration(dur);
+    }
+
+    if (status.isBuffering) {
+      console.log('[Radio] Buffering at position:', Math.floor(pos / 1000), 's');
+    }
 
     if (status.didJustFinish && !isTransitioningRef.current) {
-      console.log('[Radio] Song finished naturally, transitioning...');
+      console.log('[Radio] Song finished naturally at', Math.floor(pos / 1000), 's of', Math.floor(dur / 1000), 's — transitioning...');
       isTransitioningRef.current = true;
 
       const finishedSongId = currentSongIdRef.current;
@@ -158,16 +176,18 @@ export default function MusicScreen() {
         playMutation.mutate(finishedSongId);
       }
 
-      void api.post('/music/radio/advance')
-        .catch(err => console.error('[Radio] Error advancing:', err))
-        .then(() => {
-          currentSongIdRef.current = null;
-          return new Promise(resolve => setTimeout(resolve, 300));
-        })
-        .then(() => syncToStation())
-        .finally(() => {
-          isTransitioningRef.current = false;
-        });
+      const advanceAndLoad = async () => {
+        try {
+          await api.post('/music/radio/advance');
+        } catch (err) {
+          console.log('[Radio] Error advancing:', err);
+        }
+        currentSongIdRef.current = null;
+        await new Promise(resolve => setTimeout(resolve, 500));
+        await syncToStation();
+        isTransitioningRef.current = false;
+      };
+      void advanceAndLoad();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -214,9 +234,12 @@ export default function MusicScreen() {
       // CASE 3 & 4: Server reports different song
       try {
         const status = await soundRef.current.getStatusAsync();
-        if (status.isLoaded && (status.isPlaying || status.isBuffering)) {
-          console.log('[Radio] Server advanced, but audio still playing — letting it finish.');
-          return;
+        if (status.isLoaded) {
+          const remaining = (status.durationMillis || 0) - (status.positionMillis || 0);
+          if (status.isPlaying || status.isBuffering || remaining > 2000) {
+            console.log('[Radio] Server advanced, but audio still playing (' + Math.floor(remaining / 1000) + 's remaining) — letting it finish.');
+            return;
+          }
         }
       } catch (statusErr) {
         console.log('[Radio] Error checking status, safe to switch:', statusErr);

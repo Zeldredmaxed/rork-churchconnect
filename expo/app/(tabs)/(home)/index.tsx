@@ -117,7 +117,7 @@ export default function HomeFeedScreen() {
   });
 
   const likeMutation = useMutation({
-    mutationFn: (postId: string) => api.post(`/feed/${postId}/like`),
+    mutationFn: (postId: string) => api.post(`/feed/${postId}/likes`),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['feed'] });
     },

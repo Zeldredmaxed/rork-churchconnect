@@ -29,7 +29,7 @@ import type { Comment, Member } from '@/types';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SHEET_HEIGHT = SCREEN_HEIGHT * 0.65;
 
-type CommentSource = 'feed' | 'shorts';
+type CommentSource = 'feed' | 'shorts' | 'clips';
 
 interface CommentsSheetProps {
   visible: boolean;
@@ -115,7 +115,7 @@ export default function CommentsSheet({ visible, onClose, postId, source }: Comm
 
   const endpoint = source === 'feed'
     ? `/feed/${postId}/comments`
-    : `/glory_clips/${postId}/comments`;
+    : `/clips/${postId}/comments`;
 
   const commentsQuery = useQuery({
     queryKey: ['comments', source, postId],
@@ -131,7 +131,7 @@ export default function CommentsSheet({ visible, onClose, postId, source }: Comm
       if (source === 'feed') {
         void queryClient.invalidateQueries({ queryKey: ['feed'] });
       } else {
-        void queryClient.invalidateQueries({ queryKey: ['shorts'] });
+        void queryClient.invalidateQueries({ queryKey: ['clips'] });
       }
       setCommentText('');
     },

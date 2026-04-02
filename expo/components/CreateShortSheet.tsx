@@ -135,12 +135,12 @@ export default function CreateShortSheet({ visible, onClose }: CreateShortSheetP
       if (videoUrl) body.video_url = videoUrl;
       if (durationSeconds) body.duration_seconds = durationSeconds;
 
-      return api.post('/glory_clips', body);
+      return api.post('/clips', body);
     },
     onSuccess: () => {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      void queryClient.invalidateQueries({ queryKey: ['glory_clips'] });
-      void queryClient.invalidateQueries({ queryKey: ['my-glory-clips'] });
+      void queryClient.invalidateQueries({ queryKey: ['clips'] });
+      void queryClient.invalidateQueries({ queryKey: ['my-clips'] });
       resetForm();
       Alert.alert('Success', 'Your short has been uploaded!');
     },

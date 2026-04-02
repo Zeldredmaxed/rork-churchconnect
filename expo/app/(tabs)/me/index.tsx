@@ -38,7 +38,7 @@ import { useSaved } from '@/contexts/SavedContext';
 import type { SavedItemData as SavedItemType } from '@/contexts/SavedContext';
 import { api } from '@/utils/api';
 import Avatar from '@/components/Avatar';
-import type { FlockUser, FeedPost, Short, LoginStreak, SundayAttendanceStats } from '@/types';
+import type { FlockUser, FeedPost, Clip, LoginStreak, SundayAttendanceStats } from '@/types';
 import type { SavedItemData } from '@/contexts/SavedContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -121,10 +121,10 @@ export default function ProfileTabScreen() {
   });
 
   const flockQuery = useQuery({
-    queryKey: ['my-flock-stats'],
+    queryKey: ['my-followers-stats'],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: { followers_count: number; following_count: number } }>('/social/flock/stats');
+        const data = await api.get<{ data: { followers_count: number; following_count: number } }>('/social/followers/stats');
         return data?.data ?? { followers_count: 0, following_count: 0 };
       } catch {
         return { followers_count: 0, following_count: 0 };
@@ -136,7 +136,7 @@ export default function ProfileTabScreen() {
     queryKey: ['suggested-users-profile'],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: FlockUser[] }>('/social/flock/suggestions');
+        const data = await api.get<{ data: FlockUser[] }>('/social/followers/suggestions');
         return data?.data ?? [];
       } catch {
         return [] as FlockUser[];
@@ -161,15 +161,15 @@ export default function ProfileTabScreen() {
   });
 
   const shortsQuery = useQuery({
-    queryKey: ['my-shorts', user?.id],
+    queryKey: ['my-clips', user?.id],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: Short[] }>('/glory_clips/me?limit=50&offset=0');
-        console.log('[Profile] My shorts response:', JSON.stringify(data).slice(0, 300));
+        const data = await api.get<{ data: Clip[] }>('/clips/me?limit=50&offset=0');
+        console.log('[Profile] My clips response:', JSON.stringify(data).slice(0, 300));
         return data?.data ?? [];
       } catch (e: unknown) {
-        console.log('[Profile] /glory_clips/me failed:', e);
-        return [] as Short[];
+        console.log('[Profile] /clips/me failed:', e);
+        return [] as Clip[];
       }
     },
     enabled: !!user?.id,
@@ -196,11 +196,11 @@ export default function ProfileTabScreen() {
   });
 
   const deleteShortMutation = useMutation({
-    mutationFn: (shortId: string) => api.delete(`/glory_clips/${shortId}`),
+    mutationFn: (shortId: string) => api.delete(`/clips/${shortId}`),
     onSuccess: (_data, shortId) => {
-      console.log('[Profile] Short deleted successfully, cascade invalidating...');
-      void queryClient.invalidateQueries({ queryKey: ['my-glory-clips'] });
-      void queryClient.invalidateQueries({ queryKey: ['glory_clips'] });
+      console.log('[Profile] Clip deleted successfully, cascade invalidating...');
+      void queryClient.invalidateQueries({ queryKey: ['my-clips'] });
+      void queryClient.invalidateQueries({ queryKey: ['clips'] });
       const currentSaved = savedItems.filter(
         (item) => !(item.item_id === shortId && item.item_type === 'short')
       );
@@ -215,7 +215,7 @@ export default function ProfileTabScreen() {
   });
 
   const followMutation = useMutation({
-    mutationFn: (userId: string) => api.post(`/social/flock/${userId}`),
+    mutationFn: (userId: string) => api.post(`/social/follow/${userId}`),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['suggested-users-profile'] });
     },
@@ -358,8 +358,8 @@ export default function ProfileTabScreen() {
               console.log('[Profile] Pull to refresh - syncing profile');
               void refreshProfile();
               void queryClient.invalidateQueries({ queryKey: ['my-posts'] });
-              void queryClient.invalidateQueries({ queryKey: ['my-shorts'] });
-              void queryClient.invalidateQueries({ queryKey: ['my-flock-stats'] });
+              void queryClient.invalidateQueries({ queryKey: ['my-clips'] });
+              void queryClient.invalidateQueries({ queryKey: ['my-followers-stats'] });
             }}
             tintColor={theme.colors.accent}
           />

@@ -18,7 +18,7 @@ import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
-import type { FlockUser, FeedPost, Short, Conversation } from '@/types';
+import type { FlockUser, FeedPost, Clip, Conversation } from '@/types';
 
 type SearchTab = 'all' | 'users' | 'posts' | 'shorts' | 'messages';
 
@@ -27,7 +27,7 @@ const MAX_RECENT = 15;
 
 interface RecentSearch {
   id: string;
-  type: 'user' | 'post' | 'short' | 'message';
+  type: 'user' | 'post' | 'short' | 'clip' | 'message';
   title: string;
   subtitle?: string;
   avatar_url?: string;
@@ -126,7 +126,7 @@ export default function UniversalSearchScreen() {
     queryKey: ['universal-search-shorts', trimmedQuery],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: Short[] }>(`/glory_clips/trending?limit=50`);
+        const data = await api.get<{ data: Clip[] }>(`/clips/trending?limit=50`);
         const all = data?.data ?? [];
         const q = trimmedQuery.toLowerCase();
         return all.filter(
@@ -136,7 +136,7 @@ export default function UniversalSearchScreen() {
             s.author_name?.toLowerCase().includes(q)
         );
       } catch {
-        return [] as Short[];
+        return [] as Clip[];
       }
     },
     enabled: isSearching && (activeTab === 'all' || activeTab === 'shorts'),
@@ -213,7 +213,7 @@ export default function UniversalSearchScreen() {
     router.push('/(tabs)/(home)' as never);
   }, [router, saveRecentSearch]);
 
-  const handleShortPress = useCallback((short: Short) => {
+  const handleShortPress = useCallback((short: Clip) => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Keyboard.dismiss();
     saveRecentSearch({
@@ -324,7 +324,7 @@ export default function UniversalSearchScreen() {
     </TouchableOpacity>
   );
 
-  const renderShortItem = (short: Short) => (
+  const renderShortItem = (short: Clip) => (
     <TouchableOpacity
       key={short.id}
       style={styles.resultRow}
@@ -491,7 +491,7 @@ export default function UniversalSearchScreen() {
             {activeTab === 'all' && (
               <View style={styles.sectionHeader}>
                 <Clapperboard size={16} color={theme.colors.warning} />
-                <Text style={styles.sectionTitle}>Glory Clips</Text>
+                <Text style={styles.sectionTitle}>Clips</Text>
                 {shorts.length > 3 && (
                   <TouchableOpacity onPress={() => setActiveTab('shorts')}>
                     <Text style={styles.seeAllText}>See all</Text>
@@ -619,7 +619,7 @@ export default function UniversalSearchScreen() {
             <Search size={48} color={theme.colors.textTertiary} />
             <Text style={styles.emptyTitle}>Search everything</Text>
             <Text style={styles.emptySubtitle}>
-              Find people, posts, Glory Clips, and messages
+              Find people, posts, clips, and messages
             </Text>
           </View>
         )}
