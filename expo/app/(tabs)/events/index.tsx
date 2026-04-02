@@ -303,10 +303,17 @@ export default function EventsScreen() {
   }, [queryClient]);
 
   const allEvents = useMemo(() => {
-    const raw = eventsQuery.data;
+    const raw = eventsQuery.data as unknown;
     if (!raw) return [];
-    if (Array.isArray(raw)) return raw;
-    if (typeof raw === 'object' && 'data' in raw && Array.isArray((raw as { data: Event[] }).data)) return (raw as { data: Event[] }).data;
+    if (Array.isArray(raw)) return raw as Event[];
+    if (typeof raw === 'object' && raw !== null) {
+      const obj = raw as Record<string, unknown>;
+      if (Array.isArray(obj.data)) return obj.data as Event[];
+      if (Array.isArray(obj.events)) return obj.events as Event[];
+      if (Array.isArray(obj.items)) return obj.items as Event[];
+      if (Array.isArray(obj.results)) return obj.results as Event[];
+    }
+    console.log('[Events] Could not parse events response:', JSON.stringify(raw).slice(0, 300));
     return [];
   }, [eventsQuery.data]);
 
