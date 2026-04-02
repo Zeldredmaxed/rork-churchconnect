@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,9 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
-  KeyboardAvoidingView,
+  InputAccessoryView,
+  Keyboard,
+  Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack } from 'expo-router';
@@ -31,6 +33,8 @@ export default function PrayerDetailScreen() {
   const styles = createStyles(theme, insets.bottom);
   const [responseText, setResponseText] = useState('');
   const scrollRef = useRef<ScrollView>(null);
+  const inputAccessoryViewID = 'prayer-response-input';
+  const keyboardHeight = useRef(new Animated.Value(0)).current;
 
   const prayerQuery = useQuery({
     queryKey: ['prayer', id],
@@ -104,6 +108,28 @@ export default function PrayerDetailScreen() {
     return [] as PrayerResponse[];
   }, [responsesQuery.data]);
 
+  useEffect(() => {
+    if (Platform.OS === 'ios') return;
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      Animated.timing(keyboardHeight, {
+        toValue: e.endCoordinates.height,
+        duration: 250,
+        useNativeDriver: false,
+      }).start();
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      Animated.timing(keyboardHeight, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: false,
+      }).start();
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [keyboardHeight]);
+
   if (prayerQuery.isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -130,12 +156,34 @@ export default function PrayerDetailScreen() {
     spiritual: 'Spiritual',
   };
 
+  const renderInputBar = () => (
+    <View style={styles.inputBar}>
+      <TextInput
+        style={styles.responseInput}
+        value={responseText}
+        onChangeText={setResponseText}
+        placeholder="Write a response..."
+        placeholderTextColor={theme.colors.textTertiary}
+        multiline
+        inputAccessoryViewID={Platform.OS === 'ios' ? inputAccessoryViewID : undefined}
+        onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300)}
+      />
+      <TouchableOpacity
+        style={[styles.sendBtn, !responseText.trim() && styles.sendBtnDisabled]}
+        onPress={() => respondMutation.mutate(responseText.trim())}
+        disabled={!responseText.trim() || respondMutation.isPending}
+      >
+        {respondMutation.isPending ? (
+          <ActivityIndicator size="small" color={theme.colors.accent} />
+        ) : (
+          <Send size={18} color={responseText.trim() ? theme.colors.accent : theme.colors.textTertiary} />
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-    >
+    <View style={styles.container}>
       <Stack.Screen
         options={{
           title: '',
@@ -226,29 +274,16 @@ export default function PrayerDetailScreen() {
         </View>
       </ScrollView>
 
-      <View style={styles.inputBar}>
-        <TextInput
-          style={styles.responseInput}
-          value={responseText}
-          onChangeText={setResponseText}
-          placeholder="Write a response..."
-          placeholderTextColor={theme.colors.textTertiary}
-          multiline
-          onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300)}
-        />
-        <TouchableOpacity
-          style={[styles.sendBtn, !responseText.trim() && styles.sendBtnDisabled]}
-          onPress={() => respondMutation.mutate(responseText.trim())}
-          disabled={!responseText.trim() || respondMutation.isPending}
-        >
-          {respondMutation.isPending ? (
-            <ActivityIndicator size="small" color={theme.colors.accent} />
-          ) : (
-            <Send size={18} color={responseText.trim() ? theme.colors.accent : theme.colors.textTertiary} />
-          )}
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+      {Platform.OS === 'ios' ? (
+        <InputAccessoryView nativeID={inputAccessoryViewID}>
+          {renderInputBar()}
+        </InputAccessoryView>
+      ) : (
+        <Animated.View style={{ marginBottom: keyboardHeight }}>
+          {renderInputBar()}
+        </Animated.View>
+      )}
+    </View>
   );
 }
 
