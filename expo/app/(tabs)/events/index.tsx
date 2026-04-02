@@ -305,16 +305,29 @@ export default function EventsScreen() {
   const allEvents = useMemo(() => {
     const raw = eventsQuery.data as unknown;
     if (!raw) return [];
-    if (Array.isArray(raw)) return raw as Event[];
-    if (typeof raw === 'object' && raw !== null) {
+    let list: Record<string, unknown>[] = [];
+    if (Array.isArray(raw)) {
+      list = raw;
+    } else if (typeof raw === 'object' && raw !== null) {
       const obj = raw as Record<string, unknown>;
-      if (Array.isArray(obj.data)) return obj.data as Event[];
-      if (Array.isArray(obj.events)) return obj.events as Event[];
-      if (Array.isArray(obj.items)) return obj.items as Event[];
-      if (Array.isArray(obj.results)) return obj.results as Event[];
+      if (Array.isArray(obj.data)) list = obj.data;
+      else if (Array.isArray(obj.events)) list = obj.events;
+      else if (Array.isArray(obj.items)) list = obj.items;
+      else if (Array.isArray(obj.results)) list = obj.results;
+      else {
+        console.log('[Events] Could not parse events response:', JSON.stringify(raw).slice(0, 300));
+        return [];
+      }
     }
-    console.log('[Events] Could not parse events response:', JSON.stringify(raw).slice(0, 300));
-    return [];
+    console.log('[Events] Raw list count:', list.length, 'sample:', JSON.stringify(list[0]).slice(0, 300));
+    return list.map((e) => {
+      const item = e as Record<string, unknown>;
+      return {
+        ...item,
+        start_date: (item.start_date ?? item.start_datetime ?? item.startDate ?? item.date ?? '') as string,
+        end_date: (item.end_date ?? item.end_datetime ?? item.endDate ?? item.date ?? '') as string,
+      } as Event;
+    });
   }, [eventsQuery.data]);
 
   const filteredEvents = useMemo(() => {
