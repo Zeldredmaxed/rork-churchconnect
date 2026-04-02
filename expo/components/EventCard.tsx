@@ -55,8 +55,8 @@ export default function EventCard({ event, onPress }: EventCardProps) {
       <View style={styles.content}>
         <View style={styles.topRow}>
           <Badge
-            label={event.type.charAt(0).toUpperCase() + event.type.slice(1)}
-            variant={typeBadgeVariant[event.type] || 'accent'}
+            label={event.type ? event.type.charAt(0).toUpperCase() + event.type.slice(1) : 'Event'}
+            variant={typeBadgeVariant[event.type ?? 'event'] || 'accent'}
             small
           />
           {event.status === 'cancelled' && <Badge label="Cancelled" variant="error" small />}
