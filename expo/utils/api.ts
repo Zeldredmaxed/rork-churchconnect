@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 
-const BASE_URL = 'https://newbirth-app-production.up.railway.app';
+const BASE_URL = 'https://anti-gravity-church-app-backend-production.up.railway.app';
 const API_URL = `${BASE_URL}/api/v1`;
 
 async function getToken(): Promise<string | null> {
