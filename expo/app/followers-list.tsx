@@ -67,9 +67,10 @@ function UserRow({ user }: { user: FlockUser }) {
 export default function FollowersListScreen() {
   const { theme } = useTheme();
   const styles = createStyles(theme);
-  const { id, tab } = useLocalSearchParams<{ id: string; tab: string }>();
+  const { id, tab, type } = useLocalSearchParams<{ id: string; tab: string; type: string }>();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<TabType>((tab as TabType) ?? 'followers');
+  const resolvedTab = (tab ?? type ?? 'followers') as TabType;
+  const [activeTab, setActiveTab] = useState<TabType>(resolvedTab);
 
   const followersQuery = useQuery({
     queryKey: ['followers', 'list', id],

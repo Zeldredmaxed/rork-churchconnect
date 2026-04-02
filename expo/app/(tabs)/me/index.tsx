@@ -384,14 +384,14 @@ export default function ProfileTabScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.statItem}
-              onPress={() => handleMenuPress('/followers-list?type=followers')}
+              onPress={() => handleMenuPress(`/followers-list?id=${user?.id}&tab=followers`)}
             >
               <Text style={styles.statValue}>{flockStats.followers_count}</Text>
               <Text style={styles.statLabel}>followers</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.statItem}
-              onPress={() => handleMenuPress('/followers-list?type=following')}
+              onPress={() => handleMenuPress(`/followers-list?id=${user?.id}&tab=following`)}
             >
               <Text style={styles.statValue}>{flockStats.following_count}</Text>
               <Text style={styles.statLabel}>following</Text>
