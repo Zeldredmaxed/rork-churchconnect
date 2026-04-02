@@ -169,7 +169,40 @@ export default function ShortsScreen() {
       params.liked
         ? api.delete(`/clips/${params.id}/like`)
         : api.post(`/clips/${params.id}/like`),
-    onSuccess: () => {
+    onMutate: async (params) => {
+      await queryClient.cancelQueries({ queryKey: ['clips'] });
+      const tabs: FeedTab[] = ['trending', 'my-church'];
+      const snapshots: Record<string, { data: Clip[] } | undefined> = {};
+      for (const tab of tabs) {
+        const key = ['clips', tab];
+        const prev = queryClient.getQueryData<{ data: Clip[] }>(key);
+        snapshots[tab] = prev;
+        if (prev?.data) {
+          queryClient.setQueryData<{ data: Clip[] }>(key, {
+            ...prev,
+            data: prev.data.map((c) =>
+              String(c.id) === params.id
+                ? {
+                    ...c,
+                    is_liked_by_me: !params.liked,
+                    like_count: params.liked ? Math.max(0, c.like_count - 1) : c.like_count + 1,
+                  }
+                : c
+            ),
+          });
+        }
+      }
+      return { snapshots };
+    },
+    onError: (_err, _params, context) => {
+      console.log('[Shorts] Like failed, rolling back');
+      if (context?.snapshots) {
+        for (const [tab, snap] of Object.entries(context.snapshots)) {
+          if (snap) queryClient.setQueryData(['clips', tab], snap);
+        }
+      }
+    },
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['clips'] });
     },
   });

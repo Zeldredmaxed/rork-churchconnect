@@ -279,11 +279,32 @@ export default function MusicScreen() {
     }
   };
 
+  const likeSongMutation = useMutation({
+    mutationFn: () => {
+      if (!currentSong) throw new Error('No song playing');
+      console.log('[Music] Like toggle for song:', currentSong.id, 'currently liked:', liked);
+      return liked
+        ? api.delete(`/music/songs/${currentSong.id}/like`)
+        : api.post(`/music/songs/${currentSong.id}/like`);
+    },
+    onMutate: () => {
+      setLiked(prev => !prev);
+    },
+    onError: () => {
+      console.log('[Music] Like failed, rolling back');
+      setLiked(prev => !prev);
+    },
+  });
+
   const handleLike = () => {
     if (Platform.OS !== 'web') {
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-    setLiked(prev => !prev);
+    if (currentSong) {
+      likeSongMutation.mutate();
+    } else {
+      setLiked(prev => !prev);
+    }
   };
 
   useEffect(() => {

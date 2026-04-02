@@ -42,10 +42,40 @@ export default function SermonPlayerScreen() {
   });
 
   const likeMutation = useMutation({
-    mutationFn: () => api.post(`/sermons/${id}/like`),
-    onSuccess: () => {
+    mutationFn: () => {
+      const current = queryClient.getQueryData<{ data: Sermon }>(['sermon', id]);
+      const isCurrentlyLiked = current?.data?.is_liked;
+      console.log('[Sermon] Like toggle for sermon:', id, 'currently liked:', isCurrentlyLiked);
+      return isCurrentlyLiked
+        ? api.delete(`/sermons/${id}/like`)
+        : api.post(`/sermons/${id}/like`);
+    },
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['sermon', id] });
+      const prev = queryClient.getQueryData<{ data: Sermon }>(['sermon', id]);
+      if (prev?.data) {
+        const wasLiked = prev.data.is_liked;
+        queryClient.setQueryData<{ data: Sermon }>(['sermon', id], {
+          ...prev,
+          data: {
+            ...prev.data,
+            is_liked: !wasLiked,
+            like_count: wasLiked ? Math.max(0, prev.data.like_count - 1) : prev.data.like_count + 1,
+          },
+        });
+      }
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      return { prev };
+    },
+    onError: (_err, _vars, context) => {
+      console.log('[Sermon] Like failed, rolling back');
+      if (context?.prev) {
+        queryClient.setQueryData(['sermon', id], context.prev);
+      }
+    },
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['sermon', id] });
+      void queryClient.invalidateQueries({ queryKey: ['sermons'] });
     },
   });
 

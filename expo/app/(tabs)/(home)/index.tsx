@@ -117,8 +117,44 @@ export default function HomeFeedScreen() {
   });
 
   const likeMutation = useMutation({
-    mutationFn: (postId: string) => api.post(`/feed/${postId}/likes`),
-    onSuccess: () => {
+    mutationFn: (postId: string) => {
+      const post = (queryClient.getQueryData<{ data: FeedPost[] }>(['feed', feedFilter]))?.data?.find((p) => String(p.id) === postId);
+      const isCurrentlyLiked = post?.is_liked;
+      console.log('[Feed] Like toggle for post:', postId, 'currently liked:', isCurrentlyLiked);
+      return isCurrentlyLiked
+        ? api.delete(`/feed/${postId}/likes`)
+        : api.post(`/feed/${postId}/likes`);
+    },
+    onMutate: async (postId: string) => {
+      await queryClient.cancelQueries({ queryKey: ['feed'] });
+      const filters: FeedFilter[] = ['all', 'following', 'favourites'];
+      const snapshots: Record<string, { data: FeedPost[] } | undefined> = {};
+      for (const f of filters) {
+        const key = ['feed', f];
+        const prev = queryClient.getQueryData<{ data: FeedPost[] }>(key);
+        snapshots[f] = prev;
+        if (prev?.data) {
+          queryClient.setQueryData<{ data: FeedPost[] }>(key, {
+            ...prev,
+            data: prev.data.map((p) =>
+              String(p.id) === postId
+                ? { ...p, is_liked: !p.is_liked, like_count: p.is_liked ? Math.max(0, p.like_count - 1) : p.like_count + 1 }
+                : p
+            ),
+          });
+        }
+      }
+      return { snapshots };
+    },
+    onError: (_err, _postId, context) => {
+      console.log('[Feed] Like failed, rolling back');
+      if (context?.snapshots) {
+        for (const [f, snap] of Object.entries(context.snapshots)) {
+          if (snap) queryClient.setQueryData(['feed', f], snap);
+        }
+      }
+    },
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['feed'] });
     },
   });

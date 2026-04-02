@@ -96,7 +96,25 @@ export default function ShortViewerScreen() {
       params.liked
         ? api.delete(`/clips/${params.id}/like`)
         : api.post(`/clips/${params.id}/like`),
-    onSuccess: () => {
+    onMutate: async (params) => {
+      await queryClient.cancelQueries({ queryKey: ['short-detail', id] });
+      const prev = queryClient.getQueryData<Clip>(['short-detail', id]);
+      if (prev) {
+        queryClient.setQueryData<Clip>(['short-detail', id], {
+          ...prev,
+          is_liked_by_me: !params.liked,
+          like_count: params.liked ? Math.max(0, prev.like_count - 1) : prev.like_count + 1,
+        });
+      }
+      return { prev };
+    },
+    onError: (_err, _params, context) => {
+      console.log('[ShortViewer] Like failed, rolling back');
+      if (context?.prev) {
+        queryClient.setQueryData(['short-detail', id], context.prev);
+      }
+    },
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['short-detail', id] });
       void queryClient.invalidateQueries({ queryKey: ['clips'] });
     },
