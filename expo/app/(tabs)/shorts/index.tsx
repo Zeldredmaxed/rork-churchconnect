@@ -153,10 +153,15 @@ export default function ShortsScreen() {
 
   const shortsQuery = useQuery({
     queryKey: ['clips', activeTab],
-    queryFn: () =>
-      api.get<{ data: Clip[] }>(
-        activeTab === 'trending' ? '/clips/trending' : '/clips'
-      ),
+    queryFn: async () => {
+      const endpoint = activeTab === 'trending' ? '/clips/trending' : '/clips';
+      console.log('[Shorts] Fetching clips from:', endpoint);
+      const raw = await api.get<Clip[] | { data: Clip[] }>(endpoint);
+      console.log('[Shorts] Raw response type:', typeof raw, Array.isArray(raw) ? 'array' : 'object');
+      const clips = Array.isArray(raw) ? raw : (raw as { data: Clip[] }).data ?? [];
+      console.log('[Shorts] Parsed clips count:', clips.length);
+      return { data: clips };
+    },
   });
 
   const likeMutation = useMutation({

@@ -126,8 +126,8 @@ export default function UniversalSearchScreen() {
     queryKey: ['universal-search-shorts', trimmedQuery],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: Clip[] }>(`/clips?limit=50`);
-        const all = data?.data ?? [];
+        const raw = await api.get<Clip[] | { data: Clip[] }>(`/clips?limit=50`);
+        const all = Array.isArray(raw) ? raw : (raw as { data: Clip[] })?.data ?? [];
         const q = trimmedQuery.toLowerCase();
         return all.filter(
           (s) =>

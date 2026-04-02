@@ -56,15 +56,17 @@ export default function ShortViewerScreen() {
     queryKey: ['short-detail', id],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: Clip }>(`/clips/${id}`);
-        console.log('[ShortViewer] Short loaded:', JSON.stringify(data).slice(0, 200));
-        if (data?.data) return data.data;
+        const raw = await api.get<Clip | { data: Clip }>(`/clips/${id}`);
+        console.log('[ShortViewer] Short loaded:', JSON.stringify(raw).slice(0, 200));
+        const clip = (raw as { data: Clip })?.data ?? (raw as Clip);
+        if (clip?.id) return clip;
       } catch (e) {
         console.log('[ShortViewer] Direct fetch failed, trying fallbacks:', e);
       }
       try {
-        const all = await api.get<{ data: Clip[] }>('/clips?limit=100');
-        const found = all?.data?.find((s) => String(s.id) === String(id));
+        const rawAll = await api.get<Clip[] | { data: Clip[] }>('/clips?limit=100');
+        const allClips = Array.isArray(rawAll) ? rawAll : (rawAll as { data: Clip[] })?.data ?? [];
+        const found = allClips.find((s) => String(s.id) === String(id));
         if (found) {
           console.log('[ShortViewer] Found in trending');
           return found;
@@ -73,8 +75,9 @@ export default function ShortViewerScreen() {
         console.log('[ShortViewer] Trending fallback failed:', e2);
       }
       try {
-        const myClips = await api.get<{ data: Clip[] }>('/clips/me?limit=100&offset=0');
-        const found = myClips?.data?.find((s) => String(s.id) === String(id));
+        const rawMy = await api.get<Clip[] | { data: Clip[] }>('/clips/me?limit=100&offset=0');
+        const myClips = Array.isArray(rawMy) ? rawMy : (rawMy as { data: Clip[] })?.data ?? [];
+        const found = myClips.find((s) => String(s.id) === String(id));
         if (found) {
           console.log('[ShortViewer] Found in my clips');
           return found;

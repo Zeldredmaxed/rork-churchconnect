@@ -164,9 +164,11 @@ export default function ProfileTabScreen() {
     queryKey: ['my-clips', user?.id],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: Clip[] }>('/clips/me?limit=50&offset=0');
-        console.log('[Profile] My clips response:', JSON.stringify(data).slice(0, 300));
-        return data?.data ?? [];
+        const raw = await api.get<Clip[] | { data: Clip[] }>('/clips/me?limit=50&offset=0');
+        console.log('[Profile] My clips raw response:', JSON.stringify(raw).slice(0, 300));
+        const clips = Array.isArray(raw) ? raw : (raw as { data: Clip[] })?.data ?? [];
+        console.log('[Profile] Parsed my clips count:', clips.length);
+        return clips;
       } catch (e: unknown) {
         console.log('[Profile] /clips/me failed:', e);
         return [] as Clip[];

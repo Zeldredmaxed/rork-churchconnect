@@ -126,16 +126,22 @@ export default function CreateShortSheet({ visible, onClose }: CreateShortSheetP
         }
       }
 
-      console.log('[CreateShort] Step 2: Creating short record (backend auto-generates thumbnail)...');
+      console.log('[CreateShort] Step 2: Creating short record...');
       const body: Record<string, unknown> = {
         title: params.title,
         description: params.description,
         category: params.category.toLowerCase(),
       };
       if (videoUrl) body.video_url = videoUrl;
-      if (durationSeconds) body.duration_seconds = durationSeconds;
+      if (durationSeconds) {
+        body.duration_seconds = durationSeconds;
+        body.duration = durationSeconds;
+      }
 
-      return api.post('/clips', body);
+      console.log('[CreateShort] POST /clips body:', JSON.stringify(body).slice(0, 300));
+      const result = await api.post('/clips', body);
+      console.log('[CreateShort] POST /clips response:', JSON.stringify(result).slice(0, 300));
+      return result;
     },
     onSuccess: () => {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
