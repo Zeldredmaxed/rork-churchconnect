@@ -45,12 +45,23 @@ export default function PrayerDetailScreen() {
   const responsesQuery = useQuery({
     queryKey: ['prayer-responses', id],
     queryFn: async () => {
-      const res = await api.get<unknown>(`/prayers/${id}`);
-      console.log('[PrayerDetail] Fetching comments from prayer object');
-      const parsed = res as Record<string, unknown>;
-      const prayerData = (parsed.data ?? res) as Record<string, unknown>;
-      const comments = prayerData.comments ?? prayerData.responses ?? [];
-      return { data: comments as PrayerResponse[] };
+      console.log('[PrayerDetail] Fetching comments for prayer', id);
+      try {
+        const res = await api.get<unknown>(`/prayers/${id}/comments`);
+        console.log('[PrayerDetail] Comments endpoint response:', JSON.stringify(res).slice(0, 300));
+        const parsed = res as Record<string, unknown>;
+        const commentsData = parsed.data ?? parsed.comments ?? parsed.results ?? res;
+        if (Array.isArray(commentsData)) return { data: commentsData as PrayerResponse[] };
+        return { data: [] as PrayerResponse[] };
+      } catch (commentsErr) {
+        console.log('[PrayerDetail] Comments endpoint failed, falling back to prayer object:', (commentsErr as Error).message);
+        const res = await api.get<unknown>(`/prayers/${id}`);
+        const parsed = res as Record<string, unknown>;
+        const prayerData = (parsed.data ?? res) as Record<string, unknown>;
+        const comments = prayerData.comments ?? prayerData.responses ?? [];
+        if (Array.isArray(comments)) return { data: comments as PrayerResponse[] };
+        return { data: [] as PrayerResponse[] };
+      }
     },
     enabled: !!id,
   });
@@ -77,10 +88,12 @@ export default function PrayerDetailScreen() {
   const respondMutation = useMutation({
     mutationFn: (content: string) =>
       api.post(`/prayers/${id}/comments`, { content, is_anonymous: false } as unknown as Record<string, unknown>),
-    onSuccess: () => {
-      console.log('[PrayerDetail] Response submitted successfully');
+    onSuccess: (data) => {
+      console.log('[PrayerDetail] Response submitted successfully:', JSON.stringify(data).slice(0, 300));
       void queryClient.invalidateQueries({ queryKey: ['prayer-responses', id] });
+      void queryClient.invalidateQueries({ queryKey: ['prayer', id] });
       setResponseText('');
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 400);
     },
     onError: (error) => {
       console.log('[PrayerDetail] Response submit error:', error.message);
