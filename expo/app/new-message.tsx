@@ -62,10 +62,24 @@ export default function NewMessageScreen() {
     queryKey: ['message-suggestions'],
     queryFn: async () => {
       try {
+        console.log('[NewMessage] Fetching suggestions...');
         const data = await api.get<{ data: FlockUser[] }>('/social/flock/suggestions');
-        return data;
-      } catch {
-        return { data: [] as FlockUser[] };
+        console.log('[NewMessage] Suggestions result:', data?.data?.length ?? 0);
+        if (data?.data && data.data.length > 0) return data;
+        console.log('[NewMessage] No suggestions, falling back to members list...');
+        const membersData = await api.get<{ data: FlockUser[] }>('/members');
+        console.log('[NewMessage] Members fallback result:', membersData?.data?.length ?? 0);
+        return membersData;
+      } catch (e) {
+        console.log('[NewMessage] Suggestions error, trying members fallback:', e);
+        try {
+          const membersData = await api.get<{ data: FlockUser[] }>('/members');
+          console.log('[NewMessage] Members fallback result:', membersData?.data?.length ?? 0);
+          return membersData;
+        } catch (e2) {
+          console.log('[NewMessage] Members fallback also failed:', e2);
+          return { data: [] as FlockUser[] };
+        }
       }
     },
   });
@@ -75,10 +89,24 @@ export default function NewMessageScreen() {
     queryFn: async () => {
       if (!searchQuery.trim()) return { data: [] as SearchResultUser[] };
       try {
+        console.log('[NewMessage] Searching members:', searchQuery.trim());
         const data = await api.get<{ data: SearchResultUser[] }>(`/members?search=${encodeURIComponent(searchQuery.trim())}`);
+        console.log('[NewMessage] Search results:', data?.data?.length ?? 0);
         return data;
-      } catch {
-        return { data: [] as SearchResultUser[] };
+      } catch (e) {
+        console.log('[NewMessage] Search error, trying local filter:', e);
+        try {
+          const allMembers = await api.get<{ data: SearchResultUser[] }>('/members');
+          const q = searchQuery.trim().toLowerCase();
+          const filtered = (allMembers?.data ?? []).filter(
+            (m) => m.full_name?.toLowerCase().includes(q) || m.username?.toLowerCase().includes(q)
+          );
+          console.log('[NewMessage] Local filter results:', filtered.length);
+          return { data: filtered };
+        } catch (e2) {
+          console.log('[NewMessage] All search attempts failed:', e2);
+          return { data: [] as SearchResultUser[] };
+        }
       }
     },
     enabled: searchQuery.trim().length > 0,

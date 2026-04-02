@@ -112,6 +112,24 @@ export default function ChatScreen() {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
 
+  const searchMembersQuery = useQuery({
+    queryKey: ['chat-search-members', searchQuery],
+    queryFn: async () => {
+      const trimmed = searchQuery.trim();
+      if (!trimmed) return [] as FlockUser[];
+      try {
+        console.log('[Chat] Searching members:', trimmed);
+        const data = await api.get<{ data: FlockUser[] }>(`/members?search=${encodeURIComponent(trimmed)}`);
+        console.log('[Chat] Search results:', data?.data?.length ?? 0);
+        return data?.data ?? [];
+      } catch (e) {
+        console.log('[Chat] Member search error:', e);
+        return [] as FlockUser[];
+      }
+    },
+    enabled: searchQuery.trim().length > 0,
+  });
+
   const convosQuery = useQuery({
     queryKey: ['conversations'],
     queryFn: () => api.get<{ data: Conversation[] }>('/chat'),
@@ -143,6 +161,8 @@ export default function ChatScreen() {
         return name.toLowerCase().includes(searchQuery.toLowerCase());
       })
     : conversations;
+
+  const searchedMembers = searchMembersQuery.data ?? [];
 
   const userName = user?.full_name ?? 'You';
   const userInitials = userName
@@ -286,9 +306,69 @@ export default function ChatScreen() {
       <FlatList
         data={filteredConvos}
         keyExtractor={(item) => String(item.id)}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={renderEmpty}
-        ListFooterComponent={renderFooter}
+        ListHeaderComponent={() => (
+          <View>
+            {searchQuery.trim().length > 0 && searchedMembers.length > 0 && (
+              <View style={styles.searchMembersSection}>
+                <Text style={styles.searchMembersSectionTitle}>People</Text>
+                {searchedMembers.slice(0, 5).map((member) => {
+                  const initials = member.full_name
+                    .split(' ')
+                    .map((n) => n[0])
+                    .join('')
+                    .toUpperCase()
+                    .slice(0, 2);
+                  return (
+                    <TouchableOpacity
+                      key={member.id}
+                      style={styles.searchMemberRow}
+                      onPress={() => {
+                        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        router.push(`/chat-room?userId=${member.id}&userName=${encodeURIComponent(member.full_name)}&isNew=true` as never);
+                      }}
+                      activeOpacity={0.6}
+                    >
+                      <View style={styles.searchMemberAvatar}>
+                        <Text style={styles.searchMemberAvatarText}>{initials}</Text>
+                      </View>
+                      <View style={styles.searchMemberInfo}>
+                        <Text style={styles.searchMemberName} numberOfLines={1}>{member.full_name}</Text>
+                        <Text style={styles.searchMemberSub} numberOfLines={1}>
+                          {member.username ?? member.church_name ?? 'Member'}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+            {searchQuery.trim().length > 0 && filteredConvos.length > 0 && (
+              <View style={styles.searchConvosSectionHeader}>
+                <Text style={styles.searchMembersSectionTitle}>Conversations</Text>
+              </View>
+            )}
+            {!searchQuery.trim() && renderHeader()}
+          </View>
+        )}
+        ListEmptyComponent={() => {
+          if (searchQuery.trim().length > 0 && searchedMembers.length > 0) return null;
+          if (searchQuery.trim().length > 0 && searchMembersQuery.isLoading) {
+            return (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={theme.colors.accent} />
+              </View>
+            );
+          }
+          if (searchQuery.trim().length > 0 && searchedMembers.length === 0 && !searchMembersQuery.isLoading) {
+            return (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No results found for "{searchQuery}"</Text>
+              </View>
+            );
+          }
+          return renderEmpty();
+        }}
+        ListFooterComponent={searchQuery.trim().length > 0 ? null : renderFooter}
         renderItem={({ item }) => (
           <ConversationRow
             convo={item}
@@ -538,6 +618,56 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     fontSize: 13,
     color: theme.colors.textTertiary,
     marginTop: 1,
+  },
+  searchMembersSection: {
+    paddingTop: 4,
+    borderBottomWidth: 0.5,
+    borderBottomColor: theme.colors.borderLight,
+    paddingBottom: 8,
+  },
+  searchMembersSectionTitle: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: theme.colors.text,
+    paddingHorizontal: 16,
+    paddingBottom: 6,
+  },
+  searchMemberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 12,
+  },
+  searchMemberAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: theme.colors.accentMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchMemberAvatarText: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: theme.colors.accent,
+  },
+  searchMemberInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  searchMemberName: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: theme.colors.text,
+  },
+  searchMemberSub: {
+    fontSize: 13,
+    color: theme.colors.textTertiary,
+  },
+  searchConvosSectionHeader: {
+    paddingTop: 12,
+    paddingBottom: 4,
   },
 });
 
