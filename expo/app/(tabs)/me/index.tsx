@@ -366,12 +366,17 @@ export default function ProfileTabScreen() {
         }
       >
         <View style={styles.profileSection}>
-          <View style={styles.avatarLarge}>
+          <TouchableOpacity
+            style={styles.avatarLarge}
+            onPress={() => handleMenuPress('/profile')}
+            activeOpacity={0.7}
+            testID="profile-avatar-btn"
+          >
             <Avatar url={user?.avatar_url} name={user?.full_name ?? 'User'} size={82} />
             <View style={styles.addStoryBadge}>
-              <Plus size={10} color={theme.colors.white} strokeWidth={3} />
+              <Plus size={10} color="#fff" strokeWidth={3} />
             </View>
-          </View>
+          </TouchableOpacity>
           <View style={styles.statsRow}>
             <TouchableOpacity style={styles.statItem}>
               <Text style={styles.statValue}>{totalPostCount}</Text>
