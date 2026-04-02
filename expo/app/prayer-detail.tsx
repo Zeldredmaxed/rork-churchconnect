@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,11 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
   Platform,
+  Keyboard,
+  Animated,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { HandHeart, AlertTriangle, CheckCircle2, Send } from 'lucide-react-native';
@@ -24,10 +26,36 @@ import type { Prayer, PrayerResponse } from '@/types';
 
 export default function PrayerDetailScreen() {
   const { theme } = useTheme();
-  const styles = createStyles(theme);
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
+  const styles = createStyles(theme, insets.bottom);
   const [responseText, setResponseText] = useState('');
+  const scrollRef = useRef<ScrollView>(null);
+  const keyboardPadding = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const onShow = Keyboard.addListener(showEvent, (e) => {
+      Animated.timing(keyboardPadding, {
+        toValue: e.endCoordinates.height - insets.bottom,
+        duration: Platform.OS === 'ios' ? 250 : 100,
+        useNativeDriver: false,
+      }).start();
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
+    });
+    const onHide = Keyboard.addListener(hideEvent, () => {
+      Animated.timing(keyboardPadding, {
+        toValue: 0,
+        duration: Platform.OS === 'ios' ? 250 : 100,
+        useNativeDriver: false,
+      }).start();
+    });
+
+    return () => { onShow.remove(); onHide.remove(); };
+  }, [insets.bottom, keyboardPadding]);
 
   const prayerQuery = useQuery({
     queryKey: ['prayer', id],
@@ -128,11 +156,7 @@ export default function PrayerDetailScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-    >
+    <View style={styles.container}>
       <Stack.Screen
         options={{
           title: '',
@@ -142,7 +166,11 @@ export default function PrayerDetailScreen() {
         }}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.badgeRow}>
           <Badge label={categoryLabels[prayer.category] ?? 'General'} variant="accent" />
           {prayer.is_urgent && (
@@ -218,7 +246,7 @@ export default function PrayerDetailScreen() {
         </View>
       </ScrollView>
 
-      <View style={styles.inputBar}>
+      <Animated.View style={[styles.inputBar, { paddingBottom: Animated.add(keyboardPadding, insets.bottom || 12) }]}> 
         <TextInput
           style={styles.responseInput}
           value={responseText}
@@ -238,12 +266,12 @@ export default function PrayerDetailScreen() {
             <Send size={18} color={responseText.trim() ? theme.colors.accent : theme.colors.textTertiary} />
           )}
         </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+      </Animated.View>
+    </View>
   );
 }
 
-const createStyles = (theme: AppTheme) => StyleSheet.create({
+const createStyles = (theme: AppTheme, bottomInset: number) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
@@ -260,7 +288,7 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 100,
+    paddingBottom: 16,
   },
   badgeRow: {
     flexDirection: 'row',
@@ -386,14 +414,11 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     lineHeight: 20,
   },
   inputBar: {
-    position: 'absolute' as const,
-    bottom: 0,
-    left: 0,
-    right: 0,
     flexDirection: 'row',
     alignItems: 'flex-end',
-    padding: 12,
-    paddingBottom: 24,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: bottomInset || 12,
     backgroundColor: theme.colors.surface,
     borderTopWidth: 1,
     borderTopColor: theme.colors.borderLight,
