@@ -6,23 +6,18 @@ import {
   FlatList,
   RefreshControl,
   ActivityIndicator,
-  Image,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { Stack } from 'expo-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Clock } from 'lucide-react-native';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Clock, RotateCcw } from 'lucide-react-native';
+import { Image } from 'expo-image';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
-import { api } from '@/utils/api';
+import { settingsApi, type ArchiveItem } from '@/utils/settings-api';
 import EmptyState from '@/components/EmptyState';
-
-interface ArchivedStory {
-  id: string;
-  image_url?: string;
-  thumbnail_url?: string;
-  created_at: string;
-}
 
 function formatDate(date: string): string {
   return new Date(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -34,35 +29,57 @@ export default function ArchiveStoriesScreen() {
   const queryClient = useQueryClient();
 
   const archiveQuery = useQuery({
-    queryKey: ['archive-stories'],
+    queryKey: ['archive', 'story'],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: ArchivedStory[] }>('/activity/archive/stories');
+        const data = await settingsApi.getArchive('story');
         console.log('[ArchiveStories] Fetched:', data);
-        return data?.data ?? [];
+        return Array.isArray(data) ? data : [];
       } catch (e) {
         console.log('[ArchiveStories] Error:', e);
-        return [] as ArchivedStory[];
+        return [] as ArchiveItem[];
       }
     },
   });
 
+  const unarchiveMutation = useMutation({
+    mutationFn: (archiveId: string) => settingsApi.unarchiveContent(archiveId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['archive', 'story'] });
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: (err) => {
+      console.log('[ArchiveStories] Unarchive error:', err);
+      Alert.alert('Error', 'Failed to unarchive story.');
+    },
+  });
+
+  const handleUnarchive = (item: ArchiveItem) => {
+    Alert.alert('Unarchive', 'Restore this story?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Restore', onPress: () => unarchiveMutation.mutate(item.id) },
+    ]);
+  };
+
   const handleRefresh = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ['archive-stories'] });
+    void queryClient.invalidateQueries({ queryKey: ['archive', 'story'] });
   }, [queryClient]);
 
   const stories = archiveQuery.data ?? [];
 
-  const renderItem = ({ item }: { item: ArchivedStory }) => (
-    <TouchableOpacity style={s.storyItem} activeOpacity={0.8}>
+  const renderItem = ({ item }: { item: ArchiveItem }) => (
+    <TouchableOpacity style={s.storyItem} activeOpacity={0.8} onLongPress={() => handleUnarchive(item)}>
       {item.image_url || item.thumbnail_url ? (
-        <Image source={{ uri: item.image_url || item.thumbnail_url }} style={s.storyImage} />
+        <Image source={{ uri: item.image_url || item.thumbnail_url }} style={s.storyImage} contentFit="cover" />
       ) : (
         <View style={s.storyPlaceholder}>
           <Clock size={20} color={theme.colors.textTertiary} />
         </View>
       )}
-      <Text style={s.storyDate}>{formatDate(item.created_at)}</Text>
+      <Text style={s.storyDate}>{formatDate(item.created_at ?? item.archived_at ?? '')}</Text>
+      <TouchableOpacity style={s.restoreIcon} onPress={() => handleUnarchive(item)}>
+        <RotateCcw size={10} color="#FFF" />
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 
@@ -107,8 +124,9 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   listContent: { paddingBottom: 40, paddingTop: 16 },
   columnWrapper: { paddingHorizontal: 12, gap: 12, marginBottom: 16 },
   center: { paddingTop: 60, alignItems: 'center' },
-  storyItem: { flex: 1, alignItems: 'center' },
+  storyItem: { flex: 1, alignItems: 'center', position: 'relative' as const },
   storyImage: { width: 72, height: 72, borderRadius: 36, backgroundColor: theme.colors.surfaceElevated, borderWidth: 2, borderColor: theme.colors.accent },
   storyPlaceholder: { width: 72, height: 72, borderRadius: 36, backgroundColor: theme.colors.surfaceElevated, alignItems: 'center', justifyContent: 'center' },
   storyDate: { fontSize: 10, color: theme.colors.textTertiary, marginTop: 6, textAlign: 'center' },
+  restoreIcon: { position: 'absolute' as const, top: 0, right: 0, width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' },
 });

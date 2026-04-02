@@ -6,28 +6,19 @@ import {
   FlatList,
   RefreshControl,
   ActivityIndicator,
-  Image,
   Dimensions,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Film, Play } from 'lucide-react-native';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Film, Play, RotateCcw } from 'lucide-react-native';
+import { Image } from 'expo-image';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
-import { api } from '@/utils/api';
+import { settingsApi, type ArchiveItem } from '@/utils/settings-api';
 import EmptyState from '@/components/EmptyState';
-
-interface ArchivedShort {
-  id: string;
-  title?: string;
-  caption?: string;
-  thumbnail_url?: string;
-  video_url?: string;
-  view_count?: number;
-  created_at: string;
-  archived_at: string;
-}
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const ITEM_SIZE = (SCREEN_WIDTH - 6) / 3;
@@ -39,33 +30,53 @@ export default function ArchiveShortsScreen() {
   const router = useRouter();
 
   const archiveQuery = useQuery({
-    queryKey: ['archive-shorts'],
+    queryKey: ['archive', 'clip'],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: ArchivedShort[] }>('/activity/archive/clips');
+        const data = await settingsApi.getArchive('clip');
         console.log('[ArchiveShorts] Fetched:', data);
-        return data?.data ?? [];
+        return Array.isArray(data) ? data : [];
       } catch (e) {
         console.log('[ArchiveShorts] Error:', e);
-        return [] as ArchivedShort[];
+        return [] as ArchiveItem[];
       }
     },
   });
 
+  const unarchiveMutation = useMutation({
+    mutationFn: (archiveId: string) => settingsApi.unarchiveContent(archiveId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['archive', 'clip'] });
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: (err) => {
+      console.log('[ArchiveShorts] Unarchive error:', err);
+      Alert.alert('Error', 'Failed to unarchive short.');
+    },
+  });
+
+  const handleUnarchive = (item: ArchiveItem) => {
+    Alert.alert('Unarchive', 'Restore this short to your profile?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Restore', onPress: () => unarchiveMutation.mutate(item.id) },
+    ]);
+  };
+
   const handleRefresh = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ['archive-shorts'] });
+    void queryClient.invalidateQueries({ queryKey: ['archive', 'clip'] });
   }, [queryClient]);
 
   const shorts = archiveQuery.data ?? [];
 
-  const renderItem = ({ item }: { item: ArchivedShort }) => (
+  const renderItem = ({ item }: { item: ArchiveItem }) => (
     <TouchableOpacity
       style={s.gridItem}
       activeOpacity={0.8}
-      onPress={() => router.push(`/short-viewer?id=${item.id}` as never)}
+      onPress={() => router.push(`/short-viewer?id=${item.content_id}` as never)}
+      onLongPress={() => handleUnarchive(item)}
     >
       {item.thumbnail_url ? (
-        <Image source={{ uri: item.thumbnail_url }} style={s.gridImage} />
+        <Image source={{ uri: item.thumbnail_url }} style={s.gridImage} contentFit="cover" />
       ) : (
         <View style={s.gridPlaceholder}>
           <Film size={24} color={theme.colors.textTertiary} />
@@ -75,6 +86,9 @@ export default function ArchiveShortsScreen() {
         <Play size={12} color="#FFF" fill="#FFF" />
         <Text style={s.viewCount}>{item.view_count ?? 0}</Text>
       </View>
+      <TouchableOpacity style={s.restoreIcon} onPress={() => handleUnarchive(item)}>
+        <RotateCcw size={12} color="#FFF" />
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 
@@ -124,4 +138,5 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   gridPlaceholder: { width: '100%', height: '100%', backgroundColor: theme.colors.surfaceElevated, alignItems: 'center', justifyContent: 'center' },
   overlay: { position: 'absolute' as const, bottom: 6, left: 6, flexDirection: 'row', alignItems: 'center', gap: 3 },
   viewCount: { fontSize: 11, color: '#FFF', fontWeight: '600' as const },
+  restoreIcon: { position: 'absolute' as const, top: 4, right: 4, width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' },
 });

@@ -9,6 +9,7 @@ import {
   Image,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
 import {
   ChevronRight,
   CreditCard,
@@ -49,6 +50,7 @@ import {
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
+import { settingsApi } from '@/utils/settings-api';
 import * as Haptics from 'expo-haptics';
 
 interface SettingsRowProps {
@@ -88,6 +90,50 @@ export default function SettingsScreen() {
   const styles = createStyles(theme);
   const router = useRouter();
   const { logout } = useAuth();
+
+  const blockedQuery = useQuery({
+    queryKey: ['settings-blocked'],
+    queryFn: async () => {
+      try { return await settingsApi.getBlocked(); } catch { return []; }
+    },
+  });
+  const restrictedQuery = useQuery({
+    queryKey: ['settings-restricted'],
+    queryFn: async () => {
+      try { return await settingsApi.getRestricted(); } catch { return []; }
+    },
+  });
+  const mutedQuery = useQuery({
+    queryKey: ['settings-muted'],
+    queryFn: async () => {
+      try { return await settingsApi.getMuted(); } catch { return []; }
+    },
+  });
+  const closeFriendsQuery = useQuery({
+    queryKey: ['settings-close-friends'],
+    queryFn: async () => {
+      try { return await settingsApi.getCloseFriends(); } catch { return []; }
+    },
+  });
+  const favouritesQuery = useQuery({
+    queryKey: ['settings-favourites'],
+    queryFn: async () => {
+      try { return await settingsApi.getFavourites(); } catch { return []; }
+    },
+  });
+  const settingsQuery = useQuery({
+    queryKey: ['user-settings'],
+    queryFn: async () => {
+      try { return await settingsApi.getSettings(); } catch { return null; }
+    },
+  });
+
+  const blockedCount = Array.isArray(blockedQuery.data) ? blockedQuery.data.length : 0;
+  const restrictedCount = Array.isArray(restrictedQuery.data) ? restrictedQuery.data.length : 0;
+  const mutedCount = Array.isArray(mutedQuery.data) ? mutedQuery.data.length : 0;
+  const closeFriendsCount = Array.isArray(closeFriendsQuery.data) ? closeFriendsQuery.data.length : 0;
+  const favouritesCount = Array.isArray(favouritesQuery.data) ? favouritesQuery.data.length : 0;
+  const currentLanguage = settingsQuery.data?.language ?? 'English';
 
   const handleNav = (route: string) => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -232,13 +278,13 @@ export default function SettingsScreen() {
           <SettingsRow
             icon={<Star size={20} color={theme.colors.textSecondary} />}
             label="Close friends"
-            rightValue="0"
+            rightValue={`${closeFriendsCount}`}
             onPress={() => handleNav('/close-friends')}
           />
           <SettingsRow
             icon={<UserX size={20} color={theme.colors.textSecondary} />}
             label="Blocked"
-            rightValue="0"
+            rightValue={`${blockedCount}`}
             onPress={() => handleNav('/blocked-accounts')}
           />
         </View>
@@ -270,7 +316,7 @@ export default function SettingsScreen() {
           <SettingsRow
             icon={<UserX size={20} color={theme.colors.textSecondary} />}
             label="Restricted"
-            rightValue="0"
+            rightValue={`${restrictedCount}`}
             onPress={() => handleNav('/restricted-accounts')}
           />
           <SettingsRow
@@ -297,13 +343,13 @@ export default function SettingsScreen() {
           <SettingsRow
             icon={<Star size={20} color={theme.colors.textSecondary} />}
             label="Favourites"
-            rightValue="0"
+            rightValue={`${favouritesCount}`}
             onPress={() => handleNav('/favourites')}
           />
           <SettingsRow
             icon={<BellOff size={20} color={theme.colors.textSecondary} />}
             label="Muted accounts"
-            rightValue="0"
+            rightValue={`${mutedCount}`}
             onPress={() => handleNav('/muted-accounts')}
           />
           <SettingsRow
@@ -360,7 +406,7 @@ export default function SettingsScreen() {
           <SettingsRow
             icon={<Languages size={20} color={theme.colors.textSecondary} />}
             label="Language"
-            rightValue="English"
+            rightValue={currentLanguage}
             onPress={() => handleNav('/language-settings')}
           />
           <SettingsRow

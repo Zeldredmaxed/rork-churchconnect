@@ -1,14 +1,105 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+  Alert,
+} from 'react-native';
 import { Stack } from 'expo-router';
-import { Search, Star } from 'lucide-react-native';
+import { Search, Star, X } from 'lucide-react-native';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Image } from 'expo-image';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
+import { settingsApi, type SocialBoundaryUser } from '@/utils/settings-api';
 
 export default function CloseFriendsScreen() {
   const { theme } = useTheme();
   const s = createStyles(theme);
   const [search, setSearch] = useState('');
+  const queryClient = useQueryClient();
+
+  const closeFriendsQuery = useQuery({
+    queryKey: ['settings-close-friends'],
+    queryFn: async () => {
+      try {
+        const data = await settingsApi.getCloseFriends();
+        console.log('[CloseFriends] Fetched:', data);
+        return Array.isArray(data) ? data : [];
+      } catch (e) {
+        console.log('[CloseFriends] Error:', e);
+        return [] as SocialBoundaryUser[];
+      }
+    },
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: (userId: string) => settingsApi.removeCloseFriend(userId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['settings-close-friends'] });
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: (err) => {
+      console.log('[CloseFriends] Remove error:', err);
+      Alert.alert('Error', 'Failed to remove close friend. Please try again.');
+    },
+  });
+
+  const handleRemove = (user: SocialBoundaryUser) => {
+    const userId = user.target_user_id ?? user.id;
+    Alert.alert(
+      'Remove',
+      `Remove ${user.full_name} from close friends?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Remove', style: 'destructive', onPress: () => removeMutation.mutate(userId) },
+      ]
+    );
+  };
+
+  const handleRefresh = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ['settings-close-friends'] });
+  }, [queryClient]);
+
+  const friends = closeFriendsQuery.data ?? [];
+  const filtered = search.trim()
+    ? friends.filter((u) =>
+        u.full_name.toLowerCase().includes(search.toLowerCase()) ||
+        (u.username ?? '').toLowerCase().includes(search.toLowerCase())
+      )
+    : friends;
+
+  const renderItem = ({ item }: { item: SocialBoundaryUser }) => {
+    const initials = (item.full_name ?? 'U').split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
+    return (
+      <View style={s.userRow}>
+        <View style={s.avatarContainer}>
+          {item.avatar_url ? (
+            <Image source={{ uri: item.avatar_url }} style={s.avatar} contentFit="cover" />
+          ) : (
+            <View style={s.avatarPlaceholder}><Text style={s.avatarText}>{initials}</Text></View>
+          )}
+        </View>
+        <View style={s.userInfo}>
+          <Text style={s.userName}>{item.full_name}</Text>
+          {item.username ? <Text style={s.userHandle}>@{item.username}</Text> : null}
+        </View>
+        <TouchableOpacity
+          style={s.removeBtn}
+          onPress={() => handleRemove(item)}
+          activeOpacity={0.7}
+        >
+          <Text style={s.removeText}>Remove</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   return (
     <View style={s.container}>
@@ -29,16 +120,34 @@ export default function CloseFriendsScreen() {
           value={search}
           onChangeText={setSearch}
         />
+        {search.length > 0 && (
+          <TouchableOpacity onPress={() => setSearch('')}>
+            <X size={16} color={theme.colors.textTertiary} />
+          </TouchableOpacity>
+        )}
       </View>
-      <View style={s.emptyContainer}>
-        <View style={s.iconCircle}>
-          <Star size={32} color={theme.colors.accent} />
-        </View>
-        <Text style={s.emptyTitle}>Close friends</Text>
-        <Text style={s.emptyText}>
-          People you add to your close friends list will be able to see content you share specifically with them.
-        </Text>
-      </View>
+      <FlatList
+        data={filtered}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        contentContainerStyle={s.listContent}
+        refreshControl={
+          <RefreshControl refreshing={closeFriendsQuery.isRefetching} onRefresh={handleRefresh} tintColor={theme.colors.accent} />
+        }
+        ListEmptyComponent={
+          closeFriendsQuery.isLoading ? (
+            <View style={s.center}><ActivityIndicator size="large" color={theme.colors.accent} /></View>
+          ) : (
+            <View style={s.emptyContainer}>
+              <View style={s.iconCircle}><Star size={32} color={theme.colors.accent} /></View>
+              <Text style={s.emptyTitle}>Close friends</Text>
+              <Text style={s.emptyText}>
+                People you add to your close friends list will be able to see content you share specifically with them.
+              </Text>
+            </View>
+          )
+        }
+      />
     </View>
   );
 }
@@ -47,8 +156,20 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.surfaceElevated, borderRadius: 10, marginHorizontal: 16, marginTop: 8, marginBottom: 16, paddingHorizontal: 12, height: 38, gap: 8 },
   searchInput: { flex: 1, fontSize: 15, color: theme.colors.text },
+  listContent: { flexGrow: 1, paddingBottom: 40 },
+  center: { paddingTop: 60, alignItems: 'center' },
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40, paddingBottom: 80 },
   iconCircle: { width: 72, height: 72, borderRadius: 36, backgroundColor: theme.colors.accentMuted, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  emptyTitle: { fontSize: 20, fontWeight: '700', color: theme.colors.text, marginBottom: 8 },
+  emptyTitle: { fontSize: 20, fontWeight: '700' as const, color: theme.colors.text, marginBottom: 8 },
   emptyText: { fontSize: 14, color: theme.colors.textTertiary, textAlign: 'center', lineHeight: 20 },
+  userRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 16, gap: 12 },
+  avatarContainer: { width: 48, height: 48, borderRadius: 24, overflow: 'hidden' },
+  avatar: { width: 48, height: 48, borderRadius: 24 },
+  avatarPlaceholder: { width: 48, height: 48, borderRadius: 24, backgroundColor: theme.colors.accentMuted, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontSize: 16, fontWeight: '600' as const, color: theme.colors.accent },
+  userInfo: { flex: 1 },
+  userName: { fontSize: 15, fontWeight: '500' as const, color: theme.colors.text },
+  userHandle: { fontSize: 13, color: theme.colors.textTertiary, marginTop: 1 },
+  removeBtn: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 8, backgroundColor: theme.colors.surfaceElevated, borderWidth: 1, borderColor: theme.colors.border },
+  removeText: { fontSize: 13, fontWeight: '600' as const, color: theme.colors.text },
 });

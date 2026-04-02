@@ -7,16 +7,18 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Grid3x3, MessageCircle } from 'lucide-react-native';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Grid3x3, MessageCircle, MoreHorizontal } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { settingsApi } from '@/utils/settings-api';
 import FollowButton from '@/components/FollowButton';
 import EmptyState from '@/components/EmptyState';
 import type { FeedPost } from '@/types';
@@ -44,6 +46,97 @@ export default function UserProfileScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isFollowing, setIsFollowing] = useState(false);
+
+  const blockMutation = useMutation({
+    mutationFn: () => settingsApi.blockUser(id ?? ''),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['settings-blocked'] });
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Blocked', `${profile?.full_name ?? 'User'} has been blocked.`);
+    },
+    onError: (err) => {
+      console.log('[UserProfile] Block error:', err);
+      Alert.alert('Error', 'Failed to block user.');
+    },
+  });
+
+  const muteMutation = useMutation({
+    mutationFn: () => settingsApi.muteUser(id ?? ''),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['settings-muted'] });
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Muted', `${profile?.full_name ?? 'User'} has been muted.`);
+    },
+    onError: (err) => {
+      console.log('[UserProfile] Mute error:', err);
+      Alert.alert('Error', 'Failed to mute user.');
+    },
+  });
+
+  const restrictMutation = useMutation({
+    mutationFn: () => settingsApi.restrictUser(id ?? ''),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['settings-restricted'] });
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Restricted', `${profile?.full_name ?? 'User'} has been restricted.`);
+    },
+    onError: (err) => {
+      console.log('[UserProfile] Restrict error:', err);
+      Alert.alert('Error', 'Failed to restrict user.');
+    },
+  });
+
+  const closeFriendMutation = useMutation({
+    mutationFn: () => settingsApi.addCloseFriend(id ?? ''),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['settings-close-friends'] });
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Added', `${profile?.full_name ?? 'User'} added to close friends.`);
+    },
+    onError: (err) => {
+      console.log('[UserProfile] Close friend error:', err);
+      Alert.alert('Error', 'Failed to add close friend.');
+    },
+  });
+
+  const favouriteMutation = useMutation({
+    mutationFn: () => settingsApi.addFavourite(id ?? ''),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['settings-favourites'] });
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Added', `${profile?.full_name ?? 'User'} added to favourites.`);
+    },
+    onError: (err) => {
+      console.log('[UserProfile] Favourite error:', err);
+      Alert.alert('Error', 'Failed to add favourite.');
+    },
+  });
+
+  const handleProfileActions = () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const name = profile?.full_name ?? 'this user';
+    Alert.alert(
+      name,
+      'Choose an action',
+      [
+        {
+          text: 'Block',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert('Block', `Are you sure you want to block ${name}?`, [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Block', style: 'destructive', onPress: () => blockMutation.mutate() },
+            ]);
+          },
+        },
+        { text: 'Mute', onPress: () => muteMutation.mutate() },
+        { text: 'Restrict', onPress: () => restrictMutation.mutate() },
+        { text: 'Add to Close Friends', onPress: () => closeFriendMutation.mutate() },
+        { text: 'Add to Favourites', onPress: () => favouriteMutation.mutate() },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
 
   const profileQuery = useQuery({
     queryKey: ['user-profile', id],
@@ -121,6 +214,11 @@ export default function UserProfileScreen() {
         options={{
           title: profile?.full_name ?? 'Profile',
           headerShadowVisible: false,
+          headerRight: !isOwnProfile ? () => (
+            <TouchableOpacity onPress={handleProfileActions} style={{ padding: 4 }}>
+              <MoreHorizontal size={22} color={theme.colors.text} />
+            </TouchableOpacity>
+          ) : undefined,
         }}
       />
 

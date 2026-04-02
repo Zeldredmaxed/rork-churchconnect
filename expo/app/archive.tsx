@@ -1,20 +1,52 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { Clock, Image, Film, Grid3x3, ChevronRight } from 'lucide-react-native';
+import { Clock, Film, Grid3x3, ChevronRight, ImageIcon } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
+import { settingsApi } from '@/utils/settings-api';
 
 export default function ArchiveScreen() {
   const { theme } = useTheme();
   const s = createStyles(theme);
   const router = useRouter();
 
+  const postsQuery = useQuery({
+    queryKey: ['archive', 'post'],
+    queryFn: async () => {
+      try {
+        const data = await settingsApi.getArchive('post');
+        return Array.isArray(data) ? data : [];
+      } catch { return []; }
+    },
+  });
+
+  const clipsQuery = useQuery({
+    queryKey: ['archive', 'clip'],
+    queryFn: async () => {
+      try {
+        const data = await settingsApi.getArchive('clip');
+        return Array.isArray(data) ? data : [];
+      } catch { return []; }
+    },
+  });
+
+  const storiesQuery = useQuery({
+    queryKey: ['archive', 'story'],
+    queryFn: async () => {
+      try {
+        const data = await settingsApi.getArchive('story');
+        return Array.isArray(data) ? data : [];
+      } catch { return []; }
+    },
+  });
+
   const sections = [
-    { icon: <Grid3x3 size={22} color={theme.colors.textSecondary} />, label: 'Posts', count: 0, route: '/archive-posts' },
-    { icon: <Film size={22} color={theme.colors.textSecondary} />, label: 'Shorts', count: 0, route: '/archive-shorts' },
-    { icon: <Image size={22} color={theme.colors.textSecondary} />, label: 'Stories', count: 0, route: '/archive-stories' },
+    { icon: <Grid3x3 size={22} color={theme.colors.textSecondary} />, label: 'Posts', count: postsQuery.data?.length ?? 0, route: '/archive-posts' },
+    { icon: <Film size={22} color={theme.colors.textSecondary} />, label: 'Shorts', count: clipsQuery.data?.length ?? 0, route: '/archive-shorts' },
+    { icon: <ImageIcon size={22} color={theme.colors.textSecondary} />, label: 'Stories', count: storiesQuery.data?.length ?? 0, route: '/archive-stories' },
   ];
 
   return (

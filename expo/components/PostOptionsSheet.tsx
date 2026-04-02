@@ -9,7 +9,7 @@ import {
   Pressable,
   ActivityIndicator,
 } from 'react-native';
-import { Trash2, Flag, Bookmark, Share2, Link, AlertTriangle } from 'lucide-react-native';
+import { Trash2, Flag, Bookmark, Share2, Link, AlertTriangle, UserX, BellOff, ShieldAlert, Clock } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
@@ -21,9 +21,14 @@ interface PostOptionsSheetProps {
   onDelete: () => void;
   onReport?: () => void;
   onSave?: () => void;
+  onBlock?: () => void;
+  onMute?: () => void;
+  onRestrict?: () => void;
+  onArchive?: () => void;
   isSaved?: boolean;
   isDeleting?: boolean;
   itemType?: 'post' | 'short' | 'clip';
+  authorName?: string;
 }
 
 export default function PostOptionsSheet({
@@ -33,9 +38,14 @@ export default function PostOptionsSheet({
   onDelete,
   onReport,
   onSave,
+  onBlock,
+  onMute,
+  onRestrict,
+  onArchive,
   isSaved = false,
   isDeleting = false,
   itemType = 'post',
+  authorName,
 }: PostOptionsSheetProps) {
   const { theme } = useTheme();
   const styles = createStyles(theme);
@@ -110,6 +120,51 @@ export default function PostOptionsSheet({
 
           <View style={styles.divider} />
 
+          {!isOwner && onBlock && (
+            <TouchableOpacity
+              style={styles.optionRow}
+              activeOpacity={0.7}
+              onPress={() => {
+                void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                onBlock();
+                onClose();
+              }}
+            >
+              <UserX size={20} color={theme.colors.error} />
+              <Text style={styles.optionTextDanger}>Block{authorName ? ` ${authorName}` : ''}</Text>
+            </TouchableOpacity>
+          )}
+
+          {!isOwner && onMute && (
+            <TouchableOpacity
+              style={styles.optionRow}
+              activeOpacity={0.7}
+              onPress={() => {
+                void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onMute();
+                onClose();
+              }}
+            >
+              <BellOff size={20} color={theme.colors.textSecondary} />
+              <Text style={styles.optionText}>Mute{authorName ? ` ${authorName}` : ''}</Text>
+            </TouchableOpacity>
+          )}
+
+          {!isOwner && onRestrict && (
+            <TouchableOpacity
+              style={styles.optionRow}
+              activeOpacity={0.7}
+              onPress={() => {
+                void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onRestrict();
+                onClose();
+              }}
+            >
+              <ShieldAlert size={20} color={theme.colors.textSecondary} />
+              <Text style={styles.optionText}>Restrict{authorName ? ` ${authorName}` : ''}</Text>
+            </TouchableOpacity>
+          )}
+
           {!isOwner && (
             <TouchableOpacity
               style={styles.optionRow}
@@ -121,6 +176,21 @@ export default function PostOptionsSheet({
             >
               <Flag size={20} color={theme.colors.error} />
               <Text style={styles.optionTextReport}>Report this {label}</Text>
+            </TouchableOpacity>
+          )}
+
+          {isOwner && onArchive && (
+            <TouchableOpacity
+              style={styles.optionRow}
+              activeOpacity={0.7}
+              onPress={() => {
+                void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onArchive();
+                onClose();
+              }}
+            >
+              <Clock size={20} color={theme.colors.textSecondary} />
+              <Text style={styles.optionText}>Archive this {label}</Text>
             </TouchableOpacity>
           )}
 
@@ -308,6 +378,11 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   optionTextReport: {
     fontSize: 16,
     color: theme.colors.error,
+    fontWeight: '400' as const,
+  },
+  optionText: {
+    fontSize: 16,
+    color: theme.colors.text,
     fontWeight: '400' as const,
   },
   cancelBtn: {
