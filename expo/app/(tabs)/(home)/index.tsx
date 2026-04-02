@@ -297,9 +297,13 @@ export default function HomeFeedScreen() {
               onPress={() => router.push('/create-post')}
               activeOpacity={0.7}
             >
-              <View style={styles.composeAvatar}>
-                <Text style={styles.composeAvatarText}>{userInitials}</Text>
-              </View>
+              {user?.avatar_url ? (
+                <Image source={{ uri: user.avatar_url }} style={styles.composeAvatarImg} />
+              ) : (
+                <View style={styles.composeAvatar}>
+                  <Text style={styles.composeAvatarText}>{userInitials}</Text>
+                </View>
+              )}
               <Text style={styles.composePlaceholder}>Share something with your church...</Text>
             </TouchableOpacity>
             <QuickNavTabs />
@@ -491,6 +495,11 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     gap: 12,
     borderBottomWidth: 0.5,
     borderBottomColor: theme.colors.borderLight,
+  },
+  composeAvatarImg: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
   },
   composeAvatar: {
     width: 36,
