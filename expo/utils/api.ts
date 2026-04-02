@@ -131,4 +131,24 @@ export const api = {
     apiRequest<T>(endpoint, { ...options, method: 'DELETE' }),
 };
 
-export { getToken, setTokens, clearTokens, API_URL, BASE_URL };
+function extractArray<T>(raw: unknown): T[] {
+  if (Array.isArray(raw)) return raw as T[];
+  if (raw && typeof raw === 'object') {
+    const obj = raw as Record<string, unknown>;
+    if (Array.isArray(obj.data)) return obj.data as T[];
+    if (Array.isArray(obj.items)) return obj.items as T[];
+    if (Array.isArray(obj.results)) return obj.results as T[];
+  }
+  console.log('[API] extractArray: could not parse', JSON.stringify(raw).slice(0, 200));
+  return [];
+}
+
+function extractObject<T>(raw: unknown): T | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const obj = raw as Record<string, unknown>;
+  if (obj.data && typeof obj.data === 'object') return obj.data as T;
+  if (obj.id != null) return raw as T;
+  return raw as T;
+}
+
+export { getToken, setTokens, clearTokens, API_URL, BASE_URL, extractArray, extractObject };

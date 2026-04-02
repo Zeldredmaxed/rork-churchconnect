@@ -36,7 +36,7 @@ import type { AppTheme } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSaved } from '@/contexts/SavedContext';
 import type { SavedItemData as SavedItemType } from '@/contexts/SavedContext';
-import { api } from '@/utils/api';
+import { api, extractArray, extractObject } from '@/utils/api';
 import Avatar from '@/components/Avatar';
 import type { FlockUser, FeedPost, Clip, LoginStreak, SundayAttendanceStats } from '@/types';
 import type { SavedItemData } from '@/contexts/SavedContext';
@@ -97,8 +97,10 @@ export default function ProfileTabScreen() {
     queryKey: ['login-streak'],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: LoginStreak }>('/auth/streak');
-        return data?.data ?? null;
+        const raw = await api.get<unknown>('/auth/streak');
+        const parsed = extractObject<LoginStreak>(raw);
+        if (parsed && 'current_streak' in (parsed as unknown as Record<string, unknown>)) return parsed;
+        return null;
       } catch {
         return null;
       }
@@ -111,8 +113,8 @@ export default function ProfileTabScreen() {
     queryFn: async () => {
       try {
         const year = new Date().getFullYear();
-        const data = await api.get<{ data: SundayAttendanceStats }>(`/attendance/my-sundays?year=${year}`);
-        return data?.data ?? null;
+        const raw = await api.get<unknown>(`/attendance/my-sundays?year=${year}`);
+        return extractObject<SundayAttendanceStats>(raw);
       } catch {
         return null;
       }
@@ -124,8 +126,9 @@ export default function ProfileTabScreen() {
     queryKey: ['my-followers-stats'],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: { followers_count: number; following_count: number } }>('/social/flock/stats');
-        return data?.data ?? { followers_count: 0, following_count: 0 };
+        const raw = await api.get<unknown>('/social/flock/stats');
+        const parsed = extractObject<{ followers_count: number; following_count: number }>(raw);
+        return parsed ?? { followers_count: 0, following_count: 0 };
       } catch {
         return { followers_count: 0, following_count: 0 };
       }
@@ -136,8 +139,8 @@ export default function ProfileTabScreen() {
     queryKey: ['suggested-users-profile'],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: FlockUser[] }>('/social/flock/suggestions');
-        return data?.data ?? [];
+        const raw = await api.get<unknown>('/social/flock/suggestions');
+        return extractArray<FlockUser>(raw);
       } catch {
         return [] as FlockUser[];
       }
@@ -148,9 +151,9 @@ export default function ProfileTabScreen() {
     queryKey: ['my-posts', user?.id],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: FeedPost[] }>('/feed/me?limit=50&offset=0');
-        console.log('[Profile] My posts response:', JSON.stringify(data).slice(0, 300));
-        return data?.data ?? [];
+        const raw = await api.get<unknown>('/feed/me?limit=50&offset=0');
+        console.log('[Profile] My posts response:', JSON.stringify(raw).slice(0, 300));
+        return extractArray<FeedPost>(raw);
       } catch (e: unknown) {
         console.log('[Profile] /feed/me failed:', e);
         return [] as FeedPost[];

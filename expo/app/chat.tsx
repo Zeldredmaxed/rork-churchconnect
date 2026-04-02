@@ -15,7 +15,7 @@ import { ArrowLeft, Video, SquarePen, Search } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
-import { api } from '@/utils/api';
+import { api, extractArray } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
 import FollowButton from '@/components/FollowButton';
 import type { Conversation, FlockUser } from '@/types';
@@ -145,20 +145,7 @@ export default function ChatScreen() {
       try {
         console.log('[Chat] Fetching all members for search...');
         const raw = await api.get<unknown>('/members');
-        console.log('[Chat] Raw members response type:', typeof raw, Array.isArray(raw));
-        let members: FlockUser[] = [];
-        if (Array.isArray(raw)) {
-          members = raw;
-        } else if (raw && typeof raw === 'object') {
-          const obj = raw as Record<string, unknown>;
-          if (Array.isArray(obj.data)) {
-            members = obj.data;
-          } else if (Array.isArray(obj.results)) {
-            members = obj.results as FlockUser[];
-          } else if (Array.isArray(obj.members)) {
-            members = obj.members as FlockUser[];
-          }
-        }
+        const members = extractArray<FlockUser>(raw);
         console.log('[Chat] Parsed members count:', members.length);
         return members;
       } catch (e) {
@@ -170,17 +157,17 @@ export default function ChatScreen() {
 
   const convosQuery = useQuery({
     queryKey: ['conversations'],
-    queryFn: () => api.get<{ data: Conversation[] }>('/chat'),
+    queryFn: async () => extractArray<Conversation>(await api.get<unknown>('/chat')),
   });
 
   const followersQuery = useQuery({
     queryKey: ['followers-suggestions'],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: FlockUser[] }>('/social/flock/suggestions');
-        return data;
+        const raw = await api.get<unknown>('/social/flock/suggestions');
+        return extractArray<FlockUser>(raw);
       } catch {
-        return { data: [] as FlockUser[] };
+        return [] as FlockUser[];
       }
     },
   });
@@ -191,8 +178,8 @@ export default function ChatScreen() {
     void queryClient.invalidateQueries({ queryKey: ['chat-requests'] });
   }, [queryClient]);
 
-  const conversations = convosQuery.data?.data ?? [];
-  const followers = followersQuery.data?.data ?? [];
+  const conversations = convosQuery.data ?? [];
+  const followers = followersQuery.data ?? [];
 
   const filteredConvos = searchQuery.trim()
     ? conversations.filter((c) => {

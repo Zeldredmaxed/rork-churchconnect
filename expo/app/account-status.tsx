@@ -1,15 +1,55 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { Stack } from 'expo-router';
-import { CheckCircle } from 'lucide-react-native';
+import { useQuery } from '@tanstack/react-query';
+import { CheckCircle, AlertTriangle } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
+import { api, extractObject } from '@/utils/api';
+
+interface AccountStatusData {
+  account_type: string;
+  is_active: boolean;
+  is_verified: boolean;
+  is_2fa_enabled: boolean;
+  email: string;
+  username: string;
+  full_name: string;
+  church_id: number;
+  church_name: string;
+  joined_at: string;
+  last_login_at: string;
+}
 
 export default function AccountStatusScreen() {
   const { theme } = useTheme();
   const s = createStyles(theme);
   const { user } = useAuth();
+
+  const statusQuery = useQuery({
+    queryKey: ['account-status'],
+    queryFn: async () => {
+      try {
+        const raw = await api.get<unknown>('/auth/account-status');
+        console.log('[AccountStatus] Response:', JSON.stringify(raw).slice(0, 500));
+        return extractObject<AccountStatusData>(raw);
+      } catch (e) {
+        console.log('[AccountStatus] Failed to fetch:', e);
+        return null;
+      }
+    },
+  });
+
+  const status = statusQuery.data;
+  const isActive = status?.is_active ?? true;
+  const displayName = status?.full_name ?? user?.full_name ?? 'User';
+  const displayRole = status?.account_type ?? user?.role ?? 'member';
+  const churchName = status?.church_name ?? '';
+  const joinedAt = status?.joined_at ?? user?.created_at;
+  const lastLogin = status?.last_login_at;
+  const isVerified = status?.is_verified ?? false;
+  const is2fa = status?.is_2fa_enabled ?? false;
 
   return (
     <View style={s.container}>
@@ -22,44 +62,83 @@ export default function AccountStatusScreen() {
         }}
       />
       <ScrollView contentContainerStyle={s.content}>
-        <View style={s.heroSection}>
-          <View style={s.statusBadge}>
-            <CheckCircle size={48} color={theme.colors.success} />
+        {statusQuery.isLoading ? (
+          <View style={s.loadingContainer}>
+            <ActivityIndicator size="large" color={theme.colors.accent} />
           </View>
-          <Text style={s.heroTitle}>Your account is in good standing</Text>
-          <Text style={s.heroDesc}>
-            There are no issues with your account.
-          </Text>
-        </View>
-
-        <View style={s.card}>
-          <View style={s.cardRow}>
-            <Text style={s.cardLabel}>Account</Text>
-            <Text style={s.cardValue}>{user?.full_name || 'User'}</Text>
-          </View>
-          <View style={s.cardDivider} />
-          <View style={s.cardRow}>
-            <Text style={s.cardLabel}>Status</Text>
-            <View style={s.statusTag}>
-              <Text style={s.statusTagText}>Active</Text>
+        ) : (
+          <>
+            <View style={s.heroSection}>
+              <View style={s.statusBadge}>
+                {isActive ? (
+                  <CheckCircle size={48} color={theme.colors.success} />
+                ) : (
+                  <AlertTriangle size={48} color={theme.colors.warning} />
+                )}
+              </View>
+              <Text style={s.heroTitle}>
+                {isActive ? 'Your account is in good standing' : 'Account requires attention'}
+              </Text>
+              <Text style={s.heroDesc}>
+                {isActive ? 'There are no issues with your account.' : 'Please contact administration for details.'}
+              </Text>
             </View>
-          </View>
-          <View style={s.cardDivider} />
-          <View style={s.cardRow}>
-            <Text style={s.cardLabel}>Role</Text>
-            <Text style={s.cardValue}>{user?.role || 'Member'}</Text>
-          </View>
-          <View style={s.cardDivider} />
-          <View style={s.cardRow}>
-            <Text style={s.cardLabel}>Membership</Text>
-            <Text style={s.cardValue}>{user?.membership_status || 'Active'}</Text>
-          </View>
-          <View style={s.cardDivider} />
-          <View style={s.cardRow}>
-            <Text style={s.cardLabel}>Joined</Text>
-            <Text style={s.cardValue}>{user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}</Text>
-          </View>
-        </View>
+
+            <View style={s.card}>
+              <View style={s.cardRow}>
+                <Text style={s.cardLabel}>Account</Text>
+                <Text style={s.cardValue}>{displayName}</Text>
+              </View>
+              <View style={s.cardDivider} />
+              <View style={s.cardRow}>
+                <Text style={s.cardLabel}>Status</Text>
+                <View style={[s.statusTag, !isActive && s.statusTagWarning]}>
+                  <Text style={[s.statusTagText, !isActive && s.statusTagTextWarning]}>
+                    {isActive ? 'Active' : 'Inactive'}
+                  </Text>
+                </View>
+              </View>
+              <View style={s.cardDivider} />
+              <View style={s.cardRow}>
+                <Text style={s.cardLabel}>Role</Text>
+                <Text style={s.cardValue}>{displayRole}</Text>
+              </View>
+              {churchName ? (
+                <>
+                  <View style={s.cardDivider} />
+                  <View style={s.cardRow}>
+                    <Text style={s.cardLabel}>Church</Text>
+                    <Text style={s.cardValue}>{churchName}</Text>
+                  </View>
+                </>
+              ) : null}
+              <View style={s.cardDivider} />
+              <View style={s.cardRow}>
+                <Text style={s.cardLabel}>Verified</Text>
+                <Text style={s.cardValue}>{isVerified ? 'Yes' : 'No'}</Text>
+              </View>
+              <View style={s.cardDivider} />
+              <View style={s.cardRow}>
+                <Text style={s.cardLabel}>2FA Enabled</Text>
+                <Text style={s.cardValue}>{is2fa ? 'Yes' : 'No'}</Text>
+              </View>
+              <View style={s.cardDivider} />
+              <View style={s.cardRow}>
+                <Text style={s.cardLabel}>Joined</Text>
+                <Text style={s.cardValue}>{joinedAt ? new Date(joinedAt).toLocaleDateString() : 'N/A'}</Text>
+              </View>
+              {lastLogin ? (
+                <>
+                  <View style={s.cardDivider} />
+                  <View style={s.cardRow}>
+                    <Text style={s.cardLabel}>Last Login</Text>
+                    <Text style={s.cardValue}>{new Date(lastLogin).toLocaleDateString()}</Text>
+                  </View>
+                </>
+              ) : null}
+            </View>
+          </>
+        )}
       </ScrollView>
     </View>
   );

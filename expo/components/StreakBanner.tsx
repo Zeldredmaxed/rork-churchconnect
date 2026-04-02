@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Flame, Trophy, Calendar } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
-import { api } from '@/utils/api';
+import { api, extractObject } from '@/utils/api';
 import type { LoginStreak } from '@/types';
 
 export default function StreakBanner() {
@@ -16,9 +16,11 @@ export default function StreakBanner() {
   const streakQuery = useQuery({
     queryKey: ['login-streak'],
     queryFn: async () => {
-      const res = await api.get<{ data: LoginStreak }>('/auth/streak');
+      const res = await api.get<unknown>('/auth/streak');
       console.log('[Streak] Response:', JSON.stringify(res));
-      return res?.data ?? null;
+      const parsed = extractObject<LoginStreak>(res);
+      if (parsed && 'current_streak' in (parsed as unknown as Record<string, unknown>)) return parsed;
+      return null;
     },
     staleTime: 60000,
   });

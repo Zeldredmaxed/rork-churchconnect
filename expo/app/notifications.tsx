@@ -24,10 +24,10 @@ import {
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
-import { api } from '@/utils/api';
+import { api, extractArray } from '@/utils/api';
 import EmptyState from '@/components/EmptyState';
 import SuggestedUserRow from '@/components/SuggestedUserRow';
-import type { Notification, FlockUser, AlertListResponse } from '@/types';
+import type { Notification, FlockUser } from '@/types';
 
 function getTypeIcons(theme: AppTheme): Record<string, { icon: React.ReactNode; color: string }> {
   return {
@@ -167,10 +167,10 @@ export default function NotificationsScreen() {
     queryKey: ['notifications'],
     queryFn: async () => {
       try {
-        const raw = await api.get<AlertListResponse | { data: Notification[] }>('/notifications');
-        return raw;
+        const raw = await api.get<unknown>('/notifications');
+        return extractArray<Notification>(raw);
       } catch {
-        return { items: [] as Notification[], unread_count: 0, total: 0 } as AlertListResponse;
+        return [] as Notification[];
       }
     },
   });
@@ -180,10 +180,10 @@ export default function NotificationsScreen() {
     queryFn: async () => {
       console.log('[Notifications] Fetching suggested users');
       try {
-        const data = await api.get<{ data: FlockUser[] }>('/social/flock/suggestions');
-        return data;
+        const raw = await api.get<unknown>('/social/flock/suggestions');
+        return extractArray<FlockUser>(raw);
       } catch {
-        return { data: [] as FlockUser[] };
+        return [] as FlockUser[];
       }
     },
   });
@@ -211,15 +211,9 @@ export default function NotificationsScreen() {
     setDismissedUsers((prev) => [...prev, userId]);
   }, []);
 
-  const notifications = React.useMemo(() => {
-    const raw = notifsQuery.data;
-    if (!raw) return [] as Notification[];
-    if ('items' in raw && Array.isArray((raw as AlertListResponse).items)) return (raw as AlertListResponse).items;
-    if ('data' in raw && Array.isArray((raw as { data: Notification[] }).data)) return (raw as { data: Notification[] }).data;
-    return [] as Notification[];
-  }, [notifsQuery.data]);
+  const notifications = notifsQuery.data ?? [];
   const hasUnread = notifications.some((n) => !n.is_read);
-  const suggestedUsers = (suggestedQuery.data?.data ?? []).filter(
+  const suggestedUsers = (suggestedQuery.data ?? []).filter(
     (u) => !dismissedUsers.includes(u.id)
   );
 

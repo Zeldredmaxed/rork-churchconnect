@@ -28,7 +28,7 @@ import {
 } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
-import { api } from '@/utils/api';
+import { api, extractArray } from '@/utils/api';
 import type { Fund, Donation } from '@/types';
 
 export default function GivingScreen() {
@@ -49,12 +49,12 @@ export default function GivingScreen() {
 
   const fundsQuery = useQuery({
     queryKey: ['funds'],
-    queryFn: () => api.get<{ data: Fund[] }>('/funds'),
+    queryFn: async () => extractArray<Fund>(await api.get<unknown>('/funds')),
   });
 
   const historyQuery = useQuery({
     queryKey: ['donations', 'my'],
-    queryFn: () => api.get<{ items: Donation[]; total: number; total_amount: number } | { data: Donation[] }>('/donations'),
+    queryFn: async () => extractArray<Donation>(await api.get<unknown>('/donations')),
   });
 
   interface RecurringDonation {
@@ -112,14 +112,8 @@ export default function GivingScreen() {
     onError: (error) => Alert.alert('Error', error.message),
   });
 
-  const funds = fundsQuery.data?.data ?? [];
-  const donations = React.useMemo(() => {
-    const raw = historyQuery.data;
-    if (!raw) return [];
-    if ('items' in raw && Array.isArray((raw as any).items)) return (raw as any).items as Donation[];
-    if ('data' in raw && Array.isArray((raw as any).data)) return (raw as any).data as Donation[];
-    return [];
-  }, [historyQuery.data]);
+  const funds = fundsQuery.data ?? [];
+  const donations = historyQuery.data ?? [];
   const recentDonations = donations.slice(0, 3);
 
   const activeFund = funds.length > 0 ? funds[0] : null;

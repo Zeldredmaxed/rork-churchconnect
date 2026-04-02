@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
-import { api } from '@/utils/api';
+import { api, extractArray } from '@/utils/api';
 import type { FlockUser } from '@/types';
 
 const RECENT_SEARCHES_KEY = 'shepherd_recent_searches';
@@ -82,19 +82,7 @@ export default function SearchScreen() {
       try {
         console.log('[Search] Fetching all members...');
         const raw = await api.get<unknown>('/members');
-        let members: FlockUser[] = [];
-        if (Array.isArray(raw)) {
-          members = raw;
-        } else if (raw && typeof raw === 'object') {
-          const obj = raw as Record<string, unknown>;
-          if (Array.isArray(obj.data)) {
-            members = obj.data;
-          } else if (Array.isArray(obj.results)) {
-            members = obj.results as FlockUser[];
-          } else if (Array.isArray(obj.members)) {
-            members = obj.members as FlockUser[];
-          }
-        }
+        const members = extractArray<FlockUser>(raw);
         console.log('[Search] Parsed members count:', members.length);
         return members;
       } catch (e) {

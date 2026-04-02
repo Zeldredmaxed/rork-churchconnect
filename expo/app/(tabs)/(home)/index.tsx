@@ -20,7 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
-import { api } from '@/utils/api';
+import { api, extractArray } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
 import PostCard from '@/components/PostCard';
 import EmptyState from '@/components/EmptyState';
@@ -110,15 +110,17 @@ export default function HomeFeedScreen() {
 
   const feedQuery = useQuery({
     queryKey: ['feed', feedFilter],
-    queryFn: () => {
+    queryFn: async () => {
       const params = feedFilter !== 'all' ? `?filter=${feedFilter}` : '';
-      return api.get<{ data: FeedPost[] }>(`/feed${params}`);
+      const raw = await api.get<unknown>(`/feed${params}`);
+      return extractArray<FeedPost>(raw);
     },
   });
 
   const likeMutation = useMutation({
     mutationFn: (postId: string) => {
-      const post = (queryClient.getQueryData<{ data: FeedPost[] }>(['feed', feedFilter]))?.data?.find((p) => String(p.id) === postId);
+      const posts = queryClient.getQueryData<FeedPost[]>(['feed', feedFilter]);
+      const post = posts?.find((p) => String(p.id) === postId);
       const isCurrentlyLiked = post?.is_liked;
       console.log('[Feed] Like toggle for post:', postId, 'currently liked:', isCurrentlyLiked);
       return api.post(`/feed/${postId}/like`);
@@ -126,20 +128,19 @@ export default function HomeFeedScreen() {
     onMutate: async (postId: string) => {
       await queryClient.cancelQueries({ queryKey: ['feed'] });
       const filters: FeedFilter[] = ['all', 'following', 'favourites'];
-      const snapshots: Record<string, { data: FeedPost[] } | undefined> = {};
+      const snapshots: Record<string, FeedPost[] | undefined> = {};
       for (const f of filters) {
         const key = ['feed', f];
-        const prev = queryClient.getQueryData<{ data: FeedPost[] }>(key);
+        const prev = queryClient.getQueryData<FeedPost[]>(key);
         snapshots[f] = prev;
-        if (prev?.data) {
-          queryClient.setQueryData<{ data: FeedPost[] }>(key, {
-            ...prev,
-            data: prev.data.map((p) =>
+        if (prev) {
+          queryClient.setQueryData<FeedPost[]>(key,
+            prev.map((p) =>
               String(p.id) === postId
                 ? { ...p, is_liked: !p.is_liked, like_count: p.is_liked ? Math.max(0, p.like_count - 1) : p.like_count + 1 }
                 : p
             ),
-          });
+          );
         }
       }
       return { snapshots };
@@ -205,7 +206,7 @@ export default function HomeFeedScreen() {
   }, [queryClient]);
 
 
-  const posts = feedQuery.data?.data ?? [];
+  const posts = feedQuery.data ?? [];
   const selectedPost = optionsPostId ? posts.find((p) => String(p.id) === optionsPostId) : null;
   const isPostOwner = selectedPost?.author_id != null && user?.id != null && String(selectedPost.author_id) === String(user.id);
   const pinnedPosts = posts.filter((p) => p.is_pinned).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());

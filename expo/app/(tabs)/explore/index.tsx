@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
-import { api } from '@/utils/api';
+import { api, extractArray } from '@/utils/api';
 import EmptyState from '@/components/EmptyState';
 import type { Event, Sermon, Prayer } from '@/types';
 
@@ -41,25 +41,17 @@ export default function ExploreScreen() {
 
   const eventsQuery = useQuery({
     queryKey: ['events'],
-    queryFn: () => api.get<{ data: Event[] }>('/events'),
+    queryFn: async () => extractArray<Event>(await api.get<unknown>('/events')),
   });
 
   const sermonsQuery = useQuery({
     queryKey: ['sermons'],
-    queryFn: () => api.get<{ data: Sermon[] }>('/sermons'),
+    queryFn: async () => extractArray<Sermon>(await api.get<unknown>('/sermons')),
   });
 
   const prayersQuery = useQuery({
     queryKey: ['prayers'],
-    queryFn: async () => {
-      const response = await api.get<unknown>('/prayers');
-      if (Array.isArray(response)) return { data: response };
-      if (typeof response === 'object' && response !== null) {
-        const obj = response as Record<string, unknown>;
-        if (Array.isArray(obj.data)) return { data: obj.data };
-      }
-      return { data: [] };
-    },
+    queryFn: async () => extractArray<Prayer>(await api.get<unknown>('/prayers')),
   });
 
   const handleRefresh = useCallback(() => {
@@ -68,9 +60,9 @@ export default function ExploreScreen() {
     void queryClient.invalidateQueries({ queryKey: ['prayers'] });
   }, [queryClient]);
 
-  const events = (eventsQuery.data?.data ?? []) as Event[];
-  const sermons = (sermonsQuery.data?.data ?? []) as Sermon[];
-  const prayers = (prayersQuery.data?.data ?? []) as Prayer[];
+  const events = eventsQuery.data ?? [];
+  const sermons = sermonsQuery.data ?? [];
+  const prayers = prayersQuery.data ?? [];
 
   const isLoading = eventsQuery.isLoading && sermonsQuery.isLoading;
   const isRefreshing = eventsQuery.isRefetching || sermonsQuery.isRefetching;
