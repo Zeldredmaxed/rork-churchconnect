@@ -50,7 +50,7 @@ function ShortOverlay({ item, onLike, onComment, onShare, onMore, onSave, isSave
     },
   });
 
-  const isOwnShort = currentUserId === item.author_id;
+  const isOwnShort = currentUserId != null && item.author_id != null && String(currentUserId) === String(item.author_id);
 
   const handleLike = () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
