@@ -159,8 +159,8 @@ export default function EventDetailScreen() {
           <View style={styles.heroContent}>
             <View style={styles.badgeRow}>
               <Badge
-                label={event.type.charAt(0).toUpperCase() + event.type.slice(1)}
-                variant={typeBadgeVariant[event.type] ?? 'accent'}
+                label={(event.type ?? 'event').charAt(0).toUpperCase() + (event.type ?? 'event').slice(1)}
+                variant={typeBadgeVariant[event.type ?? 'event'] ?? 'accent'}
               />
               {event.status === 'cancelled' && <Badge label="Cancelled" variant="error" />}
               {event.is_recurring && <Badge label="Recurring" variant="info" />}
