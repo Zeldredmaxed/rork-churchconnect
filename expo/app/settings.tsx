@@ -201,12 +201,12 @@ export default function SettingsScreen() {
           <SettingsRow
             icon={<Clock size={20} color={theme.colors.textSecondary} />}
             label="Archive"
-            onPress={() => console.log('[Settings] Archive')}
+            onPress={() => handleNav('/archive')}
           />
           <SettingsRow
             icon={<Activity size={20} color={theme.colors.textSecondary} />}
             label="Your activity"
-            onPress={() => console.log('[Settings] Activity')}
+            onPress={() => handleNav('/your-activity')}
           />
           <SettingsRow
             icon={<Bell size={20} color={theme.colors.textSecondary} />}
@@ -216,7 +216,7 @@ export default function SettingsScreen() {
           <SettingsRow
             icon={<Clock size={20} color={theme.colors.textSecondary} />}
             label="Time spent"
-            onPress={() => console.log('[Settings] Time spent')}
+            onPress={() => handleNav('/time-spent')}
           />
         </View>
 
@@ -227,19 +227,19 @@ export default function SettingsScreen() {
           <SettingsRow
             icon={<Lock size={20} color={theme.colors.textSecondary} />}
             label="Account privacy"
-            onPress={() => console.log('[Settings] Privacy')}
+            onPress={() => handleNav('/account-privacy')}
           />
           <SettingsRow
             icon={<Star size={20} color={theme.colors.textSecondary} />}
             label="Close friends"
             rightValue="0"
-            onPress={() => console.log('[Settings] Close friends')}
+            onPress={() => handleNav('/close-friends')}
           />
           <SettingsRow
             icon={<UserX size={20} color={theme.colors.textSecondary} />}
             label="Blocked"
             rightValue="0"
-            onPress={() => console.log('[Settings] Blocked')}
+            onPress={() => handleNav('/blocked-accounts')}
           />
         </View>
 
@@ -255,38 +255,38 @@ export default function SettingsScreen() {
           <SettingsRow
             icon={<AtSign size={20} color={theme.colors.textSecondary} />}
             label="Tags and mentions"
-            onPress={() => console.log('[Settings] Tags')}
+            onPress={() => handleNav('/tags-mentions')}
           />
           <SettingsRow
             icon={<MessageSquare size={20} color={theme.colors.textSecondary} />}
             label="Comments"
-            onPress={() => console.log('[Settings] Comments')}
+            onPress={() => handleNav('/comments-settings')}
           />
           <SettingsRow
             icon={<Share2 size={20} color={theme.colors.textSecondary} />}
             label="Sharing"
-            onPress={() => console.log('[Settings] Sharing')}
+            onPress={() => handleNav('/sharing-settings')}
           />
           <SettingsRow
             icon={<UserX size={20} color={theme.colors.textSecondary} />}
             label="Restricted"
             rightValue="0"
-            onPress={() => console.log('[Settings] Restricted')}
+            onPress={() => handleNav('/restricted-accounts')}
           />
           <SettingsRow
             icon={<AlertCircle size={20} color={theme.colors.textSecondary} />}
             label="Limit interactions"
-            onPress={() => console.log('[Settings] Limit')}
+            onPress={() => handleNav('/limit-interactions')}
           />
           <SettingsRow
             icon={<Type size={20} color={theme.colors.textSecondary} />}
             label="Hidden words"
-            onPress={() => console.log('[Settings] Hidden words')}
+            onPress={() => handleNav('/hidden-words')}
           />
           <SettingsRow
             icon={<UserPlus size={20} color={theme.colors.textSecondary} />}
             label="Follow and invite friends"
-            onPress={() => console.log('[Settings] Follow invite')}
+            onPress={() => handleNav('/follow-invite')}
           />
         </View>
 
@@ -298,23 +298,23 @@ export default function SettingsScreen() {
             icon={<Star size={20} color={theme.colors.textSecondary} />}
             label="Favourites"
             rightValue="0"
-            onPress={() => console.log('[Settings] Favourites')}
+            onPress={() => handleNav('/favourites')}
           />
           <SettingsRow
             icon={<BellOff size={20} color={theme.colors.textSecondary} />}
             label="Muted accounts"
             rightValue="0"
-            onPress={() => console.log('[Settings] Muted')}
+            onPress={() => handleNav('/muted-accounts')}
           />
           <SettingsRow
             icon={<Eye size={20} color={theme.colors.textSecondary} />}
             label="Suggested content"
-            onPress={() => console.log('[Settings] Suggested')}
+            onPress={() => handleNav('/suggested-content')}
           />
           <SettingsRow
             icon={<Heart size={20} color={theme.colors.textSecondary} />}
             label="Like and share counts"
-            onPress={() => console.log('[Settings] Like counts')}
+            onPress={() => handleNav('/like-share-counts')}
           />
         </View>
 
@@ -345,33 +345,33 @@ export default function SettingsScreen() {
           <SettingsRow
             icon={<Smartphone size={20} color={theme.colors.textSecondary} />}
             label="Device permissions"
-            onPress={() => console.log('[Settings] Permissions')}
+            onPress={() => handleNav('/device-permissions')}
           />
           <SettingsRow
             icon={<Download size={20} color={theme.colors.textSecondary} />}
             label="Archiving and downloading"
-            onPress={() => console.log('[Settings] Archiving')}
+            onPress={() => handleNav('/archiving-downloading')}
           />
           <SettingsRow
             icon={<Accessibility size={20} color={theme.colors.textSecondary} />}
             label="Accessibility and translations"
-            onPress={() => console.log('[Settings] Accessibility')}
+            onPress={() => handleNav('/accessibility-settings')}
           />
           <SettingsRow
             icon={<Languages size={20} color={theme.colors.textSecondary} />}
             label="Language"
             rightValue="English"
-            onPress={() => console.log('[Settings] Language')}
+            onPress={() => handleNav('/language-settings')}
           />
           <SettingsRow
             icon={<BarChart3 size={20} color={theme.colors.textSecondary} />}
             label="Data usage and media quality"
-            onPress={() => console.log('[Settings] Data usage')}
+            onPress={() => handleNav('/data-usage')}
           />
           <SettingsRow
             icon={<MonitorSmartphone size={20} color={theme.colors.textSecondary} />}
             label="Website permissions"
-            onPress={() => console.log('[Settings] Website permissions')}
+            onPress={() => handleNav('/website-permissions')}
           />
         </View>
 
@@ -393,22 +393,22 @@ export default function SettingsScreen() {
           <SettingsRow
             icon={<HelpCircle size={20} color={theme.colors.textSecondary} />}
             label="Help"
-            onPress={() => console.log('[Settings] Help')}
+            onPress={() => handleNav('/help')}
           />
           <SettingsRow
             icon={<Shield size={20} color={theme.colors.textSecondary} />}
             label="Privacy and security help"
-            onPress={() => console.log('[Settings] Privacy help')}
+            onPress={() => handleNav('/privacy-security-help')}
           />
           <SettingsRow
             icon={<CircleUser size={20} color={theme.colors.textSecondary} />}
             label="Account Status"
-            onPress={() => console.log('[Settings] Account status')}
+            onPress={() => handleNav('/account-status')}
           />
           <SettingsRow
             icon={<Info size={20} color={theme.colors.textSecondary} />}
             label="About"
-            onPress={() => console.log('[Settings] About')}
+            onPress={() => handleNav('/about')}
           />
         </View>
 
@@ -419,7 +419,7 @@ export default function SettingsScreen() {
           <SettingsRow
             icon={<Church size={20} color={theme.colors.textSecondary} />}
             label="About This Church"
-            onPress={() => console.log('[Settings] About church')}
+            onPress={() => handleNav('/about-church')}
           />
           <SettingsRow
             icon={<LogOut size={20} color={theme.colors.warning} />}

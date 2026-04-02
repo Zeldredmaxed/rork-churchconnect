@@ -89,6 +89,34 @@ function RootLayoutNav() {
       <Stack.Screen name="edit-gender" options={{ title: 'Gender' }} />
       <Stack.Screen name="new-message" options={{ title: 'New Message' }} />
       <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="archive" options={{ title: 'Archive' }} />
+      <Stack.Screen name="your-activity" options={{ title: 'Your Activity' }} />
+      <Stack.Screen name="time-spent" options={{ title: 'Time Spent' }} />
+      <Stack.Screen name="account-privacy" options={{ title: 'Account Privacy' }} />
+      <Stack.Screen name="close-friends" options={{ title: 'Close Friends' }} />
+      <Stack.Screen name="blocked-accounts" options={{ title: 'Blocked' }} />
+      <Stack.Screen name="tags-mentions" options={{ title: 'Tags and Mentions' }} />
+      <Stack.Screen name="comments-settings" options={{ title: 'Comments' }} />
+      <Stack.Screen name="sharing-settings" options={{ title: 'Sharing' }} />
+      <Stack.Screen name="restricted-accounts" options={{ title: 'Restricted' }} />
+      <Stack.Screen name="limit-interactions" options={{ title: 'Limit Interactions' }} />
+      <Stack.Screen name="hidden-words" options={{ title: 'Hidden Words' }} />
+      <Stack.Screen name="follow-invite" options={{ title: 'Follow and Invite' }} />
+      <Stack.Screen name="favourites" options={{ title: 'Favourites' }} />
+      <Stack.Screen name="muted-accounts" options={{ title: 'Muted Accounts' }} />
+      <Stack.Screen name="suggested-content" options={{ title: 'Suggested Content' }} />
+      <Stack.Screen name="like-share-counts" options={{ title: 'Like and Share Counts' }} />
+      <Stack.Screen name="device-permissions" options={{ title: 'Device Permissions' }} />
+      <Stack.Screen name="archiving-downloading" options={{ title: 'Archiving and Downloading' }} />
+      <Stack.Screen name="accessibility-settings" options={{ title: 'Accessibility' }} />
+      <Stack.Screen name="language-settings" options={{ title: 'Language' }} />
+      <Stack.Screen name="data-usage" options={{ title: 'Data Usage' }} />
+      <Stack.Screen name="website-permissions" options={{ title: 'Website Permissions' }} />
+      <Stack.Screen name="help" options={{ title: 'Help' }} />
+      <Stack.Screen name="privacy-security-help" options={{ title: 'Privacy & Security Help' }} />
+      <Stack.Screen name="account-status" options={{ title: 'Account Status' }} />
+      <Stack.Screen name="about" options={{ title: 'About' }} />
+      <Stack.Screen name="about-church" options={{ title: 'About This Church' }} />
       <Stack.Screen name="+not-found" />
     </Stack>
   );
