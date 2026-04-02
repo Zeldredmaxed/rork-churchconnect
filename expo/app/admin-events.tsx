@@ -23,6 +23,7 @@ import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import EventCard from '@/components/EventCard';
 import EmptyState from '@/components/EmptyState';
+import DateTimePicker from '@/components/DateTimePicker';
 import type { Event } from '@/types';
 
 export default function AdminEventsScreen() {
@@ -37,6 +38,18 @@ export default function AdminEventsScreen() {
   const [regRequired, setRegRequired] = useState(false);
   const [recurring, setRecurring] = useState(false);
   const [maxCapacity, setMaxCapacity] = useState('');
+  const [startDate, setStartDate] = useState<Date>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(10, 0, 0, 0);
+    return d;
+  });
+  const [endDate, setEndDate] = useState<Date>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(12, 0, 0, 0);
+    return d;
+  });
 
   const eventsQuery = useQuery({
     queryKey: ['admin', 'events'],
@@ -83,19 +96,28 @@ export default function AdminEventsScreen() {
     setRegRequired(false);
     setRecurring(false);
     setMaxCapacity('');
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(10, 0, 0, 0);
+    setStartDate(tomorrow);
+    const tomorrowEnd = new Date(tomorrow);
+    tomorrowEnd.setHours(12, 0, 0, 0);
+    setEndDate(tomorrowEnd);
   };
 
   const handleCreate = () => {
     if (!title.trim()) return;
-    const now = new Date();
-    const tomorrow = new Date(now.getTime() + 86400000);
+    if (endDate <= startDate) {
+      Alert.alert('Invalid Time', 'End date must be after start date.');
+      return;
+    }
     createMutation.mutate({
       title: title.trim(),
       description: description.trim() || 'No description provided',
       type: eventType,
       location: location.trim() || 'TBD',
-      start_datetime: tomorrow.toISOString(),
-      end_datetime: new Date(tomorrow.getTime() + 7200000).toISOString(),
+      start_datetime: startDate.toISOString(),
+      end_datetime: endDate.toISOString(),
       registration_required: regRequired,
       is_recurring: recurring,
       ...(maxCapacity ? { max_capacity: parseInt(maxCapacity, 10) } : {}),
@@ -187,6 +209,24 @@ export default function AdminEventsScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
+              <DateTimePicker
+                label="Start Date & Time"
+                value={startDate}
+                onChange={(d) => {
+                  setStartDate(d);
+                  if (d >= endDate) {
+                    const newEnd = new Date(d.getTime() + 7200000);
+                    setEndDate(newEnd);
+                  }
+                }}
+                minimumDate={new Date()}
+              />
+              <DateTimePicker
+                label="End Date & Time"
+                value={endDate}
+                onChange={setEndDate}
+                minimumDate={startDate}
+              />
               <TextInput style={styles.input} value={location} onChangeText={setLocation} placeholder="Location" placeholderTextColor={theme.colors.textTertiary} />
               <TextInput style={styles.input} value={maxCapacity} onChangeText={setMaxCapacity} placeholder="Max Capacity (optional)" placeholderTextColor={theme.colors.textTertiary} keyboardType="number-pad" />
               <View style={styles.toggleRow}>
