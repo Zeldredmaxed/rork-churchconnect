@@ -85,9 +85,35 @@ export default function UniversalSearchScreen() {
   const trimmedQuery = query.trim();
   const isSearching = trimmedQuery.length > 1;
 
+  interface UnifiedSearchResult {
+    members?: FlockUser[];
+    events?: unknown[];
+    groups?: unknown[];
+    prayers?: unknown[];
+    posts?: FeedPost[];
+  }
+
+  const unifiedQuery = useQuery({
+    queryKey: ['unified-search', trimmedQuery],
+    queryFn: async () => {
+      try {
+        const data = await api.get<UnifiedSearchResult>(`/search?q=${encodeURIComponent(trimmedQuery)}`);
+        console.log('[Search] Unified search result keys:', Object.keys(data ?? {}));
+        return data;
+      } catch (e) {
+        console.log('[Search] Unified search failed, falling back:', e);
+        return null;
+      }
+    },
+    enabled: isSearching && activeTab === 'all',
+  });
+
   const usersQuery = useQuery({
     queryKey: ['universal-search-users', trimmedQuery],
     queryFn: async () => {
+      if (unifiedQuery.data?.members && unifiedQuery.data.members.length > 0) {
+        return unifiedQuery.data.members;
+      }
       try {
         const data = await api.get<{ data: FlockUser[] }>(`/members?search=${encodeURIComponent(trimmedQuery)}`);
         return data?.data ?? [];
@@ -101,6 +127,9 @@ export default function UniversalSearchScreen() {
   const postsQuery = useQuery({
     queryKey: ['universal-search-posts', trimmedQuery],
     queryFn: async () => {
+      if (unifiedQuery.data?.posts && unifiedQuery.data.posts.length > 0) {
+        return unifiedQuery.data.posts;
+      }
       try {
         const data = await api.get<{ data: FeedPost[] }>(`/feed?search=${encodeURIComponent(trimmedQuery)}`);
         return data?.data ?? [];
@@ -168,7 +197,7 @@ export default function UniversalSearchScreen() {
   const messages = messagesQuery.data ?? [];
 
   const isLoading =
-    (activeTab === 'all' && (usersQuery.isLoading || postsQuery.isLoading || shortsQuery.isLoading || messagesQuery.isLoading)) ||
+    (activeTab === 'all' && (unifiedQuery.isLoading || usersQuery.isLoading || postsQuery.isLoading || shortsQuery.isLoading || messagesQuery.isLoading)) ||
     (activeTab === 'users' && usersQuery.isLoading) ||
     (activeTab === 'posts' && postsQuery.isLoading) ||
     (activeTab === 'shorts' && shortsQuery.isLoading) ||

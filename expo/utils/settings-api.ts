@@ -1,23 +1,35 @@
 import { api } from '@/utils/api';
 
 export interface UserSettings {
-  id?: string;
+  id?: number | string;
   user_id?: string;
   is_private_account: boolean;
   theme_mode: 'light' | 'dark' | 'system';
   allow_tags_from: 'everyone' | 'following' | 'nobody';
   allow_mentions: boolean;
   allow_comments_from: 'everyone' | 'following' | 'followers' | 'both' | 'nobody';
-  filter_offensive_comments: boolean;
-  filter_spam_comments: boolean;
+  hide_offensive_comments: boolean;
+  hide_spam_comments: boolean;
+  allow_sharing_to_messages: boolean;
+  allow_resharing_to_stories: boolean;
+  limit_interactions: boolean;
   hide_like_counts: boolean;
   hide_share_counts: boolean;
   autoplay_wifi: boolean;
   autoplay_cellular: boolean;
   high_quality_uploads: boolean;
   data_saver: boolean;
+  save_original_photos: boolean;
+  save_posted_videos: boolean;
+  auto_captions: boolean;
+  larger_text: boolean;
+  reduce_motion: boolean;
+  auto_translate: boolean;
   language: string;
   hide_offensive_words: boolean;
+  show_suggested_posts: boolean;
+  filter_offensive_comments?: boolean;
+  filter_spam_comments?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -56,11 +68,21 @@ export interface ArchiveItem {
 }
 
 export const settingsApi = {
-  getSettings: () =>
-    api.get<UserSettings>('/settings'),
+  getSettings: async (): Promise<UserSettings> => {
+    const raw = await api.get<{ data: UserSettings } | UserSettings>('/settings');
+    if (raw && typeof raw === 'object' && 'data' in raw && (raw as Record<string, unknown>).data) {
+      return (raw as { data: UserSettings }).data;
+    }
+    return raw as UserSettings;
+  },
 
-  updateSettings: (updates: Partial<UserSettings>) =>
-    api.put<UserSettings>('/settings', updates as Record<string, unknown>),
+  updateSettings: async (updates: Partial<UserSettings>): Promise<UserSettings> => {
+    const raw = await api.put<{ data: UserSettings } | UserSettings>('/settings', updates as Record<string, unknown>);
+    if (raw && typeof raw === 'object' && 'data' in raw && (raw as Record<string, unknown>).data) {
+      return (raw as { data: UserSettings }).data;
+    }
+    return raw as UserSettings;
+  },
 
   getBlocked: () =>
     api.get<SocialBoundaryUser[]>('/settings/blocked'),

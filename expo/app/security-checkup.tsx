@@ -16,10 +16,14 @@ import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 
 interface SecurityCheckupResponse {
-  active_sessions_count: number;
-  password_last_changed: string | null;
-  two_factor_enabled: boolean;
-  recommendations: string[];
+  status: string;
+  is_2fa_enabled: boolean;
+  active_devices_count: number;
+  recent_alerts: number;
+  active_sessions_count?: number;
+  password_last_changed?: string | null;
+  two_factor_enabled?: boolean;
+  recommendations?: string[];
 }
 
 interface SecurityCheck {
@@ -34,57 +38,66 @@ interface SecurityCheck {
 function buildChecksFromResponse(data: SecurityCheckupResponse): SecurityCheck[] {
   const checks: SecurityCheck[] = [];
 
+  const sessionCount = data.active_devices_count ?? data.active_sessions_count ?? 0;
   checks.push({
     id: 'sessions',
     title: 'Active sessions',
-    description: `${data.active_sessions_count} active session${data.active_sessions_count !== 1 ? 's' : ''} on your account`,
-    status: data.active_sessions_count > 3 ? 'warning' : 'good',
+    description: `${sessionCount} active device${sessionCount !== 1 ? 's' : ''} on your account`,
+    status: sessionCount > 3 ? 'warning' : 'good',
     action_route: '/active-sessions',
     action_label: 'Review',
   });
 
-  if (data.password_last_changed) {
-    const daysSince = Math.floor((Date.now() - new Date(data.password_last_changed).getTime()) / (1000 * 60 * 60 * 24));
-    checks.push({
-      id: 'password',
-      title: 'Password',
-      description: daysSince > 180
-        ? `Last changed ${daysSince} days ago. Consider updating.`
-        : `Last changed ${daysSince} days ago`,
-      status: daysSince > 180 ? 'warning' : 'good',
-      action_route: '/change-password',
-      action_label: daysSince > 180 ? 'Update' : 'Change',
-    });
-  } else {
-    checks.push({
-      id: 'password',
-      title: 'Password',
-      description: 'No password change history found',
-      status: 'warning',
-      action_route: '/change-password',
-      action_label: 'Update',
-    });
-  }
-
+  const is2fa = data.is_2fa_enabled ?? data.two_factor_enabled ?? false;
   checks.push({
     id: '2fa',
     title: 'Two-factor authentication',
-    description: data.two_factor_enabled
+    description: is2fa
       ? 'Two-factor authentication is enabled'
       : 'Add extra protection to your account',
-    status: data.two_factor_enabled ? 'good' : 'action_needed',
+    status: is2fa ? 'good' : 'action_needed',
     action_route: '/password-security',
-    action_label: data.two_factor_enabled ? 'Manage' : 'Enable',
+    action_label: is2fa ? 'Manage' : 'Enable',
   });
 
-  data.recommendations.forEach((rec, idx) => {
+  checks.push({
+    id: 'password',
+    title: 'Password',
+    description: 'Review and update your password regularly',
+    status: 'good',
+    action_route: '/change-password',
+    action_label: 'Change',
+  });
+
+  if (data.recent_alerts > 0) {
     checks.push({
-      id: `rec-${idx}`,
-      title: 'Recommendation',
-      description: rec,
+      id: 'alerts',
+      title: 'Security alerts',
+      description: `${data.recent_alerts} recent security alert${data.recent_alerts !== 1 ? 's' : ''}`,
       status: 'warning',
     });
-  });
+  }
+
+  const overallStatus = data.status ?? 'secure';
+  if (overallStatus === 'warning') {
+    checks.push({
+      id: 'overall',
+      title: 'Overall status',
+      description: 'Your account security needs attention',
+      status: 'warning',
+    });
+  }
+
+  if (data.recommendations) {
+    data.recommendations.forEach((rec, idx) => {
+      checks.push({
+        id: `rec-${idx}`,
+        title: 'Recommendation',
+        description: rec,
+        status: 'warning',
+      });
+    });
+  }
 
   return checks;
 }
@@ -110,7 +123,7 @@ export default function SecurityCheckupScreen() {
       try {
         const data = await api.get<SecurityCheckupResponse>('/auth/security-checkup');
         console.log('[SecurityCheckup] Fetched:', data);
-        if (data && typeof data === 'object' && 'active_sessions_count' in data) {
+        if (data && typeof data === 'object') {
           return buildChecksFromResponse(data);
         }
         return [] as SecurityCheck[];

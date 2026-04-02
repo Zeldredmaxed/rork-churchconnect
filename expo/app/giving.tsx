@@ -40,6 +40,10 @@ export default function GivingScreen() {
   const [amount, setAmount] = useState('');
   const [memo, setMemo] = useState('');
   const [showFundPicker, setShowFundPicker] = useState(false);
+  const [showRecurringModal, setShowRecurringModal] = useState(false);
+  const [recurringFrequency, setRecurringFrequency] = useState<'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly'>('monthly');
+  const [recurringAmount, setRecurringAmount] = useState('');
+  const [recurringFund, setRecurringFund] = useState<Fund | null>(null);
 
   const progressAnim = useRef(new Animated.Value(0)).current;
 
@@ -51,6 +55,46 @@ export default function GivingScreen() {
   const historyQuery = useQuery({
     queryKey: ['donations', 'my'],
     queryFn: () => api.get<{ items: Donation[]; total: number; total_amount: number } | { data: Donation[] }>('/donations'),
+  });
+
+  interface RecurringDonation {
+    id: number | string;
+    fund_id: number | string;
+    fund_name: string;
+    amount: number;
+    frequency: string;
+    status: string;
+    start_date?: string;
+    next_date?: string;
+  }
+
+  const recurringQuery = useQuery({
+    queryKey: ['donations', 'recurring'],
+    queryFn: async () => {
+      try {
+        const raw = await api.get<{ data: RecurringDonation[] } | RecurringDonation[]>('/donations/recurring');
+        if (Array.isArray(raw)) return raw;
+        if (raw && typeof raw === 'object' && 'data' in raw) return (raw as { data: RecurringDonation[] }).data;
+        return [] as RecurringDonation[];
+      } catch {
+        return [] as RecurringDonation[];
+      }
+    },
+  });
+
+  const recurringDonations = recurringQuery.data ?? [];
+
+  const createRecurringMutation = useMutation({
+    mutationFn: (params: { fund_id: string; amount: number; frequency: string }) =>
+      api.post('/donations/recurring', params as unknown as Record<string, unknown>),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['donations', 'recurring'] });
+      setShowRecurringModal(false);
+      setRecurringAmount('');
+      setRecurringFund(null);
+      Alert.alert('Recurring Donation Set', 'Your recurring donation has been scheduled.');
+    },
+    onError: (error) => Alert.alert('Error', error.message),
   });
 
   const donateMutation = useMutation({
@@ -197,7 +241,7 @@ export default function GivingScreen() {
         )}
 
         <View style={styles.quickActionsRow}>
-          <TouchableOpacity style={styles.quickActionCard} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.quickActionCard} activeOpacity={0.7} onPress={() => setShowRecurringModal(true)}>
             <View style={styles.quickActionIconWrap}>
               <RefreshCw size={20} color={theme.colors.accent} />
             </View>
@@ -212,6 +256,24 @@ export default function GivingScreen() {
             <Text style={styles.quickActionSub}>Quick & simple</Text>
           </TouchableOpacity>
         </View>
+
+        {recurringDonations.length > 0 && (
+          <View style={styles.historySection}>
+            <Text style={styles.sectionTitle}>Active Recurring</Text>
+            {recurringDonations.map((rd) => (
+              <View key={rd.id} style={styles.donationRow}>
+                <View style={styles.donationIcon}>
+                  <RefreshCw size={16} color={theme.colors.accent} />
+                </View>
+                <View style={styles.donationInfo}>
+                  <Text style={styles.donationFund}>{rd.fund_name}</Text>
+                  <Text style={styles.donationDate}>{rd.frequency} · {rd.status}</Text>
+                </View>
+                <Text style={styles.donationAmount}>${rd.amount.toFixed(2)}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         <View style={styles.historySection}>
           <View style={styles.historyHeader}>
@@ -336,6 +398,113 @@ export default function GivingScreen() {
               placeholder="Add a memo (optional)"
               placeholderTextColor={theme.colors.textTertiary}
             />
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal visible={showRecurringModal} animationType="slide" transparent>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setShowRecurringModal(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <X size={22} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>Recurring Giving</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  if (!recurringFund || !recurringAmount) return;
+                  const amountNum = parseFloat(recurringAmount);
+                  if (isNaN(amountNum) || amountNum <= 0) {
+                    Alert.alert('Invalid Amount', 'Please enter a valid amount.');
+                    return;
+                  }
+                  createRecurringMutation.mutate({
+                    fund_id: recurringFund.id,
+                    amount: amountNum,
+                    frequency: recurringFrequency,
+                  });
+                }}
+                disabled={!recurringFund || !recurringAmount || createRecurringMutation.isPending}
+              >
+                {createRecurringMutation.isPending ? (
+                  <ActivityIndicator size="small" color={theme.colors.accent} />
+                ) : (
+                  <Text
+                    style={[
+                      styles.submitText,
+                      (!recurringFund || !recurringAmount) && styles.submitTextDisabled,
+                    ]}
+                  >
+                    Save
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={styles.fundSelector}
+              onPress={() => {
+                if (!recurringFund && funds.length > 0) {
+                  setRecurringFund(funds[0]);
+                }
+              }}
+            >
+              <Text style={recurringFund ? styles.fundSelectedText : styles.fundPlaceholder}>
+                {recurringFund ? recurringFund.name : 'Select a fund'}
+              </Text>
+              <ChevronDown size={18} color={theme.colors.textTertiary} />
+            </TouchableOpacity>
+
+            <View style={styles.fundList}>
+              {funds.map((f) => (
+                <TouchableOpacity
+                  key={f.id}
+                  style={[styles.fundItem, recurringFund?.id === f.id && { backgroundColor: theme.colors.accentMuted }]}
+                  onPress={() => setRecurringFund(f)}
+                >
+                  <Text style={styles.fundItemText}>{f.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.amountRow}>
+              <Text style={styles.currencySymbol}>$</Text>
+              <TextInput
+                style={styles.amountInput}
+                value={recurringAmount}
+                onChangeText={setRecurringAmount}
+                placeholder="0.00"
+                placeholderTextColor={theme.colors.textTertiary}
+                keyboardType="decimal-pad"
+              />
+            </View>
+
+            <Text style={[styles.fundPlaceholder, { marginBottom: 8, marginLeft: 4 }]}>Frequency</Text>
+            <View style={styles.frequencyRow}>
+              {(['weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'] as const).map((freq) => (
+                <TouchableOpacity
+                  key={freq}
+                  style={[
+                    styles.frequencyChip,
+                    recurringFrequency === freq && styles.frequencyChipActive,
+                  ]}
+                  onPress={() => setRecurringFrequency(freq)}
+                >
+                  <Text
+                    style={[
+                      styles.frequencyChipText,
+                      recurringFrequency === freq && styles.frequencyChipTextActive,
+                    ]}
+                  >
+                    {freq.charAt(0).toUpperCase() + freq.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -756,5 +925,32 @@ const createStyles = (theme: AppTheme) =>
       paddingVertical: 12,
       fontSize: 15,
       color: theme.colors.text,
+    },
+    frequencyRow: {
+      flexDirection: 'row' as const,
+      flexWrap: 'wrap' as const,
+      gap: 8,
+      marginBottom: 12,
+    },
+    frequencyChip: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 20,
+      backgroundColor: theme.colors.surfaceElevated,
+      borderWidth: 1,
+      borderColor: theme.colors.borderLight,
+    },
+    frequencyChipActive: {
+      backgroundColor: theme.colors.accent,
+      borderColor: theme.colors.accent,
+    },
+    frequencyChipText: {
+      fontSize: 13,
+      fontWeight: '500' as const,
+      color: theme.colors.textSecondary,
+    },
+    frequencyChipTextActive: {
+      color: theme.colors.white,
+      fontWeight: '600' as const,
     },
   });

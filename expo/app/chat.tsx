@@ -111,6 +111,33 @@ export default function ChatScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+  const [showRequests, setShowRequests] = useState(false);
+
+  interface ChatRequest {
+    id: number;
+    type: string;
+    name: string | null;
+    sender_name: string;
+    preview: string;
+    created_at: string;
+  }
+
+  const requestsQuery = useQuery({
+    queryKey: ['chat-requests'],
+    queryFn: async () => {
+      try {
+        const raw = await api.get<{ data: ChatRequest[] } | ChatRequest[]>('/chat/requests');
+        if (Array.isArray(raw)) return raw;
+        if (raw && typeof raw === 'object' && 'data' in raw) return (raw as { data: ChatRequest[] }).data;
+        return [] as ChatRequest[];
+      } catch {
+        return [] as ChatRequest[];
+      }
+    },
+  });
+
+  const chatRequests = requestsQuery.data ?? [];
+  const requestsCount = chatRequests.length;
 
   const allMembersQuery = useQuery({
     queryKey: ['all-members-for-search'],
@@ -161,6 +188,7 @@ export default function ChatScreen() {
   const handleRefresh = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['conversations'] });
     void queryClient.invalidateQueries({ queryKey: ['followers-suggestions'] });
+    void queryClient.invalidateQueries({ queryKey: ['chat-requests'] });
   }, [queryClient]);
 
   const conversations = convosQuery.data?.data ?? [];
@@ -212,11 +240,13 @@ export default function ChatScreen() {
         <TouchableOpacity
           onPress={() => {
             void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            console.log('[Chat] Navigate to requests');
+            setShowRequests(!showRequests);
           }}
           activeOpacity={0.6}
         >
-          <Text style={styles.requestsLink}>Requests</Text>
+          <Text style={styles.requestsLink}>
+            Requests{requestsCount > 0 ? ` (${requestsCount})` : ''}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
