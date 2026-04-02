@@ -46,6 +46,8 @@ export default function MusicScreen() {
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
   const soundRef = useRef<Audio.Sound | null>(null);
+  const isTransitioningRef = useRef(false);
+  const hasInitialLoadRef = useRef(false);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -106,8 +108,78 @@ export default function MusicScreen() {
     mutationFn: (songId: number) => api.post(`/music/songs/${songId}/play`, {}),
   });
 
+  const loadAndPlaySong = useCallback(async (song: Song, seekMs: number) => {
+    console.log('[Radio] loadAndPlaySong:', song.title, 'seek:', seekMs);
+    try {
+      if (soundRef.current) {
+        try {
+          await soundRef.current.unloadAsync();
+        } catch (unloadErr) {
+          console.log('[Radio] Non-fatal unload error:', unloadErr);
+        }
+        soundRef.current = null;
+      }
+
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: true,
+      });
+
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: song.audio_url },
+        { shouldPlay: true, positionMillis: seekMs },
+        onPlaybackStatusUpdate,
+      );
+
+      soundRef.current = sound;
+      currentSongIdRef.current = song.id;
+      setCurrentSong(song);
+      setIsPlaying(true);
+
+      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
+    } catch (e) {
+      console.log('[Radio] loadAndPlaySong error:', e);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const onPlaybackStatusUpdate = useCallback((status: any) => {
+    if (!status.isLoaded) return;
+
+    setProgress(status.positionMillis || 0);
+    setDuration(status.durationMillis || 0);
+
+    if (status.didJustFinish && !isTransitioningRef.current) {
+      console.log('[Radio] Song finished naturally, transitioning...');
+      isTransitioningRef.current = true;
+
+      const finishedSongId = currentSongIdRef.current;
+      if (finishedSongId) {
+        playMutation.mutate(finishedSongId);
+      }
+
+      void api.post('/music/radio/advance')
+        .catch(err => console.error('[Radio] Error advancing:', err))
+        .then(() => {
+          currentSongIdRef.current = null;
+          return new Promise(resolve => setTimeout(resolve, 300));
+        })
+        .then(() => syncToStation())
+        .finally(() => {
+          isTransitioningRef.current = false;
+        });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const syncToStation = useCallback(async () => {
+  const syncToStation = useCallback(async (): Promise<void> => {
+    if (isTransitioningRef.current) {
+      console.log('[Radio] Sync skipped — transition in progress');
+      return;
+    }
+
     try {
       const resp = await api.get<{ data: any }>('/music/radio/now-playing');
       const data = resp?.data;
@@ -120,43 +192,34 @@ export default function MusicScreen() {
       setQueuePosition(data.queue_position || 0);
       setQueueLength(data.queue_length || 0);
 
-      if (serverSong.id !== currentSongIdRef.current) {
-        currentSongIdRef.current = serverSong.id;
-        setCurrentSong(serverSong);
-
-        Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
-
-        if (soundRef.current) {
-          await soundRef.current.unloadAsync();
-        }
-
-        await Audio.setAudioModeAsync({
-          playsInSilentModeIOS: true,
-          staysActiveInBackground: true,
-        });
-
-        const { sound } = await Audio.Sound.createAsync(
-          { uri: serverSong.audio_url },
-          { shouldPlay: true, positionMillis: elapsedMs },
-          (status) => {
-            if (status.isLoaded) {
-              setProgress(status.positionMillis || 0);
-              setDuration(status.durationMillis || 0);
-              if (status.didJustFinish) {
-                playMutation.mutate(serverSong.id);
-                api.post('/music/radio/advance')
-                  .catch(err => console.error('[Radio] Error advancing:', err))
-                  .finally(() => {
-                    currentSongIdRef.current = null;
-                    void syncToStation();
-                  });
-              }
-            }
-          },
-        );
-        soundRef.current = sound;
-        setIsPlaying(true);
+      // CASE 1: No audio loaded
+      if (!currentSongIdRef.current || !soundRef.current) {
+        console.log('[Radio] No audio loaded, loading server song:', serverSong.title);
+        await loadAndPlaySong(serverSong, elapsedMs);
+        hasInitialLoadRef.current = true;
+        return;
       }
+
+      // CASE 2: Same song playing
+      if (serverSong.id === currentSongIdRef.current) {
+        console.log('[Radio] Same song playing, no action needed');
+        return;
+      }
+
+      // CASE 3 & 4: Server reports different song
+      try {
+        const status = await soundRef.current.getStatusAsync();
+        if (status.isLoaded && (status.isPlaying || status.isBuffering)) {
+          console.log('[Radio] Server advanced, but audio still playing — letting it finish.');
+          return;
+        }
+      } catch (statusErr) {
+        console.log('[Radio] Error checking status, safe to switch:', statusErr);
+      }
+
+      // CASE 4: Audio idle/stalled/errored — safe to switch
+      console.log('[Radio] Audio idle, switching to server song:', serverSong.title);
+      await loadAndPlaySong(serverSong, elapsedMs);
     } catch (e) {
       console.log('[Radio] Sync error:', e);
     }
@@ -200,7 +263,7 @@ export default function MusicScreen() {
 
     syncIntervalRef.current = setInterval(() => {
       void syncToStation();
-    }, 30_000);
+    }, 45_000);
 
     heartbeatIntervalRef.current = setInterval(() => {
       void api.post('/music/radio/heartbeat', {}).catch(() => {});
@@ -348,9 +411,19 @@ export default function MusicScreen() {
       <View style={styles.controlsRow}>
         <TouchableOpacity
           style={[styles.sideControl, { opacity: canSkip ? 1 : 0.4 }]}
-          onPress={() => {
-            currentSongIdRef.current = null;
-            void syncToStation();
+          onPress={async () => {
+            if (isTransitioningRef.current || !canSkip) return;
+            isTransitioningRef.current = true;
+            try {
+              await api.post('/music/radio/advance');
+              currentSongIdRef.current = null;
+              await new Promise(resolve => setTimeout(resolve, 200));
+              await syncToStation();
+            } catch (err) {
+              console.log('[Radio] Skip back error:', err);
+            } finally {
+              isTransitioningRef.current = false;
+            }
           }}
         >
           <SkipBack size={28} color="#FFFFFF" fill="#FFFFFF" />
@@ -383,8 +456,16 @@ export default function MusicScreen() {
                 ],
               );
             } else {
-              currentSongIdRef.current = null;
-              void syncToStation();
+              if (isTransitioningRef.current) return;
+              isTransitioningRef.current = true;
+              api.post('/music/radio/advance')
+                .then(() => {
+                  currentSongIdRef.current = null;
+                  return new Promise(resolve => setTimeout(resolve, 200));
+                })
+                .then(() => syncToStation())
+                .catch(err => console.log('[Radio] Skip forward error:', err))
+                .finally(() => { isTransitioningRef.current = false; });
             }
           }}
         >
