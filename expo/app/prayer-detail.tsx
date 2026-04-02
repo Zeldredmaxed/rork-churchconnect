@@ -38,8 +38,14 @@ export default function PrayerDetailScreen() {
 
   const prayerQuery = useQuery({
     queryKey: ['prayer', id],
-    queryFn: () => api.get<{ data: Prayer }>(`/prayers/${id}`),
+    queryFn: async () => {
+      console.log('[PrayerDetail] Fetching prayer with id:', id, 'type:', typeof id);
+      const res = await api.get<unknown>(`/prayers/${id}`);
+      console.log('[PrayerDetail] Raw prayer response:', JSON.stringify(res).slice(0, 500));
+      return res;
+    },
     enabled: !!id,
+    retry: 1,
   });
 
   const responsesQuery = useQuery({
@@ -105,8 +111,16 @@ export default function PrayerDetailScreen() {
   const prayer = React.useMemo(() => {
     if (!rawPrayer) return undefined;
     const rp = rawPrayer as unknown as Record<string, unknown>;
-    if (rp.data && typeof rp.data === 'object') return rp.data as Prayer;
+    console.log('[PrayerDetail] Parsing prayer, keys:', Object.keys(rp));
+    if (rp.data && typeof rp.data === 'object') {
+      const dataObj = rp.data as Record<string, unknown>;
+      if (dataObj.id) return dataObj as unknown as Prayer;
+      if (dataObj.prayer && typeof dataObj.prayer === 'object') return dataObj.prayer as unknown as Prayer;
+    }
+    if (rp.prayer && typeof rp.prayer === 'object') return rp.prayer as unknown as Prayer;
+    if (rp.result && typeof rp.result === 'object') return rp.result as unknown as Prayer;
     if (rp.id) return rp as unknown as Prayer;
+    console.log('[PrayerDetail] Could not parse prayer from response:', JSON.stringify(rp).slice(0, 300));
     return undefined;
   }, [rawPrayer]);
   const responses = React.useMemo(() => {
@@ -152,11 +166,42 @@ export default function PrayerDetailScreen() {
     );
   }
 
-  if (!prayer) {
+  if (prayerQuery.isError) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Stack.Screen options={{ title: 'Prayer' }} />
+        <Text style={styles.emptyText}>Error loading prayer</Text>
+        <Text style={[styles.emptyText, { fontSize: 13, marginTop: 6 }]}>{prayerQuery.error?.message}</Text>
+        <TouchableOpacity
+          style={{ marginTop: 16, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: theme.colors.accent, borderRadius: 8 }}
+          onPress={() => prayerQuery.refetch()}
+        >
+          <Text style={{ color: theme.colors.textInverse, fontWeight: '600' as const }}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (!prayer && !prayerQuery.isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <Stack.Screen options={{ title: 'Prayer' }} />
         <Text style={styles.emptyText}>Prayer not found</Text>
+        <TouchableOpacity
+          style={{ marginTop: 16, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: theme.colors.accent, borderRadius: 8 }}
+          onPress={() => prayerQuery.refetch()}
+        >
+          <Text style={{ color: theme.colors.textInverse, fontWeight: '600' as const }}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (!prayer) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Stack.Screen options={{ title: 'Prayer' }} />
+        <ActivityIndicator size="large" color={theme.colors.accent} />
       </View>
     );
   }
