@@ -63,7 +63,7 @@ export default function ShortViewerScreen() {
         console.log('[ShortViewer] Direct fetch failed, trying fallbacks:', e);
       }
       try {
-        const all = await api.get<{ data: Clip[] }>('/clips/feed?limit=100');
+        const all = await api.get<{ data: Clip[] }>('/clips?limit=100');
         const found = all?.data?.find((s) => String(s.id) === String(id));
         if (found) {
           console.log('[ShortViewer] Found in trending');

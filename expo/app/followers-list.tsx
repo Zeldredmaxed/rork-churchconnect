@@ -76,7 +76,7 @@ export default function FollowersListScreen() {
     queryFn: async () => {
       console.log('[FollowersList] Fetching followers for:', id);
       try {
-        const data = await api.get<{ data: FlockUser[] }>(`/social/followers/${id}`);
+        const data = await api.get<{ data: FlockUser[] }>(`/social/flock/${id}/followers`);
         return data;
       } catch {
         return { data: [] as FlockUser[] };
@@ -90,7 +90,7 @@ export default function FollowersListScreen() {
     queryFn: async () => {
       console.log('[FollowersList] Fetching following for:', id);
       try {
-        const data = await api.get<{ data: FlockUser[] }>(`/social/following/${id}`);
+        const data = await api.get<{ data: FlockUser[] }>(`/social/flock/${id}/following`);
         return data;
       } catch {
         return { data: [] as FlockUser[] };

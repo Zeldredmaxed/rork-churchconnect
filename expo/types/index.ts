@@ -241,9 +241,11 @@ export interface Member {
   id: number | string;
   first_name: string;
   last_name: string;
+  full_name: string;
   email?: string;
   phone?: string;
   photo_url?: string;
+  avatar_url?: string;
   membership_status: 'visitor' | 'prospect' | 'active';
   family_id?: number | string | null;
   family_name?: string;

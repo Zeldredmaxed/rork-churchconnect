@@ -62,7 +62,7 @@ export default function NewMessageScreen() {
     queryKey: ['message-suggestions'],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: FlockUser[] }>('/social/followers/suggestions');
+        const data = await api.get<{ data: FlockUser[] }>('/social/flock/suggestions');
         return data;
       } catch {
         return { data: [] as FlockUser[] };

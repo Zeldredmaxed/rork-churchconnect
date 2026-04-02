@@ -198,7 +198,7 @@ export default function CommentsSheet({ visible, onClose, postId, source }: Comm
     queryKey: ['members', 'comment-mention', mentionQuery],
     queryFn: () =>
       api.get<{ data?: Member[] } | Member[]>(
-        `/members?search=${encodeURIComponent(mentionQuery ?? '')}&per_page=5`
+        `/members/search?q=${encodeURIComponent(mentionQuery ?? '')}&per_page=5`
       ),
     enabled: mentionQuery !== null && mentionQuery.length > 0,
     staleTime: 30000,

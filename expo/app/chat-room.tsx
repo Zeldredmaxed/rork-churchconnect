@@ -133,13 +133,13 @@ export default function ChatRoomScreen() {
 
   const convoQuery = useQuery({
     queryKey: ['conversation', conversationId],
-    queryFn: () => api.get<{ data: Conversation }>(`/chat/threads/${conversationId}`),
+    queryFn: () => api.get<{ data: Conversation }>(`/chat/${conversationId}`),
     enabled: !!conversationId,
   });
 
   const messagesQuery = useQuery({
     queryKey: ['messages', conversationId],
-    queryFn: () => api.get<{ data: ChatMessage[] }>(`/chat/threads/${conversationId}/messages`),
+    queryFn: () => api.get<{ data: ChatMessage[] }>(`/chat/${conversationId}/messages`),
     enabled: !!conversationId,
   });
 

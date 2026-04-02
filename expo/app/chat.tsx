@@ -110,14 +110,14 @@ export default function ChatScreen() {
 
   const convosQuery = useQuery({
     queryKey: ['conversations'],
-    queryFn: () => api.get<{ data: Conversation[] }>('/chat/threads'),
+    queryFn: () => api.get<{ data: Conversation[] }>('/chat'),
   });
 
   const followersQuery = useQuery({
     queryKey: ['followers-suggestions'],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: FlockUser[] }>('/social/followers/suggestions');
+        const data = await api.get<{ data: FlockUser[] }>('/social/flock/suggestions');
         return data;
       } catch {
         return { data: [] as FlockUser[] };

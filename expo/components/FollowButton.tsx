@@ -23,10 +23,10 @@ export default function FollowButton({ userId, isFollowing, size = 'medium', onT
     mutationFn: async () => {
       if (isFollowing) {
         console.log('[Follow] Unfollowing user:', userId);
-        return api.delete(`/social/follow/${userId}`);
+        return api.delete(`/social/flock/${userId}`);
       } else {
         console.log('[Follow] Following user:', userId);
-        return api.post(`/social/follow/${userId}`);
+        return api.post(`/social/flock/${userId}`);
       }
     },
     onSuccess: () => {

@@ -47,7 +47,7 @@ export default function MentionInput({
 
   const membersQuery = useQuery({
     queryKey: ['members', 'mention-search', mentionQuery],
-    queryFn: () => api.get<MemberSearchResult | Member[]>(`/members?search=${encodeURIComponent(mentionQuery ?? '')}&per_page=8`),
+    queryFn: () => api.get<MemberSearchResult | Member[]>(`/members/search?q=${encodeURIComponent(mentionQuery ?? '')}&per_page=8`),
     enabled: mentionQuery !== null && mentionQuery.length > 0,
     staleTime: 30000,
   });
@@ -82,35 +82,41 @@ export default function MentionInput({
     setMentionQuery(null); setMentionStartIndex(-1);
   }, [onChangeText, cursorPosition, value]);
 
+  const getMemberDisplayName = useCallback((member: Member): string => {
+    return member.full_name || `${member.first_name} ${member.last_name}`.trim();
+  }, []);
+
   const handleSelectMember = useCallback((member: Member) => {
     if (mentionStartIndex < 0) return;
     const before = value.slice(0, mentionStartIndex);
-    const mentionText = `@${member.full_name} `;
+    const displayName = getMemberDisplayName(member);
+    const mentionText = `@${displayName} `;
     const currentQueryEnd = mentionStartIndex + 1 + (mentionQuery?.length ?? 0);
     const after = value.slice(currentQueryEnd);
     onChangeText(before + mentionText + after);
     setMentionQuery(null); setMentionStartIndex(-1);
-    console.log('[Mention] Selected:', member.full_name);
-  }, [value, mentionStartIndex, mentionQuery, onChangeText]);
+    console.log('[Mention] Selected:', displayName);
+  }, [value, mentionStartIndex, mentionQuery, onChangeText, getMemberDisplayName]);
 
   const handleSelectionChange = useCallback((e: { nativeEvent: { selection: { start: number; end: number } } }) => {
     setCursorPosition(e.nativeEvent.selection.start);
   }, []);
 
   const renderMemberItem = useCallback(({ item }: { item: Member }) => {
-    const initials = item.full_name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
+    const displayName = getMemberDisplayName(item);
+    const initials = displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
     return (
       <TouchableOpacity style={[suggestionStyles.memberRow, darkMode && suggestionStyles.memberRowDark]} onPress={() => handleSelectMember(item)} activeOpacity={0.6}>
         <View style={[suggestionStyles.memberAvatar, darkMode && suggestionStyles.memberAvatarDark]}>
           <Text style={[suggestionStyles.memberAvatarText, darkMode && suggestionStyles.memberAvatarTextDark]}>{initials}</Text>
         </View>
         <View style={suggestionStyles.memberInfo}>
-          <Text style={[suggestionStyles.memberName, darkMode && suggestionStyles.memberNameDark]} numberOfLines={1}>{item.full_name}</Text>
+          <Text style={[suggestionStyles.memberName, darkMode && suggestionStyles.memberNameDark]} numberOfLines={1}>{displayName}</Text>
           <Text style={suggestionStyles.memberEmail} numberOfLines={1}>{item.email}</Text>
         </View>
       </TouchableOpacity>
     );
-  }, [handleSelectMember, darkMode, suggestionStyles]);
+  }, [handleSelectMember, darkMode, suggestionStyles, getMemberDisplayName]);
 
   const suggestionsView = showSuggestions ? (
     <Animated.View style={[suggestionStyles.container, darkMode && suggestionStyles.containerDark, suggestionsPosition === 'above' ? suggestionStyles.above : suggestionStyles.below, { opacity: fadeAnim }]}>
@@ -126,7 +132,7 @@ export default function MentionInput({
       ) : members.length === 0 ? (
         <View style={suggestionStyles.emptyContainer}><Text style={[suggestionStyles.emptyText, darkMode && suggestionStyles.emptyTextDark]}>No members found</Text></View>
       ) : (
-        <FlatList data={members} keyExtractor={(item) => item.id} renderItem={renderMemberItem} keyboardShouldPersistTaps="always" style={suggestionStyles.list} showsVerticalScrollIndicator={false} />
+        <FlatList data={members} keyExtractor={(item) => String(item.id)} renderItem={renderMemberItem} keyboardShouldPersistTaps="always" style={suggestionStyles.list} showsVerticalScrollIndicator={false} />
       )}
     </Animated.View>
   ) : null;

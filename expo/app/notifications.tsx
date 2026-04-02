@@ -72,7 +72,7 @@ function NotificationRow({
   const [followedBack, setFollowedBack] = useState(item.is_following_back ?? false);
 
   const followBackMutation = useMutation({
-    mutationFn: (userId: string) => api.post(`/social/follow/${userId}`),
+    mutationFn: (userId: string) => api.post(`/social/flock/${userId}`),
     onSuccess: () => {
       setFollowedBack(true);
     },
@@ -180,7 +180,7 @@ export default function NotificationsScreen() {
     queryFn: async () => {
       console.log('[Notifications] Fetching suggested users');
       try {
-        const data = await api.get<{ data: FlockUser[] }>('/social/followers/suggestions');
+        const data = await api.get<{ data: FlockUser[] }>('/social/flock/suggestions');
         return data;
       } catch {
         return { data: [] as FlockUser[] };

@@ -43,7 +43,7 @@ function ShortOverlay({ item, onLike, onComment, onShare, onMore, onSave, isSave
   const queryClient = useQueryClient();
 
   const followMutation = useMutation({
-    mutationFn: () => api.post(`/social/follow/${item.author_id}`),
+    mutationFn: () => api.post(`/social/flock/${item.author_id}`),
     onSuccess: () => {
       setIsFollowing(true);
       void queryClient.invalidateQueries({ queryKey: ['followers'] });
@@ -155,7 +155,7 @@ export default function ShortsScreen() {
     queryKey: ['clips', activeTab],
     queryFn: () =>
       api.get<{ data: Clip[] }>(
-        activeTab === 'trending' ? '/clips/feed' : '/clips/my-church'
+        activeTab === 'trending' ? '/clips/trending' : '/clips'
       ),
   });
 

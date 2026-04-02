@@ -124,7 +124,7 @@ export default function ProfileTabScreen() {
     queryKey: ['my-followers-stats'],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: { followers_count: number; following_count: number } }>('/social/followers/stats');
+        const data = await api.get<{ data: { followers_count: number; following_count: number } }>('/social/flock/stats');
         return data?.data ?? { followers_count: 0, following_count: 0 };
       } catch {
         return { followers_count: 0, following_count: 0 };
@@ -136,7 +136,7 @@ export default function ProfileTabScreen() {
     queryKey: ['suggested-users-profile'],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: FlockUser[] }>('/social/followers/suggestions');
+        const data = await api.get<{ data: FlockUser[] }>('/social/flock/suggestions');
         return data?.data ?? [];
       } catch {
         return [] as FlockUser[];
@@ -215,7 +215,7 @@ export default function ProfileTabScreen() {
   });
 
   const followMutation = useMutation({
-    mutationFn: (userId: string) => api.post(`/social/follow/${userId}`),
+    mutationFn: (userId: string) => api.post(`/social/flock/${userId}`),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['suggested-users-profile'] });
     },
