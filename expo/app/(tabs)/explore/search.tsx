@@ -78,7 +78,7 @@ export default function SearchScreen() {
 
   const searchQuery = useQuery({
     queryKey: ['search-members', query],
-    queryFn: () => api.get<{ data: FlockUser[] }>(`/seek?q=${encodeURIComponent(query)}`),
+    queryFn: () => api.get<{ data: FlockUser[] }>(`/members/search?q=${encodeURIComponent(query)}`),
     enabled: query.trim().length > 1,
   });
 

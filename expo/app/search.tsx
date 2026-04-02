@@ -89,7 +89,7 @@ export default function UniversalSearchScreen() {
     queryKey: ['universal-search-users', trimmedQuery],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: FlockUser[] }>(`/seek?q=${encodeURIComponent(trimmedQuery)}`);
+        const data = await api.get<{ data: FlockUser[] }>(`/members/search?q=${encodeURIComponent(trimmedQuery)}`);
         return data?.data ?? [];
       } catch {
         return [] as FlockUser[];
