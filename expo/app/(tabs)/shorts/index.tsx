@@ -155,15 +155,15 @@ export default function ShortsScreen() {
     queryKey: ['clips', activeTab],
     queryFn: () =>
       api.get<{ data: Clip[] }>(
-        activeTab === 'trending' ? '/clips/trending' : '/clips/my-church'
+        activeTab === 'trending' ? '/clips/feed' : '/clips/my-church'
       ),
   });
 
   const likeMutation = useMutation({
     mutationFn: (params: { id: string; liked: boolean }) =>
       params.liked
-        ? api.delete(`/clips/${params.id}/likes`)
-        : api.post(`/clips/${params.id}/likes`),
+        ? api.delete(`/clips/${params.id}/like`)
+        : api.post(`/clips/${params.id}/like`),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['clips'] });
     },

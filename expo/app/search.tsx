@@ -126,7 +126,7 @@ export default function UniversalSearchScreen() {
     queryKey: ['universal-search-shorts', trimmedQuery],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: Clip[] }>(`/clips/trending?limit=50`);
+        const data = await api.get<{ data: Clip[] }>(`/clips/feed?limit=50`);
         const all = data?.data ?? [];
         const q = trimmedQuery.toLowerCase();
         return all.filter(
@@ -146,7 +146,7 @@ export default function UniversalSearchScreen() {
     queryKey: ['universal-search-messages', trimmedQuery],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: Conversation[] }>('/chat/conversations');
+        const data = await api.get<{ data: Conversation[] }>('/chat/threads');
         const all = data?.data ?? [];
         const q = trimmedQuery.toLowerCase();
         return all.filter(

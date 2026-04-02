@@ -63,7 +63,7 @@ export default function ShortViewerScreen() {
         console.log('[ShortViewer] Direct fetch failed, trying fallbacks:', e);
       }
       try {
-        const all = await api.get<{ data: Clip[] }>('/clips/trending?limit=100');
+        const all = await api.get<{ data: Clip[] }>('/clips/feed?limit=100');
         const found = all?.data?.find((s) => String(s.id) === String(id));
         if (found) {
           console.log('[ShortViewer] Found in trending');
@@ -91,8 +91,8 @@ export default function ShortViewerScreen() {
   const likeMutation = useMutation({
     mutationFn: (params: { id: string; liked: boolean }) =>
       params.liked
-        ? api.delete(`/clips/${params.id}/likes`)
-        : api.post(`/clips/${params.id}/likes`),
+        ? api.delete(`/clips/${params.id}/like`)
+        : api.post(`/clips/${params.id}/like`),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['short-detail', id] });
       void queryClient.invalidateQueries({ queryKey: ['clips'] });

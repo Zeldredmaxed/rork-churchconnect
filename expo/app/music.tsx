@@ -201,7 +201,7 @@ export default function MusicScreen() {
     }
 
     try {
-      const resp = await api.get<{ data: any }>('/music/radio/now-playing');
+      const resp = await api.get<{ data: any }>('/music/stream/radio');
       const data = resp?.data;
       if (!data || (!data.song && !data.current_song)) return;
 

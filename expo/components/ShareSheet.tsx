@@ -129,7 +129,7 @@ export default function ShareSheet({ visible, onClose, content }: ShareSheetProp
     for (const userId of usersToSend) {
       try {
         const shareMessage = message.trim() ? `${message.trim()}\n\nShared ${content.type}: "${content.title}"` : `Shared a ${content.type}: "${content.title}"`;
-        await api.post('/chat/send', { recipient_id: userId, content: shareMessage, shared_content_id: content.id, shared_content_type: content.type });
+        await api.post('/chat/messages', { recipient_id: userId, content: shareMessage, shared_content_id: content.id, shared_content_type: content.type });
         console.log('[Share] Sent to user:', userId);
         setSentUsers((prev) => [...prev, userId]);
       } catch (error) { console.log('[Share] Failed to send to user:', userId, error); }

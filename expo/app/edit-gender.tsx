@@ -31,7 +31,7 @@ export default function EditGenderScreen() {
 
   const saveMutation = useMutation({
     mutationFn: async (newGender: string) => {
-      await api.put(`/members/${user?.id}`, { gender: newGender });
+      await api.put('/members/me', { gender: newGender });
       return newGender;
     },
     onSuccess: async (newGender) => {

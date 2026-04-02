@@ -33,7 +33,7 @@ export default function EditPronounsScreen() {
 
   const saveMutation = useMutation({
     mutationFn: async (newPronouns: string) => {
-      await api.put(`/members/${user?.id}`, { pronouns: newPronouns });
+      await api.put('/members/me', { pronouns: newPronouns });
       return newPronouns;
     },
     onSuccess: async (newPronouns) => {

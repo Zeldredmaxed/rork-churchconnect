@@ -119,7 +119,7 @@ export default function RegisterScreen() {
     }
     setIsSearching(true);
     try {
-      const results = await api.get<ChurchSearchResult[]>(`/churches?q=${encodeURIComponent(query)}`, { noAuth: true });
+      const results = await api.get<ChurchSearchResult[]>(`/churches/?search=${encodeURIComponent(query)}`, { noAuth: true });
       console.log('[Register] Church search results:', results?.length ?? 0);
       const activeChurches = (Array.isArray(results) ? results : []).filter(c => c.is_active !== false);
       setChurches(activeChurches);

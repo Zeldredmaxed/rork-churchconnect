@@ -133,13 +133,13 @@ export default function ChatRoomScreen() {
 
   const convoQuery = useQuery({
     queryKey: ['conversation', conversationId],
-    queryFn: () => api.get<{ data: Conversation }>(`/chat/conversations/${conversationId}`),
+    queryFn: () => api.get<{ data: Conversation }>(`/chat/threads/${conversationId}`),
     enabled: !!conversationId,
   });
 
   const messagesQuery = useQuery({
     queryKey: ['messages', conversationId],
-    queryFn: () => api.get<{ data: ChatMessage[] }>(`/chat/conversations/${conversationId}/messages`),
+    queryFn: () => api.get<{ data: ChatMessage[] }>(`/chat/threads/${conversationId}/messages`),
     enabled: !!conversationId,
   });
 
@@ -195,10 +195,10 @@ export default function ChatRoomScreen() {
     mutationFn: async (content: string) => {
       console.log('[ChatRoom] Sending first message to user:', targetUserId);
       const res = await api.post<{ data: { conversation_id: string; message: ChatMessage } }>(
-        '/chat/conversations',
+        '/chat/messages',
         {
           participant_ids: [targetUserId],
-          message: content,
+          content: content,
         }
       );
       return res;
@@ -209,6 +209,7 @@ export default function ChatRoomScreen() {
       setIsFirstMessage(false);
       setMessages([data.data.message]);
       void queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      void queryClient.invalidateQueries({ queryKey: ['chat-threads'] });
     },
     onError: (error) => {
       console.log('[ChatRoom] Send first message error:', error.message);
