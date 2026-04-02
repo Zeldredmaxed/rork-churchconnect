@@ -53,8 +53,17 @@ export default function EventDetailScreen() {
     queryKey: ['event', id],
     queryFn: async () => {
       const raw = await api.get<Event | { data: Event }>(`/events/${id}`);
-      if (raw && typeof raw === 'object' && 'data' in raw && (raw as { data: Event }).data) return (raw as { data: Event }).data;
-      return raw as Event;
+      let evt: Record<string, unknown>;
+      if (raw && typeof raw === 'object' && 'data' in raw && (raw as { data: Event }).data) {
+        evt = (raw as { data: Event }).data as unknown as Record<string, unknown>;
+      } else {
+        evt = raw as unknown as Record<string, unknown>;
+      }
+      return {
+        ...evt,
+        start_date: (evt.start_date ?? evt.start_datetime ?? evt.startDate ?? evt.date ?? '') as string,
+        end_date: (evt.end_date ?? evt.end_datetime ?? evt.endDate ?? evt.date ?? '') as string,
+      } as Event;
     },
     enabled: !!id,
   });
@@ -63,7 +72,12 @@ export default function EventDetailScreen() {
   const [guestCount, setGuestCount] = useState(1);
 
   const rsvpMutation = useMutation({
-    mutationFn: (params: { count?: number }) => api.post(`/events/${id}/rsvp`, params),
+    mutationFn: (params: { count?: number }) => api.post(`/events/${id}/rsvp`, {
+      count: params.count ?? 1,
+      guest_count: params.count ?? 1,
+      guests: params.count ?? 1,
+      number_of_guests: params.count ?? 1,
+    }),
     onMutate: async (params) => {
       const count = params.count ?? 1;
       await queryClient.cancelQueries({ queryKey: ['event', id] });

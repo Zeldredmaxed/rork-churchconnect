@@ -291,7 +291,12 @@ export default function EventsScreen() {
   });
 
   const rsvpMutation = useMutation({
-    mutationFn: ({ eventId, count }: { eventId: string; count?: number }) => api.post(`/events/${eventId}/rsvp`, { count }),
+    mutationFn: ({ eventId, count }: { eventId: string; count?: number }) => api.post(`/events/${eventId}/rsvp`, {
+      count: count ?? 1,
+      guest_count: count ?? 1,
+      guests: count ?? 1,
+      number_of_guests: count ?? 1,
+    }),
     onMutate: async ({ eventId, count }) => {
       setRsvpingId(eventId);
       const guestNum = count ?? 1;

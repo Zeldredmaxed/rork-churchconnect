@@ -116,6 +116,8 @@ export default function AdminEventsScreen() {
       description: description.trim() || 'No description provided',
       type: eventType,
       location: location.trim() || 'TBD',
+      start_date: startDate.toISOString(),
+      end_date: endDate.toISOString(),
       start_datetime: startDate.toISOString(),
       end_datetime: endDate.toISOString(),
       registration_required: regRequired,
