@@ -56,10 +56,12 @@ export default function ActivityContentViewedScreen() {
     queryKey: ['activity-viewed', filter],
     queryFn: async () => {
       try {
-        const param = filter === 'all' ? '' : `?type=${filter}`;
-        const data = await api.get<{ data: ViewedContent[] }>(`/activity/viewed${param}`);
+        const typeMap: Record<ContentFilter, string> = { all: '', posts: 'post', shorts: 'clip' };
+        const typeParam = typeMap[filter];
+        const param = typeParam ? `?type=${typeParam}` : '';
+        const data = await api.get<ViewedContent[]>(`/activity/viewed${param}`);
         console.log('[ActivityViewed] Fetched:', data);
-        return data?.data ?? [];
+        return Array.isArray(data) ? data : [];
       } catch (e) {
         console.log('[ActivityViewed] Error:', e);
         return [] as ViewedContent[];

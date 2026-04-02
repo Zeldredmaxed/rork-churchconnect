@@ -17,7 +17,7 @@ import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import EmptyState from '@/components/EmptyState';
 
-type InteractionType = 'all' | 'likes' | 'comments' | 'shares';
+type InteractionType = 'all' | 'like' | 'comment' | 'share';
 
 interface Interaction {
   id: string;
@@ -32,9 +32,9 @@ interface Interaction {
 
 const FILTERS: { key: InteractionType; label: string }[] = [
   { key: 'all', label: 'All' },
-  { key: 'likes', label: 'Likes' },
-  { key: 'comments', label: 'Comments' },
-  { key: 'shares', label: 'Shares' },
+  { key: 'like', label: 'Likes' },
+  { key: 'comment', label: 'Comments' },
+  { key: 'share', label: 'Shares' },
 ];
 
 function formatTimeAgo(date: string): string {
@@ -72,9 +72,9 @@ export default function ActivityInteractionsScreen() {
     queryFn: async () => {
       try {
         const param = filter === 'all' ? '' : `?type=${filter}`;
-        const data = await api.get<{ data: Interaction[] }>(`/activity/interactions${param}`);
+        const data = await api.get<Interaction[]>(`/activity/interactions${param}`);
         console.log('[ActivityInteractions] Fetched:', data);
-        return data?.data ?? [];
+        return Array.isArray(data) ? data : [];
       } catch (e) {
         console.log('[ActivityInteractions] Error:', e);
         return [] as Interaction[];

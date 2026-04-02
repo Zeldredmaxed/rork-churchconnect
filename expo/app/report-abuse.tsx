@@ -38,7 +38,12 @@ export default function ReportAbuseScreen() {
   const [username, setUsername] = useState('');
 
   const submitMutation = useMutation({
-    mutationFn: () => api.post('/support/abuse-reports', { report_type: reportType, description, reported_username: username }),
+    mutationFn: () => api.post('/support/abuse-reports', {
+      reported_user_id: username ? username.replace('@', '') : null,
+      reason: reportType,
+      details: description,
+      content_reference: null,
+    }),
     onSuccess: () => {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Report Submitted', 'Thank you for reporting. Our team will review this and take appropriate action.', [

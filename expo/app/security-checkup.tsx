@@ -15,6 +15,13 @@ import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 
+interface SecurityCheckupResponse {
+  active_sessions_count: number;
+  password_last_changed: string | null;
+  two_factor_enabled: boolean;
+  recommendations: string[];
+}
+
 interface SecurityCheck {
   id: string;
   title: string;
@@ -22,6 +29,64 @@ interface SecurityCheck {
   status: 'good' | 'warning' | 'action_needed';
   action_route?: string;
   action_label?: string;
+}
+
+function buildChecksFromResponse(data: SecurityCheckupResponse): SecurityCheck[] {
+  const checks: SecurityCheck[] = [];
+
+  checks.push({
+    id: 'sessions',
+    title: 'Active sessions',
+    description: `${data.active_sessions_count} active session${data.active_sessions_count !== 1 ? 's' : ''} on your account`,
+    status: data.active_sessions_count > 3 ? 'warning' : 'good',
+    action_route: '/active-sessions',
+    action_label: 'Review',
+  });
+
+  if (data.password_last_changed) {
+    const daysSince = Math.floor((Date.now() - new Date(data.password_last_changed).getTime()) / (1000 * 60 * 60 * 24));
+    checks.push({
+      id: 'password',
+      title: 'Password',
+      description: daysSince > 180
+        ? `Last changed ${daysSince} days ago. Consider updating.`
+        : `Last changed ${daysSince} days ago`,
+      status: daysSince > 180 ? 'warning' : 'good',
+      action_route: '/change-password',
+      action_label: daysSince > 180 ? 'Update' : 'Change',
+    });
+  } else {
+    checks.push({
+      id: 'password',
+      title: 'Password',
+      description: 'No password change history found',
+      status: 'warning',
+      action_route: '/change-password',
+      action_label: 'Update',
+    });
+  }
+
+  checks.push({
+    id: '2fa',
+    title: 'Two-factor authentication',
+    description: data.two_factor_enabled
+      ? 'Two-factor authentication is enabled'
+      : 'Add extra protection to your account',
+    status: data.two_factor_enabled ? 'good' : 'action_needed',
+    action_route: '/password-security',
+    action_label: data.two_factor_enabled ? 'Manage' : 'Enable',
+  });
+
+  data.recommendations.forEach((rec, idx) => {
+    checks.push({
+      id: `rec-${idx}`,
+      title: 'Recommendation',
+      description: rec,
+      status: 'warning',
+    });
+  });
+
+  return checks;
 }
 
 function getCheckIcon(status: string, theme: AppTheme) {
@@ -43,9 +108,12 @@ export default function SecurityCheckupScreen() {
     queryKey: ['security-checkup'],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: SecurityCheck[] }>('/auth/security-checkup');
+        const data = await api.get<SecurityCheckupResponse>('/auth/security-checkup');
         console.log('[SecurityCheckup] Fetched:', data);
-        return data?.data ?? [];
+        if (data && typeof data === 'object' && 'active_sessions_count' in data) {
+          return buildChecksFromResponse(data);
+        }
+        return [] as SecurityCheck[];
       } catch (e) {
         console.log('[SecurityCheckup] Error, using defaults:', e);
         return [

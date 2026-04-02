@@ -50,9 +50,9 @@ export default function ActivityRecentlyDeletedScreen() {
     queryKey: ['activity-recently-deleted'],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: DeletedItem[] }>('/activity/recently-deleted');
+        const data = await api.get<DeletedItem[]>('/activity/recently-deleted');
         console.log('[RecentlyDeleted] Fetched:', data);
-        return data?.data ?? [];
+        return Array.isArray(data) ? data : [];
       } catch (e) {
         console.log('[RecentlyDeleted] Error:', e);
         return [] as DeletedItem[];

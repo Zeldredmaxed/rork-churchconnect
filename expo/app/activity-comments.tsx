@@ -8,7 +8,6 @@ import {
   RefreshControl,
   ActivityIndicator,
   Alert,
-  Image,
 } from 'react-native';
 import { Stack } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -19,12 +18,10 @@ import { api } from '@/utils/api';
 import EmptyState from '@/components/EmptyState';
 
 interface UserComment {
-  id: string;
-  content: string;
-  target_type: string;
-  target_id: string;
-  target_title?: string;
-  target_thumbnail?: string;
+  id: number;
+  item_type: 'post' | 'clip';
+  item_id: number;
+  text: string;
   created_at: string;
 }
 
@@ -48,9 +45,9 @@ export default function ActivityCommentsScreen() {
     queryKey: ['activity-comments'],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: UserComment[] }>('/activity/comments');
+        const data = await api.get<UserComment[]>('/activity/comments');
         console.log('[ActivityComments] Fetched:', data);
-        return data?.data ?? [];
+        return Array.isArray(data) ? data : [];
       } catch (e) {
         console.log('[ActivityComments] Error:', e);
         return [] as UserComment[];
@@ -59,16 +56,17 @@ export default function ActivityCommentsScreen() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (commentId: string) => api.delete(`/activity/comments/${commentId}`),
+    mutationFn: ({ commentId, itemType }: { commentId: number; itemType: string }) =>
+      api.delete(`/activity/comments/${commentId}?type=${itemType}`),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['activity-comments'] });
     },
   });
 
-  const handleDelete = useCallback((commentId: string) => {
+  const handleDelete = useCallback((commentId: number, itemType: string) => {
     Alert.alert('Delete Comment', 'Are you sure you want to delete this comment?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteMutation.mutate(commentId) },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteMutation.mutate({ commentId, itemType }) },
     ]);
   }, [deleteMutation]);
 
@@ -81,22 +79,18 @@ export default function ActivityCommentsScreen() {
   const renderItem = ({ item }: { item: UserComment }) => (
     <View style={s.row}>
       <View style={s.rowLeft}>
-        {item.target_thumbnail ? (
-          <Image source={{ uri: item.target_thumbnail }} style={s.thumbnail} />
-        ) : (
-          <View style={s.iconBubble}>
-            <MessageSquare size={16} color={theme.colors.info} />
-          </View>
-        )}
+        <View style={s.iconBubble}>
+          <MessageSquare size={16} color={theme.colors.info} />
+        </View>
       </View>
       <View style={s.rowContent}>
         <Text style={s.targetLabel} numberOfLines={1}>
-          On {item.target_title || `a ${item.target_type}`}
+          On a {item.item_type === 'clip' ? 'short' : item.item_type}
         </Text>
-        <Text style={s.commentBody} numberOfLines={3}>{item.content}</Text>
+        <Text style={s.commentBody} numberOfLines={3}>{item.text}</Text>
         <Text style={s.time}>{formatTimeAgo(item.created_at)}</Text>
       </View>
-      <TouchableOpacity style={s.deleteBtn} onPress={() => handleDelete(item.id)} activeOpacity={0.6}>
+      <TouchableOpacity style={s.deleteBtn} onPress={() => handleDelete(item.id, item.item_type)} activeOpacity={0.6}>
         <Trash2 size={16} color={theme.colors.error} />
       </TouchableOpacity>
     </View>
@@ -114,7 +108,7 @@ export default function ActivityCommentsScreen() {
       />
       <FlatList
         data={comments}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item.id)}
         renderItem={renderItem}
         contentContainerStyle={s.listContent}
         refreshControl={

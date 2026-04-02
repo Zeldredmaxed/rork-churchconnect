@@ -19,16 +19,34 @@ import { api } from '@/utils/api';
 import EmptyState from '@/components/EmptyState';
 
 interface Session {
-  id: string;
-  device_name: string;
-  device_type: 'mobile' | 'desktop' | 'tablet';
-  location?: string;
-  ip_address?: string;
-  last_active: string;
+  id: number;
+  device_info: string;
+  ip_address: string | null;
+  last_active_at: string;
+  expires_at: string;
   is_current: boolean;
 }
 
-function getDeviceIcon(type: string, theme: AppTheme) {
+function parseDeviceType(deviceInfo: string): 'mobile' | 'desktop' | 'tablet' {
+  const lower = deviceInfo.toLowerCase();
+  if (lower.includes('iphone') || lower.includes('android') || lower.includes('mobile')) return 'mobile';
+  if (lower.includes('ipad') || lower.includes('tablet')) return 'tablet';
+  return 'desktop';
+}
+
+function parseDeviceName(deviceInfo: string): string {
+  if (deviceInfo.includes('iPhone')) return 'iPhone';
+  if (deviceInfo.includes('iPad')) return 'iPad';
+  if (deviceInfo.includes('Android')) return 'Android Device';
+  if (deviceInfo.includes('Windows')) return 'Windows PC';
+  if (deviceInfo.includes('Mac')) return 'Mac';
+  if (deviceInfo.includes('Linux')) return 'Linux';
+  if (deviceInfo.length > 30) return deviceInfo.substring(0, 30) + '...';
+  return deviceInfo || 'Unknown Device';
+}
+
+function getDeviceIcon(deviceInfo: string, theme: AppTheme) {
+  const type = parseDeviceType(deviceInfo);
   switch (type) {
     case 'desktop': return <Monitor size={20} color={theme.colors.info} />;
     case 'tablet': return <Tablet size={20} color={theme.colors.accent} />;
@@ -56,9 +74,9 @@ export default function ActiveSessionsScreen() {
     queryKey: ['active-sessions'],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: Session[] }>('/auth/sessions');
+        const data = await api.get<Session[]>('/auth/sessions');
         console.log('[ActiveSessions] Fetched:', data);
-        return data?.data ?? [];
+        return Array.isArray(data) ? data : [];
       } catch (e) {
         console.log('[ActiveSessions] Error:', e);
         return [] as Session[];
@@ -101,17 +119,17 @@ export default function ActiveSessionsScreen() {
   }, [queryClient]);
 
   const sessions = sessionsQuery.data ?? [];
-  const currentSession = sessions.find((s) => s.is_current);
-  const otherSessions = sessions.filter((s) => !s.is_current);
+  const currentSession = sessions.find((sess) => sess.is_current);
+  const otherSessions = sessions.filter((sess) => !sess.is_current);
 
   const renderSession = (session: Session) => (
-    <View key={session.id} style={s.sessionCard}>
+    <View key={String(session.id)} style={s.sessionCard}>
       <View style={s.sessionIcon}>
-        {getDeviceIcon(session.device_type, theme)}
+        {getDeviceIcon(session.device_info, theme)}
       </View>
       <View style={s.sessionContent}>
         <View style={s.sessionHeader}>
-          <Text style={s.deviceName}>{session.device_name}</Text>
+          <Text style={s.deviceName}>{parseDeviceName(session.device_info)}</Text>
           {session.is_current && (
             <View style={s.currentBadge}>
               <Text style={s.currentBadgeText}>This device</Text>
@@ -119,22 +137,22 @@ export default function ActiveSessionsScreen() {
           )}
         </View>
         <View style={s.sessionMeta}>
-          {session.location && (
+          {session.ip_address && (
             <View style={s.metaRow}>
               <MapPin size={11} color={theme.colors.textTertiary} />
-              <Text style={s.metaText}>{session.location}</Text>
+              <Text style={s.metaText}>{session.ip_address}</Text>
             </View>
           )}
           <View style={s.metaRow}>
             <Clock size={11} color={theme.colors.textTertiary} />
-            <Text style={s.metaText}>{formatLastActive(session.last_active)}</Text>
+            <Text style={s.metaText}>{formatLastActive(session.last_active_at)}</Text>
           </View>
         </View>
       </View>
       {!session.is_current && (
         <TouchableOpacity
           style={s.logoutBtn}
-          onPress={() => handleLogoutSession(session.id)}
+          onPress={() => handleLogoutSession(String(session.id))}
           activeOpacity={0.7}
         >
           <LogOut size={16} color={theme.colors.error} />

@@ -48,9 +48,9 @@ export default function SupportRequestsScreen() {
     queryKey: ['support-requests'],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: SupportRequest[] }>('/support/requests');
+        const data = await api.get<SupportRequest[]>('/support/requests');
         console.log('[SupportRequests] Fetched:', data);
-        return data?.data ?? [];
+        return Array.isArray(data) ? data : [];
       } catch (e) {
         console.log('[SupportRequests] Error:', e);
         return [] as SupportRequest[];

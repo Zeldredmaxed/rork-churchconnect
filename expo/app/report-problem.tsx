@@ -36,7 +36,7 @@ export default function ReportProblemScreen() {
   const [description, setDescription] = useState('');
 
   const submitMutation = useMutation({
-    mutationFn: () => api.post('/support/reports', { category, description }),
+    mutationFn: () => api.post('/support/reports', { topic: category, description, attachments: [] }),
     onSuccess: () => {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Report Submitted', 'Thank you for your feedback. We\'ll review it shortly.', [
