@@ -100,21 +100,22 @@ export default function AdminMemberDetailScreen() {
     );
   }
 
-  const initials = member.full_name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
+  const displayName = `${member.first_name} ${member.last_name}`;
+  const initials = displayName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
   const statusVariant: Record<string, 'success' | 'warning' | 'info'> = {
     active: 'success', prospect: 'warning', visitor: 'info',
   };
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: member.full_name }} />
+      <Stack.Screen options={{ title: displayName }} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.profileHeader}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{initials}</Text>
           </View>
-          <Text style={styles.name}>{member.full_name}</Text>
+          <Text style={styles.name}>{displayName}</Text>
           <Badge
             label={member.membership_status.charAt(0).toUpperCase() + member.membership_status.slice(1)}
             variant={statusVariant[member.membership_status] ?? 'info'}
@@ -122,10 +123,12 @@ export default function AdminMemberDetailScreen() {
         </View>
 
         <View style={styles.infoCard}>
-          <View style={styles.infoRow}>
-            <Mail size={16} color={theme.colors.textTertiary} />
-            <Text style={styles.infoText}>{member.email}</Text>
-          </View>
+          {member.email ? (
+            <View style={styles.infoRow}>
+              <Mail size={16} color={theme.colors.textTertiary} />
+              <Text style={styles.infoText}>{member.email}</Text>
+            </View>
+          ) : null}
           {member.phone && (
             <>
               <View style={styles.infoDivider} />
@@ -139,7 +142,7 @@ export default function AdminMemberDetailScreen() {
           <View style={styles.infoRow}>
             <User size={16} color={theme.colors.textTertiary} />
             <Text style={styles.infoText}>
-              Role: {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+              Status: {member.membership_status.charAt(0).toUpperCase() + member.membership_status.slice(1)}
             </Text>
           </View>
           {member.family_name && (

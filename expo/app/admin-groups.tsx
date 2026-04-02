@@ -34,7 +34,7 @@ export default function AdminGroupsScreen() {
 
   const groupsQuery = useQuery({
     queryKey: ['admin', 'groups'],
-    queryFn: () => api.get<{ data: Group[] }>('/groups'),
+    queryFn: () => api.get<Group[] | { data: Group[] }>('/groups'),
   });
 
   const createMutation = useMutation({
@@ -63,7 +63,13 @@ export default function AdminGroupsScreen() {
     void queryClient.invalidateQueries({ queryKey: ['admin', 'groups'] });
   }, [queryClient]);
 
-  const groups = groupsQuery.data?.data ?? [];
+  const groups = React.useMemo(() => {
+    const raw = groupsQuery.data;
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'object' && 'data' in raw && Array.isArray((raw as { data: Group[] }).data)) return (raw as { data: Group[] }).data;
+    return [];
+  }, [groupsQuery.data]);
 
   return (
     <View style={styles.container}>
@@ -71,7 +77,7 @@ export default function AdminGroupsScreen() {
 
       <FlatList
         data={groups}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => (
           <View style={styles.card}>
             <View style={styles.cardLeft}>

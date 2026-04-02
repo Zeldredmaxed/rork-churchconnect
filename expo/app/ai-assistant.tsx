@@ -121,7 +121,7 @@ export default function AIAssistantScreen() {
         <FlatList
           ref={flatListRef}
           data={displayMessages}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
           renderItem={renderItem}
           contentContainerStyle={[styles.listContent, displayMessages.length === 0 && styles.listContentEmpty]}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}

@@ -147,7 +147,7 @@ export default function NewMessageScreen() {
       ) : (
         <FlatList
           data={displayUsers}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
           renderItem={({ item }) => (
             <UserRow
               user={item}

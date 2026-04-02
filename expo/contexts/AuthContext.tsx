@@ -47,7 +47,7 @@ function normalizeUser(raw: Record<string, unknown>): User {
     phone: raw.phone as string | undefined,
     avatar_url: raw.avatar_url as string | undefined,
     username: raw.username as string | undefined,
-    bio: raw.bio as string | undefined,
+    bio: (raw.testimony_summary ?? raw.bio) as string | undefined,
     pronouns: raw.pronouns as string | undefined,
     gender: raw.gender as string | undefined,
     link: raw.link as string | undefined,

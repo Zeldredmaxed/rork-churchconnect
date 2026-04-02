@@ -33,16 +33,22 @@ export interface Church {
 }
 
 export interface FeedPost {
-  id: string;
-  author_id: string;
+  id: number | string;
+  church_id?: number | string;
+  author_id: number | string;
   author_name: string;
   author_avatar?: string;
   content: string;
-  visibility: 'all' | 'leaders';
+  visibility: 'all' | 'leaders' | 'members_only';
   is_pinned: boolean;
   like_count: number;
+  amen_count?: number;
   comment_count: number;
+  comments_count?: number;
+  share_count?: number;
+  shares_count?: number;
   is_liked?: boolean;
+  is_amened_by_me?: boolean;
   post_type?: 'text' | 'photo' | 'video';
   media_urls?: string[];
   image_url?: string;
@@ -51,7 +57,7 @@ export interface FeedPost {
 }
 
 export interface Event {
-  id: string;
+  id: number | string;
   title: string;
   description: string;
   type: 'service' | 'event' | 'meeting' | 'conference';
@@ -68,18 +74,25 @@ export interface Event {
 }
 
 export interface Prayer {
-  id: string;
+  id: number | string;
+  church_id?: number | string;
   title: string;
   description: string;
   category: 'general' | 'health' | 'family' | 'financial' | 'spiritual';
   is_anonymous: boolean;
   is_urgent: boolean;
   is_answered: boolean;
+  answered_testimony?: string | null;
   author_name: string;
-  author_id: string;
-  pray_count: number;
+  author_id: number | string;
+  author_avatar?: string;
+  prayed_count: number;
+  pray_count?: number;
+  is_prayed_by_me?: boolean;
   has_prayed?: boolean;
+  visibility?: string;
   response_count?: number;
+  responses?: unknown[];
   created_at: string;
 }
 
@@ -92,18 +105,20 @@ export interface PrayerResponse {
 }
 
 export interface Short {
-  id: string;
+  id: number | string;
   title: string;
   description?: string;
   video_url: string;
   thumbnail_url?: string;
-  author_id?: string;
+  author_id?: number | string;
   author_name?: string;
+  author_avatar?: string;
   church_name: string;
-  church_id: string;
+  church_id: number | string;
   like_count: number;
   comment_count: number;
   view_count: number;
+  share_count?: number;
   is_liked?: boolean;
   category?: string;
   created_at: string;
@@ -160,7 +175,7 @@ export interface BibleChapter {
 }
 
 export interface Group {
-  id: string;
+  id: number | string;
   name: string;
   description: string;
   type: string;
@@ -186,17 +201,25 @@ export interface Fund {
 }
 
 export interface Donation {
-  id: string;
+  id: number | string;
   amount: number;
   fund_name: string;
-  fund_id: string;
+  fund_id: number | string;
   memo?: string;
   receipt_url?: string;
   created_at: string;
 }
 
+export interface DonationListResponse {
+  items: Donation[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_amount: number;
+}
+
 export interface Notification {
-  id: string;
+  id: number | string;
   type: 'like' | 'comment' | 'rsvp' | 'prayer' | 'event' | 'short' | 'follow';
   title: string;
   body: string;
@@ -206,16 +229,24 @@ export interface Notification {
   created_at: string;
 }
 
+export interface AlertListResponse {
+  items: Notification[];
+  unread_count: number;
+  total: number;
+}
+
 export interface Member {
-  id: string;
-  full_name: string;
-  email: string;
+  id: number | string;
+  first_name: string;
+  last_name: string;
+  email?: string;
   phone?: string;
-  role: UserRole;
-  avatar_url?: string;
+  photo_url?: string;
   membership_status: 'visitor' | 'prospect' | 'active';
+  family_id?: number | string | null;
   family_name?: string;
   created_at: string;
+  updated_at?: string;
 }
 
 export interface MemberNote {
@@ -366,11 +397,11 @@ export interface MemberAttendanceStats {
 }
 
 export interface PaginatedResponse<T> {
-  data: T[];
+  items: T[];
   page: number;
   per_page: number;
   total: number;
-  total_pages: number;
+  pages: number;
 }
 
 export interface FinancialSummary {

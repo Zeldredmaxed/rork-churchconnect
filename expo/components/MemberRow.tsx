@@ -23,9 +23,9 @@ export default function MemberRow({ member, onPress }: MemberRowProps) {
   const styles = createStyles(theme);
   return (
     <TouchableOpacity style={styles.row} onPress={() => onPress(member)} activeOpacity={0.6}>
-      <Avatar url={member.avatar_url} name={member.full_name} size={40} />
+      <Avatar url={member.photo_url} name={`${member.first_name} ${member.last_name}`} size={40} />
       <View style={styles.info}>
-        <Text style={styles.name} numberOfLines={1}>{member.full_name}</Text>
+        <Text style={styles.name} numberOfLines={1}>{`${member.first_name} ${member.last_name}`}</Text>
         <Text style={styles.email} numberOfLines={1}>{member.email}</Text>
       </View>
       <Badge

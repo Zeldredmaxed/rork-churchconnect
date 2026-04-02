@@ -186,7 +186,7 @@ export default function ShareSheet({ visible, onClose, content }: ShareSheetProp
             ) : contacts.length === 0 ? (
               <View style={styles.contactsEmpty}><Text style={styles.contactsEmptyText}>{isSearching ? 'No results found' : 'No contacts available'}</Text></View>
             ) : (
-              <FlatList data={contacts} keyExtractor={(item) => item.id} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.contactsList}
+              <FlatList data={contacts} keyExtractor={(item) => String(item.id)} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.contactsList}
                 renderItem={({ item }) => (<ContactItem user={item} isSelected={selectedUsers.includes(item.id)} isSent={sentUsers.includes(item.id)} isSending={sendingUsers.includes(item.id)} onSelect={() => toggleUser(item.id)} theme={theme} />)} />
             )}
           </View>

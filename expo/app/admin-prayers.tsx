@@ -24,7 +24,7 @@ export default function AdminPrayersScreen() {
 
   const prayersQuery = useQuery({
     queryKey: ['admin', 'prayers'],
-    queryFn: () => api.get<{ data: Prayer[] }>('/prayers'),
+    queryFn: () => api.get<Prayer[] | { data: Prayer[] }>('/prayers'),
   });
 
   const markAnsweredMutation = useMutation({
@@ -49,7 +49,13 @@ export default function AdminPrayersScreen() {
     void queryClient.invalidateQueries({ queryKey: ['admin', 'prayers'] });
   }, [queryClient]);
 
-  const prayers = prayersQuery.data?.data ?? [];
+  const prayers = React.useMemo(() => {
+    const raw = prayersQuery.data;
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw as Prayer[];
+    if (typeof raw === 'object' && 'data' in raw && Array.isArray((raw as { data: Prayer[] }).data)) return (raw as { data: Prayer[] }).data;
+    return [];
+  }, [prayersQuery.data]);
 
   return (
     <View style={styles.container}>
@@ -57,7 +63,7 @@ export default function AdminPrayersScreen() {
 
       <FlatList
         data={prayers}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => (
           <View>
             <PrayerCard
@@ -67,12 +73,12 @@ export default function AdminPrayersScreen() {
                 Alert.alert(item.title, 'Moderate this prayer request', [
                   { text: 'Close', style: 'cancel' },
                   ...(!item.is_answered
-                    ? [{ text: 'Mark Answered', onPress: () => markAnsweredMutation.mutate(item.id) }]
+                    ? [{ text: 'Mark Answered', onPress: () => markAnsweredMutation.mutate(String(item.id)) }]
                     : []),
                   {
                     text: 'Delete',
                     style: 'destructive' as const,
-                    onPress: () => deleteMutation.mutate(item.id),
+                    onPress: () => deleteMutation.mutate(String(item.id)),
                   },
                 ]);
               }}

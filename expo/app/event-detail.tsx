@@ -32,7 +32,11 @@ export default function EventDetailScreen() {
 
   const eventQuery = useQuery({
     queryKey: ['event', id],
-    queryFn: () => api.get<{ data: Event }>(`/events/${id}`),
+    queryFn: async () => {
+      const raw = await api.get<Event | { data: Event }>(`/events/${id}`);
+      if (raw && typeof raw === 'object' && 'data' in raw && (raw as { data: Event }).data) return (raw as { data: Event }).data;
+      return raw as Event;
+    },
     enabled: !!id,
   });
 
@@ -54,7 +58,7 @@ export default function EventDetailScreen() {
     onError: (error) => Alert.alert('Error', error.message),
   });
 
-  const event = eventQuery.data?.data;
+  const event = eventQuery.data;
 
   if (eventQuery.isLoading) {
     return (

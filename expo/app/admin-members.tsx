@@ -79,7 +79,13 @@ export default function AdminMembersScreen() {
     void queryClient.invalidateQueries({ queryKey: ['admin', 'members'] });
   }, [queryClient]);
 
-  const members = membersQuery.data?.data ?? [];
+  const members = React.useMemo(() => {
+    const raw = membersQuery.data;
+    if (!raw) return [];
+    if ('items' in raw && Array.isArray((raw as any).items)) return (raw as any).items as Member[];
+    if ('data' in raw && Array.isArray((raw as any).data)) return (raw as any).data as Member[];
+    return [];
+  }, [membersQuery.data]);
 
   return (
     <View style={styles.container}>
@@ -103,7 +109,7 @@ export default function AdminMembersScreen() {
 
       <FlatList
         data={members}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => (
           <MemberRow
             member={item}

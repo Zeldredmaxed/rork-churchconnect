@@ -141,7 +141,7 @@ export default function FollowersListScreen() {
       ) : (
         <FlatList
           data={activeData}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
           renderItem={({ item }) => <UserRow user={item} />}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}

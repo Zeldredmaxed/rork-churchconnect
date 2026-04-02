@@ -281,7 +281,7 @@ export default function ChatScreen() {
 
       <FlatList
         data={filteredConvos}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item.id)}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
         ListFooterComponent={renderFooter}

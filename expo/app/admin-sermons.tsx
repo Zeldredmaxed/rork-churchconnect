@@ -91,7 +91,7 @@ export default function AdminSermonsScreen() {
 
       <FlatList
         data={sermons}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => <SermonCard sermon={item} onPress={() => {}} />}
         contentContainerStyle={styles.listContent}
         refreshControl={<RefreshControl refreshing={sermonsQuery.isRefetching} onRefresh={handleRefresh} tintColor={theme.colors.accent} />}

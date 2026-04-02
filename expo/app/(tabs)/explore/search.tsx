@@ -210,7 +210,7 @@ export default function SearchScreen() {
       {isSearching ? (
         <FlatList
           data={searchResults}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
           renderItem={renderSearchResult}
           ListHeaderComponent={renderSearchSuggestion}
           ListEmptyComponent={
@@ -231,7 +231,7 @@ export default function SearchScreen() {
       ) : recentSearches.length > 0 ? (
         <FlatList
           data={recentSearches}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
           renderItem={renderRecentItem}
           ListHeaderComponent={
             <View style={styles.recentHeader}>

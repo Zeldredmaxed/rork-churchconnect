@@ -43,13 +43,15 @@ export default function PrayerDetailScreen() {
   const [localPrayCount, setLocalPrayCount] = useState<number | null>(null);
 
   const prayMutation = useMutation({
-    mutationFn: () => api.post<{ data: { has_prayed: boolean; pray_count: number } }>(`/prayers/${id}/pray`),
+    mutationFn: () => api.post<{ data: { prayed: boolean; prayed_count: number; has_prayed?: boolean; pray_count?: number } }>(`/prayers/${id}/pray`),
     onSuccess: (data) => {
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      const result = (data as unknown as Record<string, unknown>)?.data as { has_prayed?: boolean; pray_count?: number } | undefined;
+      const result = (data as unknown as Record<string, unknown>)?.data as { prayed?: boolean; prayed_count?: number; has_prayed?: boolean; pray_count?: number } | undefined;
       if (result) {
-        if (result.has_prayed != null) setLocalHasPrayed(result.has_prayed);
-        if (result.pray_count != null) setLocalPrayCount(result.pray_count);
+        const prayedState = result.prayed ?? result.has_prayed;
+        const prayedCount = result.prayed_count ?? result.pray_count;
+        if (prayedState != null) setLocalHasPrayed(prayedState);
+        if (prayedCount != null) setLocalPrayCount(prayedCount);
       }
       void queryClient.invalidateQueries({ queryKey: ['prayer', id] });
       void queryClient.invalidateQueries({ queryKey: ['prayers'] });
@@ -143,7 +145,7 @@ export default function PrayerDetailScreen() {
               const rp = prayer as unknown as Record<string, unknown>;
               const isPrayedByMe = rp.is_prayed_by_me;
               const current = localHasPrayed ?? (isPrayedByMe != null ? Boolean(isPrayedByMe) : (prayer.has_prayed ?? false));
-              const currentCount = localPrayCount ?? prayer.pray_count ?? 0;
+              const currentCount = localPrayCount ?? prayer.prayed_count ?? prayer.pray_count ?? 0;
               setLocalHasPrayed(!current);
               setLocalPrayCount(!current ? currentCount + 1 : Math.max(0, currentCount - 1));
               prayMutation.mutate();
@@ -158,7 +160,7 @@ export default function PrayerDetailScreen() {
               {(localHasPrayed ?? prayer.has_prayed) ? 'Praying' : 'Pray'}
             </Text>
           </TouchableOpacity>
-          <Text style={styles.prayCount}>{localPrayCount ?? prayer.pray_count ?? 0} people praying</Text>
+          <Text style={styles.prayCount}>{localPrayCount ?? prayer.prayed_count ?? prayer.pray_count ?? 0} people praying</Text>
         </View>
 
         <View style={styles.responsesSection}>

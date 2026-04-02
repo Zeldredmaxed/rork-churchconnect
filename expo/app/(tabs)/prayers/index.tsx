@@ -177,7 +177,7 @@ export default function PrayerWallScreen() {
 
       <FlatList
         data={prayers}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item.id)}
         ListHeaderComponent={renderHeader}
         renderItem={({ item }) => (
           <PrayerCard

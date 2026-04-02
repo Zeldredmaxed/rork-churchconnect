@@ -47,14 +47,20 @@ export default function GroupsScreen() {
 
   const groupsQuery = useQuery({
     queryKey: ['groups'],
-    queryFn: () => api.get<{ data: Group[] }>('/groups'),
+    queryFn: () => api.get<Group[] | { data: Group[] }>('/groups'),
   });
 
   const handleRefresh = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['groups'] });
   }, [queryClient]);
 
-  const groups = groupsQuery.data?.data ?? [];
+  const groups = React.useMemo(() => {
+    const raw = groupsQuery.data;
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'object' && 'data' in raw && Array.isArray((raw as { data: Group[] }).data)) return (raw as { data: Group[] }).data;
+    return [];
+  }, [groupsQuery.data]);
 
   return (
     <View style={styles.container}>
@@ -69,7 +75,7 @@ export default function GroupsScreen() {
 
       <FlatList
         data={groups}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => (
           <GroupCard
             group={item}

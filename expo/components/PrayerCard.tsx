@@ -44,13 +44,13 @@ export default function PrayerCard({ prayer, onPray, onPress, onMarkFulfilled, o
   const isPrayedByMe = (prayer as unknown as Record<string, unknown>).is_prayed_by_me;
   const initialPrayed = isPrayedByMe != null ? Boolean(isPrayedByMe) : (prayer.has_prayed ?? false);
   const [localHasPrayed, setLocalHasPrayed] = useState<boolean>(initialPrayed);
-  const [localPrayCount, setLocalPrayCount] = useState<number>(prayer.pray_count ?? 0);
+  const [localPrayCount, setLocalPrayCount] = useState<number>(prayer.prayed_count ?? prayer.pray_count ?? 0);
 
   useEffect(() => {
     const newIsPrayed = (prayer as unknown as Record<string, unknown>).is_prayed_by_me;
     const newVal = newIsPrayed != null ? Boolean(newIsPrayed) : (prayer.has_prayed ?? false);
     setLocalHasPrayed(newVal);
-    setLocalPrayCount(prayer.pray_count ?? 0);
+    setLocalPrayCount(prayer.prayed_count ?? prayer.pray_count ?? 0);
   }, [prayer]);
 
   const { description } = getPrayerContent(prayer);
@@ -68,7 +68,7 @@ export default function PrayerCard({ prayer, onPray, onPress, onMarkFulfilled, o
 
     setLocalHasPrayed(!hasPrayed);
     setLocalPrayCount(!hasPrayed ? prayCount + 1 : Math.max(0, prayCount - 1));
-    onPray(prayer.id);
+    onPray(String(prayer.id));
   };
 
   const handleMorePress = () => {
@@ -86,7 +86,7 @@ export default function PrayerCard({ prayer, onPray, onPress, onMarkFulfilled, o
           { text: 'Cancel', style: 'cancel' },
           {
             text: 'Yes, Fulfilled!',
-            onPress: () => onMarkFulfilled(prayer.id),
+            onPress: () => onMarkFulfilled(String(prayer.id)),
           },
         ]
       );
@@ -104,7 +104,7 @@ export default function PrayerCard({ prayer, onPray, onPress, onMarkFulfilled, o
           {
             text: 'Delete',
             style: 'destructive',
-            onPress: () => onDelete(prayer.id),
+            onPress: () => onDelete(String(prayer.id)),
           },
         ]
       );
@@ -114,7 +114,7 @@ export default function PrayerCard({ prayer, onPray, onPress, onMarkFulfilled, o
   const handleReport = () => {
     setShowMenu(false);
     if (onReport) {
-      onReport(prayer.id);
+      onReport(String(prayer.id));
     }
   };
 

@@ -185,7 +185,7 @@ export default function ExploreScreen() {
       ) : (
         <FlatList
           data={discoverItems}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
           renderItem={renderGridItem}
           numColumns={3}
           columnWrapperStyle={styles.gridRow}

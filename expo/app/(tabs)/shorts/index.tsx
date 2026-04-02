@@ -212,8 +212,8 @@ export default function ShortsScreen() {
     ({ viewableItems }: { viewableItems: Array<{ item: Short }> }) => {
       if (viewableItems.length > 0) {
         const item = viewableItems[0].item;
-        setVisibleShortId(item.id);
-        viewMutation.mutate(item.id);
+        setVisibleShortId(String(item.id));
+        viewMutation.mutate(String(item.id));
       } else {
         setVisibleShortId(null);
       }
@@ -224,8 +224,8 @@ export default function ShortsScreen() {
   const shorts = [...(shortsQuery.data?.data ?? [])].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   const itemHeight = SCREEN_HEIGHT;
 
-  const selectedShort = optionsShortId ? shorts.find((s) => s.id === optionsShortId) : null;
-  const isShortOwner = selectedShort?.author_id === user?.id;
+  const selectedShort = optionsShortId ? shorts.find((s) => String(s.id) === optionsShortId) : null;
+  const isShortOwner = selectedShort?.author_id != null && user?.id != null && String(selectedShort.author_id) === String(user.id);
 
   const handleOpenShortOptions = useCallback((shortId: string) => {
     setOptionsShortId(shortId);
@@ -254,35 +254,35 @@ export default function ShortsScreen() {
         <ShortVideoPlayer
           videoUrl={item.video_url}
           thumbnailUrl={item.thumbnail_url}
-          isVisible={isScreenFocused && visibleShortId === item.id}
+          isVisible={isScreenFocused && visibleShortId === String(item.id)}
         />
         <ShortOverlay
           item={item}
-          onLike={() => likeMutation.mutate({ id: item.id, liked: !!item.is_liked })}
+          onLike={() => likeMutation.mutate({ id: String(item.id), liked: !!item.is_liked })}
           onComment={() => {
-            setCommentsShortId(item.id);
+            setCommentsShortId(String(item.id));
             setShowComments(true);
           }}
           onShare={() => {
             void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            setShareShortId(item.id);
+            setShareShortId(String(item.id));
             setShowShare(true);
           }}
-          onMore={() => handleOpenShortOptions(item.id)}
+          onMore={() => handleOpenShortOptions(String(item.id))}
           onSave={() => {
             void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             toggleSave({
-              itemId: item.id,
+              itemId: String(item.id),
               itemType: 'short',
               title: item.title,
               preview: item.description ?? item.title,
               authorName: item.author_name ?? item.church_name,
-              authorId: item.author_id ?? '',
+              authorId: String(item.author_id ?? ''),
               thumbnailUrl: item.thumbnail_url,
               mediaUrl: item.video_url,
             });
           }}
-          isSaved={isItemSaved(item.id, 'short')}
+          isSaved={isItemSaved(String(item.id), 'short')}
           currentUserId={user?.id}
         />
       </View>
@@ -326,7 +326,7 @@ export default function ShortsScreen() {
       ) : (
         <FlatList
           data={shorts}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
           renderItem={renderItem}
           pagingEnabled
           showsVerticalScrollIndicator={false}
@@ -368,18 +368,18 @@ export default function ShortsScreen() {
         onSave={() => {
           if (selectedShort) {
             toggleSave({
-              itemId: selectedShort.id,
+              itemId: String(selectedShort.id),
               itemType: 'short',
               title: selectedShort.title,
               preview: selectedShort.description ?? selectedShort.title,
               authorName: selectedShort.author_name ?? selectedShort.church_name,
-              authorId: selectedShort.author_id ?? '',
+              authorId: String(selectedShort.author_id ?? ''),
               thumbnailUrl: selectedShort.thumbnail_url,
               mediaUrl: selectedShort.video_url,
             });
           }
         }}
-        isSaved={selectedShort ? isItemSaved(selectedShort.id, 'short') : false}
+        isSaved={selectedShort ? isItemSaved(String(selectedShort.id), 'short') : false}
         itemType="short"
       />
 
@@ -392,7 +392,7 @@ export default function ShortsScreen() {
         contentId={optionsShortId}
         contentType="short"
         authorName={selectedShort?.author_name}
-        authorId={selectedShort?.author_id}
+        authorId={selectedShort?.author_id != null ? String(selectedShort.author_id) : undefined}
       />
 
       <DeleteConfirmSheet

@@ -27,7 +27,7 @@ import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import EmptyState from '@/components/EmptyState';
 import SuggestedUserRow from '@/components/SuggestedUserRow';
-import type { Notification, FlockUser } from '@/types';
+import type { Notification, FlockUser, AlertListResponse } from '@/types';
 
 function getTypeIcons(theme: AppTheme): Record<string, { icon: React.ReactNode; color: string }> {
   return {
@@ -79,7 +79,7 @@ function NotificationRow({
   });
 
   const handlePress = () => {
-    onRead(item.id);
+    onRead(String(item.id));
     if (isFollowType && item.user_id) {
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       router.push(`/user-profile?id=${item.user_id}` as never);
@@ -167,10 +167,10 @@ export default function NotificationsScreen() {
     queryKey: ['notifications'],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: Notification[] }>('/notifications');
-        return data;
+        const raw = await api.get<AlertListResponse | { data: Notification[] }>('/notifications');
+        return raw;
       } catch {
-        return { data: [] as Notification[] };
+        return { items: [] as Notification[], unread_count: 0, total: 0 } as AlertListResponse;
       }
     },
   });
@@ -211,7 +211,13 @@ export default function NotificationsScreen() {
     setDismissedUsers((prev) => [...prev, userId]);
   }, []);
 
-  const notifications = notifsQuery.data?.data ?? [];
+  const notifications = React.useMemo(() => {
+    const raw = notifsQuery.data;
+    if (!raw) return [] as Notification[];
+    if ('items' in raw && Array.isArray((raw as AlertListResponse).items)) return (raw as AlertListResponse).items;
+    if ('data' in raw && Array.isArray((raw as { data: Notification[] }).data)) return (raw as { data: Notification[] }).data;
+    return [] as Notification[];
+  }, [notifsQuery.data]);
   const hasUnread = notifications.some((n) => !n.is_read);
   const suggestedUsers = (suggestedQuery.data?.data ?? []).filter(
     (u) => !dismissedUsers.includes(u.id)

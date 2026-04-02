@@ -189,7 +189,7 @@ export default function BibleScreen() {
       {mode === 'books' && (
         <FlatList
           data={books}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.bookRow}

@@ -496,7 +496,7 @@ export default function ProfileTabScreen() {
             </View>
             <FlatList
               data={suggestedUsers.slice(0, 10)}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item) => String(item.id)}
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.discoverList}
@@ -549,10 +549,10 @@ export default function ProfileTabScreen() {
             <View style={styles.postsGrid}>
               {myPosts.map((post) => (
                 <TouchableOpacity
-                  key={post.id}
+                  key={String(post.id)}
                   style={styles.postGridItem}
                   activeOpacity={0.8}
-                  onLongPress={() => handleDeletePost(post.id)}
+                  onLongPress={() => handleDeletePost(String(post.id))}
                 >
                   {post.media_urls && post.media_urls.length > 0 ? (
                     <View style={styles.postGridImageContainer}>
@@ -568,7 +568,7 @@ export default function ProfileTabScreen() {
                       )}
                       <TouchableOpacity
                         style={styles.deleteOverlayBtn}
-                        onPress={() => handleDeletePost(post.id)}
+                        onPress={() => handleDeletePost(String(post.id))}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       >
                         <Trash2 size={14} color="#fff" />
@@ -584,7 +584,7 @@ export default function ProfileTabScreen() {
                       </View>
                       <TouchableOpacity
                         style={styles.deleteOverlayBtnText}
-                        onPress={() => handleDeletePost(post.id)}
+                        onPress={() => handleDeletePost(String(post.id))}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       >
                         <Trash2 size={14} color={theme.colors.error} />
@@ -614,10 +614,10 @@ export default function ProfileTabScreen() {
             <View style={styles.postsGrid}>
               {myShorts.map((short) => (
                 <TouchableOpacity
-                  key={short.id}
+                  key={String(short.id)}
                   style={styles.postGridItem}
                   activeOpacity={0.8}
-                  onLongPress={() => handleDeleteShort(short.id)}
+                  onLongPress={() => handleDeleteShort(String(short.id))}
                 >
                   <View style={styles.shortGridContent}>
                     {short.thumbnail_url ? (
@@ -644,7 +644,7 @@ export default function ProfileTabScreen() {
                     </View>
                     <TouchableOpacity
                       style={styles.deleteOverlayBtn}
-                      onPress={() => handleDeleteShort(short.id)}
+                      onPress={() => handleDeleteShort(String(short.id))}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
                       <Trash2 size={14} color="#fff" />

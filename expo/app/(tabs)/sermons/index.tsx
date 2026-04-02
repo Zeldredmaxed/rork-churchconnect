@@ -53,7 +53,7 @@ export default function SermonsScreen() {
 
       <FlatList
         data={sermons}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item.id)}
         ListHeaderComponent={
           liveSermon ? (
             <TouchableOpacity

@@ -234,7 +234,7 @@ export default function CommentsSheet({ visible, onClose, postId, source }: Comm
   const handleSelectMention = useCallback((member: Member) => {
     if (mentionStartIndex < 0) return;
     const before = commentText.slice(0, mentionStartIndex);
-    const mentionText = `@${member.full_name} `;
+    const mentionText = `@${member.first_name ? `${member.first_name} ${member.last_name}` : (member as any).full_name ?? 'Member'} `;
     const currentEnd = mentionStartIndex + 1 + (mentionQuery?.length ?? 0);
     const after = commentText.slice(currentEnd);
     setCommentText(before + mentionText + after);
@@ -291,7 +291,7 @@ export default function CommentsSheet({ visible, onClose, postId, source }: Comm
             ) : (
               <FlatList
                 data={comments}
-                keyExtractor={(item) => item.id}
+                keyExtractor={(item) => String(item.id)}
                 renderItem={({ item }) => <CommentRow comment={item} />}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={sheetStyles.listContent}
@@ -329,10 +329,10 @@ export default function CommentsSheet({ visible, onClose, postId, source }: Comm
                           onPress={() => handleSelectMention(member)}
                           activeOpacity={0.6}
                         >
-                          <Avatar url={member.avatar_url} name={member.full_name} size={30} />
+                          <Avatar url={member.photo_url} name={`${member.first_name} ${member.last_name}`} size={30} />
                           <View style={sheetStyles.mentionInfo}>
-                            <Text style={sheetStyles.mentionName} numberOfLines={1}>{member.full_name}</Text>
-                            <Text style={sheetStyles.mentionEmail} numberOfLines={1}>{member.email}</Text>
+                            <Text style={sheetStyles.mentionName} numberOfLines={1}>{`${member.first_name} ${member.last_name}`}</Text>
+                            <Text style={sheetStyles.mentionEmail} numberOfLines={1}>{member.email ?? ''}</Text>
                           </View>
                         </TouchableOpacity>
                       );

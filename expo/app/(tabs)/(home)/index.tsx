@@ -172,8 +172,8 @@ export default function HomeFeedScreen() {
 
 
   const posts = feedQuery.data?.data ?? [];
-  const selectedPost = optionsPostId ? posts.find((p) => p.id === optionsPostId) : null;
-  const isPostOwner = selectedPost?.author_id === user?.id;
+  const selectedPost = optionsPostId ? posts.find((p) => String(p.id) === optionsPostId) : null;
+  const isPostOwner = selectedPost?.author_id != null && user?.id != null && String(selectedPost.author_id) === String(user.id);
   const pinnedPosts = posts.filter((p) => p.is_pinned).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   const regularPosts = posts.filter((p) => !p.is_pinned).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   const sortedPosts = [...pinnedPosts, ...regularPosts];
@@ -250,7 +250,7 @@ export default function HomeFeedScreen() {
 
       <FlatList
         data={sortedPosts}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item.id)}
         ListHeaderComponent={
           <View>
             {activeScripture ? (
@@ -331,16 +331,16 @@ export default function HomeFeedScreen() {
         onSave={() => {
           if (selectedPost) {
             toggleSave({
-              itemId: selectedPost.id,
+              itemId: String(selectedPost.id),
               itemType: 'post',
               title: selectedPost.content.slice(0, 80),
               preview: selectedPost.content.slice(0, 150),
               authorName: selectedPost.author_name,
-              authorId: selectedPost.author_id,
+              authorId: String(selectedPost.author_id),
             });
           }
         }}
-        isSaved={selectedPost ? isItemSaved(selectedPost.id, 'post') : false}
+        isSaved={selectedPost ? isItemSaved(String(selectedPost.id), 'post') : false}
         itemType="post"
       />
 
@@ -353,7 +353,7 @@ export default function HomeFeedScreen() {
         contentId={optionsPostId}
         contentType="post"
         authorName={selectedPost?.author_name}
-        authorId={selectedPost?.author_id}
+        authorId={selectedPost?.author_id != null ? String(selectedPost.author_id) : undefined}
       />
 
       <DeleteConfirmSheet

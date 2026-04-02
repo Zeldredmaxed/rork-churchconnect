@@ -367,7 +367,7 @@ export default function ChatRoomScreen() {
           <FlatList
             ref={flatListRef}
             data={messages}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => String(item.id)}
             renderItem={renderMessage}
             contentContainerStyle={styles.msgListWithProfile}
             onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
@@ -391,7 +391,7 @@ export default function ChatRoomScreen() {
           <FlatList
             ref={flatListRef}
             data={messages}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => String(item.id)}
             renderItem={renderMessage}
             contentContainerStyle={styles.msgList}
             onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}

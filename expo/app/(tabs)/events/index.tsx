@@ -25,14 +25,20 @@ export default function EventsScreen() {
 
   const eventsQuery = useQuery({
     queryKey: ['events'],
-    queryFn: () => api.get<{ data: Event[] }>('/events'),
+    queryFn: () => api.get<Event[] | { data: Event[] }>('/events'),
   });
 
   const handleRefresh = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['events'] });
   }, [queryClient]);
 
-  const events = eventsQuery.data?.data ?? [];
+  const events = React.useMemo(() => {
+    const raw = eventsQuery.data;
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'object' && 'data' in raw && Array.isArray((raw as { data: Event[] }).data)) return (raw as { data: Event[] }).data;
+    return [];
+  }, [eventsQuery.data]);
 
   return (
     <View style={styles.container}>
@@ -45,7 +51,7 @@ export default function EventsScreen() {
 
       <FlatList
         data={events}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => (
           <EventCard
             event={item}
