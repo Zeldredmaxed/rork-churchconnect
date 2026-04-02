@@ -126,7 +126,7 @@ export default function UniversalSearchScreen() {
     queryKey: ['universal-search-shorts', trimmedQuery],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: Short[] }>(`/shorts/trending?limit=50`);
+        const data = await api.get<{ data: Short[] }>(`/glory_clips/trending?limit=50`);
         const all = data?.data ?? [];
         const q = trimmedQuery.toLowerCase();
         return all.filter(
@@ -204,7 +204,7 @@ export default function UniversalSearchScreen() {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Keyboard.dismiss();
     saveRecentSearch({
-      id: post.id,
+      id: String(post.id),
       type: 'post',
       title: post.content?.slice(0, 60) || 'Post',
       subtitle: `by ${post.author_name}`,
@@ -217,7 +217,7 @@ export default function UniversalSearchScreen() {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Keyboard.dismiss();
     saveRecentSearch({
-      id: short.id,
+      id: String(short.id),
       type: 'short',
       title: short.title || 'Short',
       subtitle: short.author_name ? `by ${short.author_name}` : undefined,

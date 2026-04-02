@@ -115,7 +115,7 @@ export default function CommentsSheet({ visible, onClose, postId, source }: Comm
 
   const endpoint = source === 'feed'
     ? `/feed/${postId}/comments`
-    : `/shorts/${postId}/comments`;
+    : `/glory_clips/${postId}/comments`;
 
   const commentsQuery = useQuery({
     queryKey: ['comments', source, postId],

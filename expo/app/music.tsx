@@ -59,8 +59,8 @@ export default function MusicScreen() {
   const appStateRef = useRef(AppState.currentState);
   const backgroundTimeRef = useRef<number>(0);
   const currentSongIdRef = useRef<number | null>(null);
-  const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const syncIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const heartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -183,14 +183,19 @@ export default function MusicScreen() {
     try {
       const resp = await api.get<{ data: any }>('/music/radio/now-playing');
       const data = resp?.data;
-      if (!data || !data.song) return;
+      if (!data || (!data.song && !data.current_song)) return;
 
-      const serverSong = data.song as Song;
-      const elapsedSeconds = data.elapsed_seconds || 0;
+      const serverSong = (data.song || data.current_song) as Song;
+      const elapsedSeconds = data.elapsed_seconds ?? data.position_seconds ?? 0;
       const elapsedMs = Math.floor(elapsedSeconds * 1000);
+      const serverDurationSec = data.song_duration_seconds ?? 0;
 
       setQueuePosition(data.queue_position || 0);
       setQueueLength(data.queue_length || 0);
+
+      if (serverDurationSec > 0 && duration === 0) {
+        setDuration(serverDurationSec * 1000);
+      }
 
       // CASE 1: No audio loaded
       if (!currentSongIdRef.current || !soundRef.current) {
@@ -223,7 +228,7 @@ export default function MusicScreen() {
     } catch (e) {
       console.log('[Radio] Sync error:', e);
     }
-  }, []);
+  }, [duration, loadAndPlaySong]);
 
   const handlePlayPause = async () => {
     if (Platform.OS !== 'web') {

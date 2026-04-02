@@ -155,30 +155,30 @@ export default function ShortsScreen() {
     queryKey: ['shorts', activeTab],
     queryFn: () =>
       api.get<{ data: Short[] }>(
-        activeTab === 'trending' ? '/shorts/trending' : '/shorts/my-church'
+        activeTab === 'trending' ? '/glory_clips/trending' : '/glory_clips/my-church'
       ),
   });
 
   const likeMutation = useMutation({
     mutationFn: (params: { id: string; liked: boolean }) =>
       params.liked
-        ? api.delete(`/shorts/${params.id}/unlike`)
-        : api.post(`/shorts/${params.id}/like`),
+        ? api.delete(`/glory_clips/${params.id}/amen`)
+        : api.post(`/glory_clips/${params.id}/amen`),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['shorts'] });
+      void queryClient.invalidateQueries({ queryKey: ['glory_clips'] });
     },
   });
 
   const viewMutation = useMutation({
-    mutationFn: (id: string) => api.post(`/shorts/${id}/view`),
+    mutationFn: (id: string) => api.post(`/glory_clips/${id}/view`),
   });
 
   const deleteShortMutation = useMutation({
-    mutationFn: (shortId: string) => api.delete(`/shorts/${shortId}`),
+    mutationFn: (shortId: string) => api.delete(`/glory_clips/${shortId}`),
     onSuccess: () => {
       console.log('[Shorts] Short deleted successfully, cascade invalidating...');
-      void queryClient.invalidateQueries({ queryKey: ['shorts'] });
-      void queryClient.invalidateQueries({ queryKey: ['my-shorts'] });
+      void queryClient.invalidateQueries({ queryKey: ['glory_clips'] });
+      void queryClient.invalidateQueries({ queryKey: ['my-glory-clips'] });
       setShowDeleteConfirm(false);
       setShowOptions(false);
       setOptionsShortId(null);

@@ -164,11 +164,11 @@ export default function ProfileTabScreen() {
     queryKey: ['my-shorts', user?.id],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: Short[] }>('/shorts/me?limit=50&offset=0');
+        const data = await api.get<{ data: Short[] }>('/glory_clips/me?limit=50&offset=0');
         console.log('[Profile] My shorts response:', JSON.stringify(data).slice(0, 300));
         return data?.data ?? [];
       } catch (e: unknown) {
-        console.log('[Profile] /shorts/me failed:', e);
+        console.log('[Profile] /glory_clips/me failed:', e);
         return [] as Short[];
       }
     },
@@ -196,11 +196,11 @@ export default function ProfileTabScreen() {
   });
 
   const deleteShortMutation = useMutation({
-    mutationFn: (shortId: string) => api.delete(`/shorts/${shortId}`),
+    mutationFn: (shortId: string) => api.delete(`/glory_clips/${shortId}`),
     onSuccess: (_data, shortId) => {
       console.log('[Profile] Short deleted successfully, cascade invalidating...');
-      void queryClient.invalidateQueries({ queryKey: ['my-shorts'] });
-      void queryClient.invalidateQueries({ queryKey: ['shorts'] });
+      void queryClient.invalidateQueries({ queryKey: ['my-glory-clips'] });
+      void queryClient.invalidateQueries({ queryKey: ['glory_clips'] });
       const currentSaved = savedItems.filter(
         (item) => !(item.item_id === shortId && item.item_type === 'short')
       );

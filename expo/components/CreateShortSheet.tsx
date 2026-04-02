@@ -135,12 +135,12 @@ export default function CreateShortSheet({ visible, onClose }: CreateShortSheetP
       if (videoUrl) body.video_url = videoUrl;
       if (durationSeconds) body.duration_seconds = durationSeconds;
 
-      return api.post('/shorts', body);
+      return api.post('/glory_clips', body);
     },
     onSuccess: () => {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      void queryClient.invalidateQueries({ queryKey: ['shorts'] });
-      void queryClient.invalidateQueries({ queryKey: ['my-shorts'] });
+      void queryClient.invalidateQueries({ queryKey: ['glory_clips'] });
+      void queryClient.invalidateQueries({ queryKey: ['my-glory-clips'] });
       resetForm();
       Alert.alert('Success', 'Your short has been uploaded!');
     },
@@ -283,7 +283,7 @@ export default function CreateShortSheet({ visible, onClose }: CreateShortSheetP
         visible={showMentionPicker}
         onClose={() => setShowMentionPicker(false)}
         onSelect={(members: Member[]) => {
-          const mentions = members.map((m) => `@${m.full_name}`).join(' ');
+          const mentions = members.map((m) => `@${m.first_name} ${m.last_name}`).join(' ');
           setUploadDescription((prev) => (prev ? `${prev} ${mentions} ` : `${mentions} `));
         }}
       />

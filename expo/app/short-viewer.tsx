@@ -56,14 +56,14 @@ export default function ShortViewerScreen() {
     queryKey: ['short-detail', id],
     queryFn: async () => {
       try {
-        const data = await api.get<{ data: Short }>(`/shorts/${id}`);
+        const data = await api.get<{ data: Short }>(`/glory_clips/${id}`);
         console.log('[ShortViewer] Short loaded:', JSON.stringify(data).slice(0, 200));
         if (data?.data) return data.data;
       } catch (e) {
         console.log('[ShortViewer] Direct fetch failed, trying fallbacks:', e);
       }
       try {
-        const all = await api.get<{ data: Short[] }>('/shorts/trending?limit=100');
+        const all = await api.get<{ data: Short[] }>('/glory_clips/trending?limit=100');
         const found = all?.data?.find((s) => String(s.id) === String(id));
         if (found) {
           console.log('[ShortViewer] Found in trending');
@@ -73,7 +73,7 @@ export default function ShortViewerScreen() {
         console.log('[ShortViewer] Trending fallback failed:', e2);
       }
       try {
-        const myShorts = await api.get<{ data: Short[] }>('/shorts/me?limit=100&offset=0');
+        const myShorts = await api.get<{ data: Short[] }>('/glory_clips/me?limit=100&offset=0');
         const found = myShorts?.data?.find((s) => String(s.id) === String(id));
         if (found) {
           console.log('[ShortViewer] Found in my shorts');
@@ -91,20 +91,20 @@ export default function ShortViewerScreen() {
   const likeMutation = useMutation({
     mutationFn: (params: { id: string; liked: boolean }) =>
       params.liked
-        ? api.delete(`/shorts/${params.id}/unlike`)
-        : api.post(`/shorts/${params.id}/like`),
+        ? api.delete(`/glory_clips/${params.id}/amen`)
+        : api.post(`/glory_clips/${params.id}/amen`),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['short-detail', id] });
-      void queryClient.invalidateQueries({ queryKey: ['shorts'] });
+      void queryClient.invalidateQueries({ queryKey: ['glory_clips'] });
     },
   });
 
   const deleteShortMutation = useMutation({
-    mutationFn: (shortId: string) => api.delete(`/shorts/${shortId}`),
+    mutationFn: (shortId: string) => api.delete(`/glory_clips/${shortId}`),
     onSuccess: () => {
       console.log('[ShortViewer] Short deleted successfully');
-      void queryClient.invalidateQueries({ queryKey: ['shorts'] });
-      void queryClient.invalidateQueries({ queryKey: ['my-shorts'] });
+      void queryClient.invalidateQueries({ queryKey: ['glory_clips'] });
+      void queryClient.invalidateQueries({ queryKey: ['my-glory-clips'] });
       setShowDeleteConfirm(false);
       setShowOptions(false);
       Alert.alert('Deleted', 'Short has been deleted.', [
@@ -119,7 +119,7 @@ export default function ShortViewerScreen() {
 
   const short = shortQuery.data;
   const isOwner = short?.author_id === user?.id;
-  const saved = short ? isItemSaved(short.id, 'short') : false;
+  const saved = short ? isItemSaved(String(short.id), 'short') : false;
 
   const handleLike = useCallback(() => {
     if (!short) return;
@@ -128,19 +128,19 @@ export default function ShortViewerScreen() {
       Animated.spring(scaleAnim, { toValue: 1.4, useNativeDriver: true, friction: 3 }),
       Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, friction: 3 }),
     ]).start();
-    likeMutation.mutate({ id: short.id, liked: !!short.is_liked });
+    likeMutation.mutate({ id: String(short.id), liked: !!short.is_liked });
   }, [short, likeMutation, scaleAnim]);
 
   const handleSave = useCallback(() => {
     if (!short) return;
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     toggleSave({
-      itemId: short.id,
+      itemId: String(short.id),
       itemType: 'short',
       title: short.title,
       preview: short.description ?? short.title,
       authorName: short.author_name ?? short.church_name,
-      authorId: short.author_id ?? '',
+      authorId: String(short.author_id ?? ''),
       thumbnailUrl: short.thumbnail_url,
       mediaUrl: short.video_url,
     });
@@ -275,15 +275,15 @@ export default function ShortViewerScreen() {
         contentId={id ?? null}
         contentType="short"
         authorName={short?.author_name}
-        authorId={short?.author_id}
+        authorId={short?.author_id != null ? String(short.author_id) : undefined}
       />
 
       <ShareSheet
         visible={showShare}
         onClose={() => setShowShare(false)}
         content={short ? {
-          id: short.id,
-          type: 'short',
+          id: String(short.id),
+          type: 'short' as const,
           title: short.title,
           authorName: short.author_name,
         } : null}
