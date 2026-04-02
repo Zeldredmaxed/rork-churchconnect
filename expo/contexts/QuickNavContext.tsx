@@ -25,7 +25,7 @@ const ALL_NAV_ITEMS: QuickNavItem[] = [
   { id: 'profile', label: 'Profile', icon: 'User', route: '/(tabs)/me' },
 ];
 
-const DEFAULT_NAV_IDS = ['giving', 'sermons', 'bible', 'ai-assistant'];
+const DEFAULT_NAV_IDS = ['giving', 'sermons', 'bible', 'events', 'ai-assistant'];
 
 const STORAGE_KEY = 'quick_nav_items';
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,22 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Calendar, MapPin, Users, Clock, Check, X } from 'lucide-react-native';
+import {
+  Calendar,
+  MapPin,
+  Users,
+  Clock,
+  Check,
+  X,
+  Bookmark,
+  BookmarkCheck,
+  CalendarCheck,
+} from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
+import { useSaved } from '@/contexts/SavedContext';
 import Badge from '@/components/Badge';
 import type { Event } from '@/types';
 
@@ -29,6 +41,7 @@ export default function EventDetailScreen() {
   const styles = createStyles(theme);
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
+  const { isItemSaved, toggleSave } = useSaved();
 
   const eventQuery = useQuery({
     queryKey: ['event', id],
@@ -43,15 +56,7 @@ export default function EventDetailScreen() {
   const rsvpMutation = useMutation({
     mutationFn: () => api.post(`/events/${id}/rsvp`),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['event', id] });
-      void queryClient.invalidateQueries({ queryKey: ['events'] });
-    },
-    onError: (error) => Alert.alert('Error', error.message),
-  });
-
-  const cancelRsvpMutation = useMutation({
-    mutationFn: () => api.post(`/events/${id}/rsvp`),
-    onSuccess: () => {
+      console.log('[EventDetail] RSVP toggled');
       void queryClient.invalidateQueries({ queryKey: ['event', id] });
       void queryClient.invalidateQueries({ queryKey: ['events'] });
     },
@@ -59,6 +64,25 @@ export default function EventDetailScreen() {
   });
 
   const event = eventQuery.data;
+  const isBookmarked = event ? isItemSaved(String(event.id), 'event') : false;
+
+  const handleBookmark = useCallback(() => {
+    if (!event) return;
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    toggleSave({
+      itemId: String(event.id),
+      itemType: 'event',
+      title: event.title,
+      preview: event.description?.slice(0, 150) ?? '',
+      authorName: '',
+      authorId: '',
+    });
+  }, [event, toggleSave]);
+
+  const handleRsvp = useCallback(() => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    rsvpMutation.mutate();
+  }, [rsvpMutation]);
 
   if (eventQuery.isLoading) {
     return (
@@ -92,6 +116,8 @@ export default function EventDetailScreen() {
     });
   };
 
+  const isPast = new Date(event.end_date) < new Date();
+
   return (
     <View style={styles.container}>
       <Stack.Screen
@@ -100,20 +126,56 @@ export default function EventDetailScreen() {
           headerStyle: { backgroundColor: theme.colors.background },
           headerTintColor: theme.colors.text,
           headerShadowVisible: false,
+          headerRight: () => (
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                onPress={handleBookmark}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                testID="event-detail-bookmark"
+              >
+                {isBookmarked ? (
+                  <BookmarkCheck size={22} color={theme.colors.accent} />
+                ) : (
+                  <Bookmark size={22} color={theme.colors.text} />
+                )}
+              </TouchableOpacity>
+            </View>
+          ),
         }}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.badgeRow}>
-          <Badge
-            label={event.type.charAt(0).toUpperCase() + event.type.slice(1)}
-            variant={typeBadgeVariant[event.type] ?? 'accent'}
-          />
-          {event.status === 'cancelled' && <Badge label="Cancelled" variant="error" />}
-          {event.is_recurring && <Badge label="Recurring" variant="info" />}
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.heroSection}>
+          <View style={styles.heroDateBlock}>
+            <Text style={styles.heroMonth}>
+              {new Date(event.start_date).toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
+            </Text>
+            <Text style={styles.heroDay}>{new Date(event.start_date).getDate()}</Text>
+            <Text style={styles.heroWeekday}>
+              {new Date(event.start_date).toLocaleDateString('en-US', { weekday: 'short' })}
+            </Text>
+          </View>
+
+          <View style={styles.heroContent}>
+            <View style={styles.badgeRow}>
+              <Badge
+                label={event.type.charAt(0).toUpperCase() + event.type.slice(1)}
+                variant={typeBadgeVariant[event.type] ?? 'accent'}
+              />
+              {event.status === 'cancelled' && <Badge label="Cancelled" variant="error" />}
+              {event.is_recurring && <Badge label="Recurring" variant="info" />}
+              {isPast && <Badge label="Past" variant="default" />}
+            </View>
+            <Text style={styles.title}>{event.title}</Text>
+          </View>
         </View>
 
-        <Text style={styles.title}>{event.title}</Text>
+        {event.is_rsvped && !isPast && (
+          <View style={styles.rsvpConfirmBanner}>
+            <Check size={16} color={theme.colors.success} />
+            <Text style={styles.rsvpConfirmText}>You're going to this event</Text>
+          </View>
+        )}
 
         <View style={styles.detailsCard}>
           <View style={styles.detailRow}>
@@ -170,16 +232,17 @@ export default function EventDetailScreen() {
           </View>
         ) : null}
 
-        {event.status !== 'cancelled' && (
+        {event.status !== 'cancelled' && !isPast && (
           <View style={styles.actionSection}>
             {event.is_rsvped ? (
               <TouchableOpacity
                 style={styles.cancelButton}
-                onPress={() => cancelRsvpMutation.mutate()}
-                disabled={cancelRsvpMutation.isPending}
+                onPress={handleRsvp}
+                disabled={rsvpMutation.isPending}
                 activeOpacity={0.8}
+                testID="cancel-rsvp-btn"
               >
-                {cancelRsvpMutation.isPending ? (
+                {rsvpMutation.isPending ? (
                   <ActivityIndicator size="small" color={theme.colors.error} />
                 ) : (
                   <>
@@ -191,20 +254,40 @@ export default function EventDetailScreen() {
             ) : (
               <TouchableOpacity
                 style={styles.rsvpButton}
-                onPress={() => rsvpMutation.mutate()}
+                onPress={handleRsvp}
                 disabled={rsvpMutation.isPending}
                 activeOpacity={0.8}
+                testID="rsvp-btn"
               >
                 {rsvpMutation.isPending ? (
-                  <ActivityIndicator size="small" color={theme.colors.background} />
+                  <ActivityIndicator size="small" color={theme.colors.textInverse} />
                 ) : (
                   <>
-                    <Check size={18} color={theme.colors.background} />
-                    <Text style={styles.rsvpButtonText}>RSVP</Text>
+                    <CalendarCheck size={18} color={theme.colors.textInverse} />
+                    <Text style={styles.rsvpButtonText}>RSVP to this Event</Text>
                   </>
                 )}
               </TouchableOpacity>
             )}
+
+            <TouchableOpacity
+              style={styles.bookmarkButton}
+              onPress={handleBookmark}
+              activeOpacity={0.8}
+              testID="bookmark-btn"
+            >
+              {isBookmarked ? (
+                <>
+                  <BookmarkCheck size={18} color={theme.colors.accent} />
+                  <Text style={styles.bookmarkButtonText}>Saved</Text>
+                </>
+              ) : (
+                <>
+                  <Bookmark size={18} color={theme.colors.accent} />
+                  <Text style={styles.bookmarkButtonText}>Save Event</Text>
+                </>
+              )}
+            </TouchableOpacity>
           </View>
         )}
       </ScrollView>
@@ -227,20 +310,79 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     color: theme.colors.textTertiary,
     fontSize: 16,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
   scrollContent: {
     padding: 16,
     paddingBottom: 40,
   },
+  heroSection: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 16,
+    marginBottom: 20,
+  },
+  heroDateBlock: {
+    width: 64,
+    height: 72,
+    borderRadius: 16,
+    backgroundColor: theme.colors.accentMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroMonth: {
+    fontSize: 10,
+    fontWeight: '700' as const,
+    color: theme.colors.accent,
+    letterSpacing: 1,
+  },
+  heroDay: {
+    fontSize: 26,
+    fontWeight: '700' as const,
+    color: theme.colors.accent,
+    marginTop: -2,
+  },
+  heroWeekday: {
+    fontSize: 10,
+    fontWeight: '500' as const,
+    color: theme.colors.accent,
+    opacity: 0.7,
+    marginTop: -2,
+  },
+  heroContent: {
+    flex: 1,
+    gap: 8,
+  },
   badgeRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 12,
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '700' as const,
     color: theme.colors.text,
-    marginBottom: 20,
+    lineHeight: 28,
+  },
+  rsvpConfirmBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: theme.colors.successMuted,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(52, 211, 153, 0.2)',
+  },
+  rsvpConfirmText: {
+    fontSize: 14,
+    fontWeight: '500' as const,
+    color: theme.colors.success,
   },
   detailsCard: {
     backgroundColor: theme.colors.surface,
@@ -300,6 +442,7 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   },
   actionSection: {
     marginTop: 28,
+    gap: 10,
   },
   rsvpButton: {
     flexDirection: 'row',
@@ -313,7 +456,7 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   rsvpButtonText: {
     fontSize: 17,
     fontWeight: '600' as const,
-    color: theme.colors.background,
+    color: theme.colors.textInverse,
   },
   cancelButton: {
     flexDirection: 'row',
@@ -331,5 +474,20 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     fontWeight: '600' as const,
     color: theme.colors.error,
   },
+  bookmarkButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.radius.md,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
+  },
+  bookmarkButtonText: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: theme.colors.accent,
+  },
 });
-
