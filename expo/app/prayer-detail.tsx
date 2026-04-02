@@ -80,7 +80,17 @@ export default function PrayerDetailScreen() {
     if (rp.id) return rp as unknown as Prayer;
     return undefined;
   }, [rawPrayer]);
-  const responses = responsesQuery.data?.data ?? [];
+  const responses = React.useMemo(() => {
+    const raw = responsesQuery.data as unknown;
+    if (!raw) return [] as PrayerResponse[];
+    if (Array.isArray(raw)) return raw as PrayerResponse[];
+    const obj = raw as Record<string, unknown>;
+    if (Array.isArray(obj.data)) return obj.data as PrayerResponse[];
+    if (Array.isArray(obj.responses)) return obj.responses as PrayerResponse[];
+    if (Array.isArray(obj.results)) return obj.results as PrayerResponse[];
+    console.log('[PrayerDetail] Unexpected responses shape:', JSON.stringify(raw).slice(0, 200));
+    return [] as PrayerResponse[];
+  }, [responsesQuery.data]);
 
   if (prayerQuery.isLoading) {
     return (
@@ -169,6 +179,14 @@ export default function PrayerDetailScreen() {
 
         <View style={styles.responsesSection}>
           <Text style={styles.sectionTitle}>RESPONSES ({responses.length})</Text>
+
+          {responsesQuery.isLoading && (
+            <ActivityIndicator size="small" color={theme.colors.accent} style={{ marginVertical: 16 }} />
+          )}
+
+          {!responsesQuery.isLoading && responses.length === 0 && (
+            <Text style={styles.emptyResponsesText}>No responses yet. Be the first to respond!</Text>
+          )}
 
           {responses.map((r) => (
             <View key={r.id} style={styles.responseItem}>
@@ -388,6 +406,12 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   },
   sendBtnDisabled: {
     opacity: 0.5,
+  },
+  emptyResponsesText: {
+    fontSize: 14,
+    color: theme.colors.textTertiary,
+    textAlign: 'center' as const,
+    marginVertical: 16,
   },
 });
 
