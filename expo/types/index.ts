@@ -288,17 +288,45 @@ export interface AnalyticsOverview {
 export interface GivingTrend {
   month: string;
   amount: number;
+  total?: number;
+  tithes?: number;
+  offerings?: number;
 }
 
 export interface EngagementData {
   week: string;
-  score: number;
-  active_users: number;
+  score?: number;
+  active_users?: number;
+  attendance?: number;
+  new_members?: number;
+  prayer_requests?: number;
+}
+
+export interface GrowthFunnel {
+  visitors: number;
+  prospects: number;
+  active_members: number;
+  inactive_members: number;
+}
+
+export interface MonthlyGrowth {
+  month: string;
+  new_members: number;
+  lost_members: number;
 }
 
 export interface GrowthData {
   stage: string;
   count: number;
+}
+
+export interface AttendanceSummary {
+  total_records: number;
+  avg_attendance: number;
+  peak_attendance: number;
+  peak_date: string;
+  first_time_guests_total: number;
+  by_service: { service_id: number; service_name: string; avg_attendance: number; total_records: number }[];
 }
 
 export interface AttendanceRecord {

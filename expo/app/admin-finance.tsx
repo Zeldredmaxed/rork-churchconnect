@@ -69,7 +69,25 @@ export default function AdminFinanceScreen() {
 
   const trendsQuery = useQuery({
     queryKey: ['admin', 'giving-trends'],
-    queryFn: () => api.get<{ data: GivingTrend[] }>('/reports/analytics/giving-trends'),
+    queryFn: async () => {
+      const res = await api.get<unknown>('/reports/analytics/giving-trends');
+      console.log('[AdminFinance] Giving trends raw:', JSON.stringify(res).slice(0, 500));
+      const parsed = res as Record<string, unknown>;
+      const dataObj = (parsed.data ?? res) as Record<string, unknown>;
+      const monthlyTrends = dataObj.monthly_trends as Record<string, unknown>[] | undefined;
+      if (Array.isArray(monthlyTrends)) {
+        return monthlyTrends.map((t) => ({
+          month: ((t.month as string) ?? '').slice(0, 3),
+          amount: (t.total ?? t.amount ?? 0) as number,
+          total: (t.total ?? 0) as number,
+          tithes: (t.tithes ?? 0) as number,
+          offerings: (t.offerings ?? 0) as number,
+        })) as GivingTrend[];
+      }
+      if (Array.isArray(dataObj)) return dataObj as GivingTrend[];
+      if (Array.isArray(parsed.data)) return parsed.data as GivingTrend[];
+      return [] as GivingTrend[];
+    },
   });
 
   const summaryQuery = useQuery({
@@ -129,7 +147,7 @@ export default function AdminFinanceScreen() {
     void queryClient.invalidateQueries({ queryKey: ['admin'] });
   }, [queryClient]);
 
-  const trends = trendsQuery.data?.data ?? [];
+  const trends = trendsQuery.data ?? [];
   const summary = summaryQuery.data?.data;
   const funds = fundsQuery.data?.data ?? [];
   const isLoading = trendsQuery.isLoading || summaryQuery.isLoading;

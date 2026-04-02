@@ -22,11 +22,20 @@ export default function GroupDetailScreen() {
 
   const groupQuery = useQuery({
     queryKey: ['group', id],
-    queryFn: () => api.get<{ data: Group }>(`/groups/${id}`),
+    queryFn: async () => {
+      const res = await api.get<unknown>(`/groups/${id}`);
+      console.log('[GroupDetail] Raw response:', JSON.stringify(res).slice(0, 500));
+      const parsed = res as Record<string, unknown>;
+      if (parsed.data && typeof parsed.data === 'object' && (parsed.data as Record<string, unknown>).id) {
+        return parsed.data as unknown as Group;
+      }
+      if (parsed.id) return parsed as unknown as Group;
+      return null;
+    },
     enabled: !!id,
   });
 
-  const group = groupQuery.data?.data;
+  const group = groupQuery.data;
 
   if (groupQuery.isLoading) {
     return (

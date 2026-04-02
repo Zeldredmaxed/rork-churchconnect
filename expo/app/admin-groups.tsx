@@ -30,7 +30,7 @@ export default function AdminGroupsScreen() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [groupType, setGroupType] = useState('small-group');
+  const [groupType, setGroupType] = useState('small_group');
 
   const groupsQuery = useQuery({
     queryKey: ['admin', 'groups'],

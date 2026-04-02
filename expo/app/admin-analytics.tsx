@@ -15,7 +15,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import type { AppTheme } from '@/constants/theme';
 import { api } from '@/utils/api';
 import StatCard from '@/components/StatCard';
-import type { AnalyticsOverview, EngagementData, GrowthData, AttendanceRecord } from '@/types';
+import type { AnalyticsOverview, EngagementData, GrowthData, GrowthFunnel, AttendanceSummary } from '@/types';
 
 export default function AdminAnalyticsScreen() {
   const { theme } = useTheme();
@@ -42,10 +42,19 @@ export default function AdminAnalyticsScreen() {
       try {
         const res = await api.get<unknown>('/reports/analytics/engagement');
         console.log('[Analytics] Engagement raw:', JSON.stringify(res).slice(0, 500));
-        return res;
+        const parsed = res as Record<string, unknown>;
+        const arr = (Array.isArray(parsed.data) ? parsed.data : Array.isArray(res) ? res : []) as Record<string, unknown>[];
+        return arr.map((e) => ({
+          week: (e.week ?? '') as string,
+          score: (e.score ?? e.attendance ?? 0) as number,
+          active_users: (e.active_users ?? e.new_members ?? 0) as number,
+          attendance: (e.attendance ?? 0) as number,
+          new_members: (e.new_members ?? 0) as number,
+          prayer_requests: (e.prayer_requests ?? 0) as number,
+        })) as EngagementData[];
       } catch (e) {
         console.log('[Analytics] Engagement failed:', e);
-        return null;
+        return [] as EngagementData[];
       }
     },
   });
@@ -56,10 +65,23 @@ export default function AdminAnalyticsScreen() {
       try {
         const res = await api.get<unknown>('/reports/analytics/growth');
         console.log('[Analytics] Growth raw:', JSON.stringify(res).slice(0, 500));
-        return res;
+        const parsed = res as Record<string, unknown>;
+        const dataObj = (parsed.data ?? res) as Record<string, unknown>;
+        const funnel = dataObj.funnel as GrowthFunnel | undefined;
+        if (funnel) {
+          return [
+            { stage: 'Visitors', count: funnel.visitors ?? 0 },
+            { stage: 'Prospects', count: funnel.prospects ?? 0 },
+            { stage: 'Active', count: funnel.active_members ?? 0 },
+            { stage: 'Inactive', count: funnel.inactive_members ?? 0 },
+          ] as GrowthData[];
+        }
+        if (Array.isArray(dataObj)) return dataObj as GrowthData[];
+        if (Array.isArray(parsed.data)) return parsed.data as GrowthData[];
+        return [] as GrowthData[];
       } catch (e) {
         console.log('[Analytics] Growth failed:', e);
-        return null;
+        return [] as GrowthData[];
       }
     },
   });
@@ -70,7 +92,16 @@ export default function AdminAnalyticsScreen() {
       try {
         const res = await api.get<unknown>('/reports/attendance');
         console.log('[Analytics] Attendance raw:', JSON.stringify(res).slice(0, 500));
-        return res;
+        const parsed = res as Record<string, unknown>;
+        const dataObj = (parsed.data ?? res) as Record<string, unknown>;
+        return {
+          total_records: (dataObj.total_records ?? 0) as number,
+          avg_attendance: (dataObj.avg_attendance ?? 0) as number,
+          peak_attendance: (dataObj.peak_attendance ?? 0) as number,
+          peak_date: (dataObj.peak_date ?? '') as string,
+          first_time_guests_total: (dataObj.first_time_guests_total ?? 0) as number,
+          by_service: (Array.isArray(dataObj.by_service) ? dataObj.by_service : []) as AttendanceSummary['by_service'],
+        } as AttendanceSummary;
       } catch (e) {
         console.log('[Analytics] Attendance failed:', e);
         return null;
@@ -93,21 +124,9 @@ export default function AdminAnalyticsScreen() {
     return undefined;
   }, [overviewQuery.data]);
 
-  const parseArray = <T,>(raw: unknown): T[] => {
-    if (!raw) return [];
-    if (Array.isArray(raw)) return raw as T[];
-    if (typeof raw === 'object' && raw !== null) {
-      const obj = raw as Record<string, unknown>;
-      if (Array.isArray(obj.data)) return obj.data as T[];
-      if (Array.isArray(obj.items)) return obj.items as T[];
-      if (Array.isArray(obj.results)) return obj.results as T[];
-    }
-    return [];
-  };
-
-  const engagement = parseArray<EngagementData>(engagementQuery.data);
-  const growth = parseArray<GrowthData>(growthQuery.data);
-  const attendance = parseArray<AttendanceRecord>(attendanceQuery.data);
+  const engagement = engagementQuery.data ?? [];
+  const growth = growthQuery.data ?? [];
+  const attendanceSummary = attendanceQuery.data;
   const isLoading = overviewQuery.isLoading;
 
   return (
@@ -176,21 +195,47 @@ export default function AdminAnalyticsScreen() {
               </View>
             )}
 
-            {attendance.length > 0 && (
+            {attendanceSummary && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>RECENT ATTENDANCE</Text>
-                {attendance.slice(0, 10).map((a) => (
-                  <View key={a.id} style={styles.attendanceRow}>
-                    <View style={styles.attendanceDot} />
-                    <View style={styles.attendanceInfo}>
-                      <Text style={styles.attendanceName}>{a.member_name}</Text>
-                      <Text style={styles.attendanceEvent}>{a.event_title}</Text>
-                    </View>
-                    <Text style={styles.attendanceTime}>
-                      {new Date(a.checked_in_at).toLocaleDateString()}
-                    </Text>
+                <Text style={styles.sectionTitle}>ATTENDANCE SUMMARY</Text>
+                <View style={styles.funnelCard}>
+                  <View style={styles.funnelRow}>
+                    <Text style={styles.funnelStage}>Total Records</Text>
+                    <Text style={styles.funnelCount}>{attendanceSummary.total_records}</Text>
                   </View>
-                ))}
+                  <View style={styles.funnelRow}>
+                    <Text style={styles.funnelStage}>Avg Attendance</Text>
+                    <Text style={styles.funnelCount}>{attendanceSummary.avg_attendance}</Text>
+                  </View>
+                  <View style={styles.funnelRow}>
+                    <Text style={styles.funnelStage}>Peak</Text>
+                    <Text style={styles.funnelCount}>{attendanceSummary.peak_attendance}</Text>
+                  </View>
+                  {attendanceSummary.peak_date ? (
+                    <View style={styles.funnelRow}>
+                      <Text style={styles.funnelStage}>Peak Date</Text>
+                      <Text style={styles.funnelCount}>{new Date(attendanceSummary.peak_date).toLocaleDateString()}</Text>
+                    </View>
+                  ) : null}
+                  <View style={styles.funnelRow}>
+                    <Text style={styles.funnelStage}>First-Time Guests</Text>
+                    <Text style={styles.funnelCount}>{attendanceSummary.first_time_guests_total}</Text>
+                  </View>
+                  {attendanceSummary.by_service.length > 0 && (
+                    <>
+                      <View style={[styles.funnelRow, { marginTop: 8 }]}>
+                        <Text style={[styles.funnelStage, { fontWeight: '600' as const }]}>By Service</Text>
+                        <Text style={styles.funnelCount} />
+                      </View>
+                      {attendanceSummary.by_service.map((s) => (
+                        <View key={s.service_id} style={styles.funnelRow}>
+                          <Text style={styles.funnelStage}>{s.service_name}</Text>
+                          <Text style={styles.funnelCount}>avg {s.avg_attendance}</Text>
+                        </View>
+                      ))}
+                    </>
+                  )}
+                </View>
               </View>
             )}
           </>
