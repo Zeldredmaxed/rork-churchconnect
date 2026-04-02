@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
 } from 'react-native';
+import { Minus, Plus } from 'lucide-react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -20,6 +25,7 @@ import {
   Bookmark,
   BookmarkCheck,
   CalendarCheck,
+  AlertCircle,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -53,9 +59,13 @@ export default function EventDetailScreen() {
     enabled: !!id,
   });
 
+  const [showRsvpModal, setShowRsvpModal] = useState(false);
+  const [guestCount, setGuestCount] = useState(1);
+
   const rsvpMutation = useMutation({
-    mutationFn: () => api.post(`/events/${id}/rsvp`),
-    onMutate: async () => {
+    mutationFn: (params: { count?: number }) => api.post(`/events/${id}/rsvp`, params),
+    onMutate: async (params) => {
+      const count = params.count ?? 1;
       await queryClient.cancelQueries({ queryKey: ['event', id] });
       const previousEvent = queryClient.getQueryData(['event', id]);
 
@@ -66,7 +76,7 @@ export default function EventDetailScreen() {
         return {
           ...ev,
           is_rsvped: !wasRsvped,
-          rsvp_count: ((ev.rsvp_count as number) ?? 0) + (wasRsvped ? -1 : 1),
+          rsvp_count: ((ev.rsvp_count as number) ?? 0) + (wasRsvped ? -count : count),
         };
       });
 
@@ -78,7 +88,7 @@ export default function EventDetailScreen() {
             return {
               ...event,
               is_rsvped: !wasRsvped,
-              rsvp_count: ((event.rsvp_count as number) ?? 0) + (wasRsvped ? -1 : 1),
+              rsvp_count: ((event.rsvp_count as number) ?? 0) + (wasRsvped ? -count : count),
             };
           }
           return event;
@@ -124,10 +134,49 @@ export default function EventDetailScreen() {
     });
   }, [event, toggleSave]);
 
-  const handleRsvp = useCallback(() => {
+  const handleRsvpPress = useCallback(() => {
+    if (!event) return;
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    rsvpMutation.mutate();
-  }, [rsvpMutation]);
+
+    if (event.is_rsvped) {
+      rsvpMutation.mutate({ count: 1 });
+      return;
+    }
+
+    if (event.max_capacity) {
+      const spotsLeft = event.max_capacity - (event.rsvp_count ?? 0);
+      if (spotsLeft <= 0) {
+        Alert.alert(
+          'Event Full',
+          "Sorry, we're full! Please reach out to administration for further information.",
+          [{ text: 'OK', style: 'default' }]
+        );
+        return;
+      }
+    }
+
+    setGuestCount(1);
+    setShowRsvpModal(true);
+  }, [event, rsvpMutation]);
+
+  const handleConfirmRsvp = useCallback(() => {
+    if (!event) return;
+    if (event.max_capacity) {
+      const spotsLeft = event.max_capacity - (event.rsvp_count ?? 0);
+      if (guestCount > spotsLeft) {
+        Alert.alert(
+          'Not Enough Spots',
+          `Only ${spotsLeft} spot${spotsLeft === 1 ? '' : 's'} left. Please reduce the number of attendees.`,
+          [{ text: 'OK', style: 'default' }]
+        );
+        return;
+      }
+    }
+    setShowRsvpModal(false);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    rsvpMutation.mutate({ count: guestCount });
+    console.log('[EventDetail] RSVP confirmed with guest count:', guestCount);
+  }, [event, guestCount, rsvpMutation]);
 
   if (eventQuery.isLoading) {
     return (
@@ -282,7 +331,7 @@ export default function EventDetailScreen() {
             {event.is_rsvped ? (
               <TouchableOpacity
                 style={styles.cancelButton}
-                onPress={handleRsvp}
+                onPress={handleRsvpPress}
                 disabled={rsvpMutation.isPending}
                 activeOpacity={0.8}
                 testID="cancel-rsvp-btn"
@@ -298,8 +347,11 @@ export default function EventDetailScreen() {
               </TouchableOpacity>
             ) : (
               <TouchableOpacity
-                style={styles.rsvpButton}
-                onPress={handleRsvp}
+                style={[
+                  styles.rsvpButton,
+                  event.max_capacity && (event.max_capacity - (event.rsvp_count ?? 0)) <= 0 && styles.rsvpButtonFull,
+                ]}
+                onPress={handleRsvpPress}
                 disabled={rsvpMutation.isPending}
                 activeOpacity={0.8}
                 testID="rsvp-btn"
@@ -308,8 +360,17 @@ export default function EventDetailScreen() {
                   <ActivityIndicator size="small" color={theme.colors.textInverse} />
                 ) : (
                   <>
-                    <CalendarCheck size={18} color={theme.colors.textInverse} />
-                    <Text style={styles.rsvpButtonText}>RSVP to this Event</Text>
+                    {event.max_capacity && (event.max_capacity - (event.rsvp_count ?? 0)) <= 0 ? (
+                      <>
+                        <AlertCircle size={18} color={theme.colors.textTertiary} />
+                        <Text style={styles.rsvpButtonFullText}>Event Full</Text>
+                      </>
+                    ) : (
+                      <>
+                        <CalendarCheck size={18} color={theme.colors.textInverse} />
+                        <Text style={styles.rsvpButtonText}>RSVP to this Event</Text>
+                      </>
+                    )}
                   </>
                 )}
               </TouchableOpacity>
@@ -336,6 +397,99 @@ export default function EventDetailScreen() {
           </View>
         )}
       </ScrollView>
+
+      <Modal
+        visible={showRsvpModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowRsvpModal(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <Pressable style={styles.modalOverlay} onPress={() => setShowRsvpModal(false)}>
+            <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+              <View style={styles.modalHeader}>
+                <CalendarCheck size={28} color={theme.colors.accent} />
+                <Text style={styles.modalTitle}>How many attending?</Text>
+                <Text style={styles.modalSubtitle}>
+                  {event?.max_capacity
+                    ? `${event.max_capacity - (event.rsvp_count ?? 0)} spot${(event.max_capacity - (event.rsvp_count ?? 0)) === 1 ? '' : 's'} remaining`
+                    : 'Enter the number of people in your party'}
+                </Text>
+              </View>
+
+              <View style={styles.counterRow}>
+                <TouchableOpacity
+                  style={[styles.counterBtn, guestCount <= 1 && styles.counterBtnDisabled]}
+                  onPress={() => {
+                    if (guestCount > 1) {
+                      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setGuestCount((c) => c - 1);
+                    }
+                  }}
+                  disabled={guestCount <= 1}
+                  activeOpacity={0.7}
+                  testID="rsvp-minus-btn"
+                >
+                  <Minus size={20} color={guestCount <= 1 ? theme.colors.textTertiary : theme.colors.accent} />
+                </TouchableOpacity>
+
+                <View style={styles.counterDisplay}>
+                  <Text style={styles.counterValue}>{guestCount}</Text>
+                  <Text style={styles.counterLabel}>{guestCount === 1 ? 'person' : 'people'}</Text>
+                </View>
+
+                <TouchableOpacity
+                  style={[
+                    styles.counterBtn,
+                    event?.max_capacity && guestCount >= (event.max_capacity - (event.rsvp_count ?? 0)) && styles.counterBtnDisabled,
+                  ]}
+                  onPress={() => {
+                    const maxAllowed = event?.max_capacity ? event.max_capacity - (event.rsvp_count ?? 0) : 99;
+                    if (guestCount < maxAllowed) {
+                      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setGuestCount((c) => c + 1);
+                    }
+                  }}
+                  disabled={!!event?.max_capacity && guestCount >= (event.max_capacity - (event.rsvp_count ?? 0))}
+                  activeOpacity={0.7}
+                  testID="rsvp-plus-btn"
+                >
+                  <Plus
+                    size={20}
+                    color={
+                      event?.max_capacity && guestCount >= (event.max_capacity - (event.rsvp_count ?? 0))
+                        ? theme.colors.textTertiary
+                        : theme.colors.accent
+                    }
+                  />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={styles.modalCancelBtn}
+                  onPress={() => setShowRsvpModal(false)}
+                  activeOpacity={0.7}
+                  testID="rsvp-modal-cancel"
+                >
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalConfirmBtn}
+                  onPress={handleConfirmRsvp}
+                  activeOpacity={0.8}
+                  testID="rsvp-modal-confirm"
+                >
+                  <Text style={styles.modalConfirmText}>Confirm RSVP</Text>
+                </TouchableOpacity>
+              </View>
+            </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -534,5 +688,112 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     fontSize: 15,
     fontWeight: '600' as const,
     color: theme.colors.accent,
+  },
+  rsvpButtonFull: {
+    backgroundColor: theme.colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
+  },
+  rsvpButtonFullText: {
+    fontSize: 17,
+    fontWeight: '600' as const,
+    color: theme.colors.textTertiary,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '85%',
+    maxWidth: 360,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.xl,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700' as const,
+    color: theme.colors.text,
+    marginTop: 12,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: theme.colors.textTertiary,
+    marginTop: 4,
+    textAlign: 'center' as const,
+  },
+  counterRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center',
+    gap: 20,
+    marginBottom: 28,
+  },
+  counterBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: theme.colors.accentMuted,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  counterBtnDisabled: {
+    backgroundColor: theme.colors.surfaceElevated,
+    opacity: 0.5,
+  },
+  counterDisplay: {
+    alignItems: 'center' as const,
+    minWidth: 60,
+  },
+  counterValue: {
+    fontSize: 40,
+    fontWeight: '700' as const,
+    color: theme.colors.text,
+    lineHeight: 48,
+  },
+  counterLabel: {
+    fontSize: 13,
+    color: theme.colors.textTertiary,
+    marginTop: 2,
+  },
+  modalActions: {
+    flexDirection: 'row' as const,
+    gap: 10,
+    width: '100%',
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.surfaceElevated,
+    alignItems: 'center' as const,
+  },
+  modalCancelText: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: theme.colors.textSecondary,
+  },
+  modalConfirmBtn: {
+    flex: 1.5,
+    paddingVertical: 14,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.accent,
+    alignItems: 'center' as const,
+  },
+  modalConfirmText: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: theme.colors.textInverse,
   },
 });
