@@ -76,13 +76,45 @@ export default function SearchScreen() {
     }
   };
 
-  const searchQuery = useQuery({
-    queryKey: ['search-members', query],
-    queryFn: () => api.get<{ data: FlockUser[] }>(`/members?search=${encodeURIComponent(query)}`),
-    enabled: query.trim().length > 1,
+  const allMembersQuery = useQuery({
+    queryKey: ['all-members-for-search'],
+    queryFn: async () => {
+      try {
+        console.log('[Search] Fetching all members...');
+        const raw = await api.get<unknown>('/members');
+        let members: FlockUser[] = [];
+        if (Array.isArray(raw)) {
+          members = raw;
+        } else if (raw && typeof raw === 'object') {
+          const obj = raw as Record<string, unknown>;
+          if (Array.isArray(obj.data)) {
+            members = obj.data;
+          } else if (Array.isArray(obj.results)) {
+            members = obj.results as FlockUser[];
+          } else if (Array.isArray(obj.members)) {
+            members = obj.members as FlockUser[];
+          }
+        }
+        console.log('[Search] Parsed members count:', members.length);
+        return members;
+      } catch (e) {
+        console.log('[Search] Failed to fetch members:', e);
+        return [] as FlockUser[];
+      }
+    },
   });
 
-  const searchResults = searchQuery.data?.data ?? [];
+  const allMembers = allMembersQuery.data ?? [];
+  const searchResults = query.trim().length > 0
+    ? allMembers.filter((m) => {
+        const q = query.trim().toLowerCase();
+        return (
+          m.full_name?.toLowerCase().includes(q) ||
+          m.username?.toLowerCase().includes(q) ||
+          m.church_name?.toLowerCase().includes(q)
+        );
+      })
+    : [];
   const isSearching = query.trim().length > 0;
 
   const handleUserPress = useCallback((user: FlockUser | RecentSearch) => {
@@ -214,11 +246,11 @@ export default function SearchScreen() {
           renderItem={renderSearchResult}
           ListHeaderComponent={renderSearchSuggestion}
           ListEmptyComponent={
-            searchQuery.isLoading ? (
+            allMembersQuery.isLoading ? (
               <View style={styles.centered}>
                 <ActivityIndicator size="small" color={theme.colors.accent} />
               </View>
-            ) : query.trim().length > 1 ? (
+            ) : query.trim().length > 0 ? (
               <View style={styles.centered}>
                 <Text style={styles.emptyText}>No results found</Text>
               </View>

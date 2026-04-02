@@ -112,22 +112,33 @@ export default function ChatScreen() {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
 
-  const searchMembersQuery = useQuery({
-    queryKey: ['chat-search-members', searchQuery],
+  const allMembersQuery = useQuery({
+    queryKey: ['all-members-for-search'],
     queryFn: async () => {
-      const trimmed = searchQuery.trim();
-      if (!trimmed) return [] as FlockUser[];
       try {
-        console.log('[Chat] Searching members:', trimmed);
-        const data = await api.get<{ data: FlockUser[] }>(`/members?search=${encodeURIComponent(trimmed)}`);
-        console.log('[Chat] Search results:', data?.data?.length ?? 0);
-        return data?.data ?? [];
+        console.log('[Chat] Fetching all members for search...');
+        const raw = await api.get<unknown>('/members');
+        console.log('[Chat] Raw members response type:', typeof raw, Array.isArray(raw));
+        let members: FlockUser[] = [];
+        if (Array.isArray(raw)) {
+          members = raw;
+        } else if (raw && typeof raw === 'object') {
+          const obj = raw as Record<string, unknown>;
+          if (Array.isArray(obj.data)) {
+            members = obj.data;
+          } else if (Array.isArray(obj.results)) {
+            members = obj.results as FlockUser[];
+          } else if (Array.isArray(obj.members)) {
+            members = obj.members as FlockUser[];
+          }
+        }
+        console.log('[Chat] Parsed members count:', members.length);
+        return members;
       } catch (e) {
-        console.log('[Chat] Member search error:', e);
+        console.log('[Chat] Failed to fetch members:', e);
         return [] as FlockUser[];
       }
     },
-    enabled: searchQuery.trim().length > 0,
   });
 
   const convosQuery = useQuery({
@@ -162,7 +173,17 @@ export default function ChatScreen() {
       })
     : conversations;
 
-  const searchedMembers = searchMembersQuery.data ?? [];
+  const allMembers = allMembersQuery.data ?? [];
+  const searchedMembers = searchQuery.trim().length > 0
+    ? allMembers.filter((m) => {
+        const q = searchQuery.trim().toLowerCase();
+        return (
+          m.full_name?.toLowerCase().includes(q) ||
+          m.username?.toLowerCase().includes(q) ||
+          m.church_name?.toLowerCase().includes(q)
+        );
+      })
+    : [];
 
   const userName = user?.full_name ?? 'You';
   const userInitials = userName
@@ -352,14 +373,14 @@ export default function ChatScreen() {
         )}
         ListEmptyComponent={() => {
           if (searchQuery.trim().length > 0 && searchedMembers.length > 0) return null;
-          if (searchQuery.trim().length > 0 && searchMembersQuery.isLoading) {
+          if (searchQuery.trim().length > 0 && allMembersQuery.isLoading) {
             return (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={theme.colors.accent} />
               </View>
             );
           }
-          if (searchQuery.trim().length > 0 && searchedMembers.length === 0 && !searchMembersQuery.isLoading) {
+          if (searchQuery.trim().length > 0 && searchedMembers.length === 0 && !allMembersQuery.isLoading) {
             return (
               <View style={styles.emptyContainer}>
                 <Text style={styles.emptyText}>No results found for "{searchQuery}"</Text>

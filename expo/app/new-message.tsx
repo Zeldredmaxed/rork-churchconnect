@@ -58,59 +58,47 @@ export default function NewMessageScreen() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
 
-  const suggestedQuery = useQuery({
-    queryKey: ['message-suggestions'],
+  const allMembersQuery = useQuery({
+    queryKey: ['all-members-for-search'],
     queryFn: async () => {
       try {
-        console.log('[NewMessage] Fetching suggestions...');
-        const data = await api.get<{ data: FlockUser[] }>('/social/flock/suggestions');
-        console.log('[NewMessage] Suggestions result:', data?.data?.length ?? 0);
-        if (data?.data && data.data.length > 0) return data;
-        console.log('[NewMessage] No suggestions, falling back to members list...');
-        const membersData = await api.get<{ data: FlockUser[] }>('/members');
-        console.log('[NewMessage] Members fallback result:', membersData?.data?.length ?? 0);
-        return membersData;
-      } catch (e) {
-        console.log('[NewMessage] Suggestions error, trying members fallback:', e);
-        try {
-          const membersData = await api.get<{ data: FlockUser[] }>('/members');
-          console.log('[NewMessage] Members fallback result:', membersData?.data?.length ?? 0);
-          return membersData;
-        } catch (e2) {
-          console.log('[NewMessage] Members fallback also failed:', e2);
-          return { data: [] as FlockUser[] };
+        console.log('[NewMessage] Fetching all members...');
+        const raw = await api.get<unknown>('/members');
+        console.log('[NewMessage] Raw members response type:', typeof raw, Array.isArray(raw));
+        let members: FlockUser[] = [];
+        if (Array.isArray(raw)) {
+          members = raw;
+        } else if (raw && typeof raw === 'object') {
+          const obj = raw as Record<string, unknown>;
+          if (Array.isArray(obj.data)) {
+            members = obj.data;
+          } else if (Array.isArray(obj.results)) {
+            members = obj.results as FlockUser[];
+          } else if (Array.isArray(obj.members)) {
+            members = obj.members as FlockUser[];
+          }
         }
+        console.log('[NewMessage] Parsed members count:', members.length);
+        return members;
+      } catch (e) {
+        console.log('[NewMessage] Failed to fetch members:', e);
+        return [] as FlockUser[];
       }
     },
   });
 
-  const searchUsersQuery = useQuery({
-    queryKey: ['search-users-message', searchQuery],
-    queryFn: async () => {
-      if (!searchQuery.trim()) return { data: [] as SearchResultUser[] };
-      try {
-        console.log('[NewMessage] Searching members:', searchQuery.trim());
-        const data = await api.get<{ data: SearchResultUser[] }>(`/members?search=${encodeURIComponent(searchQuery.trim())}`);
-        console.log('[NewMessage] Search results:', data?.data?.length ?? 0);
-        return data;
-      } catch (e) {
-        console.log('[NewMessage] Search error, trying local filter:', e);
-        try {
-          const allMembers = await api.get<{ data: SearchResultUser[] }>('/members');
-          const q = searchQuery.trim().toLowerCase();
-          const filtered = (allMembers?.data ?? []).filter(
-            (m) => m.full_name?.toLowerCase().includes(q) || m.username?.toLowerCase().includes(q)
-          );
-          console.log('[NewMessage] Local filter results:', filtered.length);
-          return { data: filtered };
-        } catch (e2) {
-          console.log('[NewMessage] All search attempts failed:', e2);
-          return { data: [] as SearchResultUser[] };
-        }
-      }
-    },
-    enabled: searchQuery.trim().length > 0,
-  });
+  const allMembers = allMembersQuery.data ?? [];
+
+  const filteredMembers = searchQuery.trim().length > 0
+    ? allMembers.filter((m) => {
+        const q = searchQuery.trim().toLowerCase();
+        return (
+          m.full_name?.toLowerCase().includes(q) ||
+          m.username?.toLowerCase().includes(q) ||
+          m.church_name?.toLowerCase().includes(q)
+        );
+      })
+    : allMembers;
 
   const handleSelectUser = useCallback((user: SearchResultUser | FlockUser) => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -119,10 +107,8 @@ export default function NewMessageScreen() {
   }, [router]);
 
   const isSearching = searchQuery.trim().length > 0;
-  const displayUsers = isSearching
-    ? (searchUsersQuery.data?.data ?? [])
-    : (suggestedQuery.data?.data ?? []);
-  const isLoading = isSearching ? searchUsersQuery.isLoading : suggestedQuery.isLoading;
+  const displayUsers = filteredMembers;
+  const isLoading = allMembersQuery.isLoading;
 
   return (
     <View style={styles.container}>
