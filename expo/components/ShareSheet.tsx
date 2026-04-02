@@ -97,7 +97,7 @@ export default function ShareSheet({ visible, onClose, content }: ShareSheetProp
     queryKey: ['share-search', searchQuery],
     queryFn: async () => {
       if (!searchQuery.trim()) return { data: [] as FlockUser[] };
-      try { const data = await api.get<{ data: FlockUser[] }>(`/members/search?q=${encodeURIComponent(searchQuery.trim())}`); return data; }
+      try { const data = await api.get<{ data: FlockUser[] }>(`/members?search=${encodeURIComponent(searchQuery.trim())}`); return data; }
       catch { return { data: [] as FlockUser[] }; }
     },
     enabled: searchQuery.trim().length > 0 && visible,

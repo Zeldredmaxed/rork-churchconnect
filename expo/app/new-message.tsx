@@ -75,7 +75,7 @@ export default function NewMessageScreen() {
     queryFn: async () => {
       if (!searchQuery.trim()) return { data: [] as SearchResultUser[] };
       try {
-        const data = await api.get<{ data: SearchResultUser[] }>(`/members/search?q=${encodeURIComponent(searchQuery.trim())}`);
+        const data = await api.get<{ data: SearchResultUser[] }>(`/members?search=${encodeURIComponent(searchQuery.trim())}`);
         return data;
       } catch {
         return { data: [] as SearchResultUser[] };

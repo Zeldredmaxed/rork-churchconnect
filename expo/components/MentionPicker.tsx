@@ -30,13 +30,13 @@ export default function MentionPicker({ visible, onClose, onSelect, selectedIds 
   const pickerStyles = createPickerStyles(theme);
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState<Set<string>>(new Set(selectedIds));
+  const [selected, setSelected] = useState<Set<string | number>>(new Set(selectedIds));
   const slideAnim = useRef(new Animated.Value(SHEET_HEIGHT)).current;
   const searchInputRef = useRef<TextInput>(null);
 
   const membersQuery = useQuery({
     queryKey: ['members', 'mention-picker', search],
-    queryFn: () => api.get<MemberSearchResult | Member[]>(`/members/search?q=${encodeURIComponent(search)}&per_page=20`),
+    queryFn: () => api.get<MemberSearchResult | Member[]>(`/members?search=${encodeURIComponent(search)}&per_page=20`),
     enabled: visible && search.length > 0, staleTime: 30000,
   });
 
@@ -75,19 +75,19 @@ export default function MentionPicker({ visible, onClose, onSelect, selectedIds 
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(member.id)) { next.delete(member.id); } else { if (!multiSelect) next.clear(); next.add(member.id); }
+      const mid = String(member.id); if (next.has(mid)) { next.delete(mid); } else { if (!multiSelect) next.clear(); next.add(mid); }
       return next;
     });
   }, [multiSelect]);
 
   const handleAdd = useCallback(() => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onSelect(members.filter((m) => selected.has(m.id)));
+    onSelect(members.filter((m) => selected.has(String(m.id))));
     handleClose();
   }, [members, selected, onSelect, handleClose]);
 
   const renderMember = useCallback(({ item }: { item: Member }) => {
-    const isSelected = selected.has(item.id);
+    const isSelected = selected.has(String(item.id));
     const initials = item.full_name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
     return (
       <TouchableOpacity style={pickerStyles.memberRow} onPress={() => toggleMember(item)} activeOpacity={0.6}>
@@ -121,7 +121,7 @@ export default function MentionPicker({ visible, onClose, onSelect, selectedIds 
           ) : members.length === 0 ? (
             <View style={pickerStyles.emptyContainer}><Text style={pickerStyles.emptyText}>{search ? 'No members found' : 'Type to search members'}</Text></View>
           ) : (
-            <FlatList data={members} keyExtractor={(item) => item.id} renderItem={renderMember} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={pickerStyles.listContent} />
+            <FlatList data={members} renderItem={renderMember} keyExtractor={(item) => String(item.id)} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={pickerStyles.listContent} />
           )}
           <View style={pickerStyles.footer}>
             <TouchableOpacity style={[pickerStyles.addBtn, selected.size === 0 && pickerStyles.addBtnDisabled]} onPress={handleAdd} disabled={selected.size === 0} activeOpacity={0.7}>

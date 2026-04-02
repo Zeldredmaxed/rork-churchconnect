@@ -47,7 +47,7 @@ export default function MentionInput({
 
   const membersQuery = useQuery({
     queryKey: ['members', 'mention-search', mentionQuery],
-    queryFn: () => api.get<MemberSearchResult | Member[]>(`/members/search?q=${encodeURIComponent(mentionQuery ?? '')}&per_page=8`),
+    queryFn: () => api.get<MemberSearchResult | Member[]>(`/members?search=${encodeURIComponent(mentionQuery ?? '')}&per_page=8`),
     enabled: mentionQuery !== null && mentionQuery.length > 0,
     staleTime: 30000,
   });
