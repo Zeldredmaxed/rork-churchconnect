@@ -282,16 +282,46 @@ export default function EventsScreen() {
 
   const rsvpMutation = useMutation({
     mutationFn: (eventId: string) => api.post(`/events/${eventId}/rsvp`),
-    onMutate: (eventId) => {
+    onMutate: async (eventId) => {
       setRsvpingId(eventId);
+      await queryClient.cancelQueries({ queryKey: ['events'] });
+      const previousEvents = queryClient.getQueryData(['events']);
+
+      queryClient.setQueryData(['events'], (old: unknown) => {
+        if (!old) return old;
+        const updateEvent = (event: Record<string, unknown>): Record<string, unknown> => {
+          if (String(event.id) === eventId) {
+            const wasRsvped = !!event.is_rsvped;
+            return {
+              ...event,
+              is_rsvped: !wasRsvped,
+              rsvp_count: ((event.rsvp_count as number) ?? 0) + (wasRsvped ? -1 : 1),
+            };
+          }
+          return event;
+        };
+
+        if (Array.isArray(old)) return old.map(updateEvent);
+        const obj = old as Record<string, unknown>;
+        if (Array.isArray(obj.data)) return { ...obj, data: (obj.data as Record<string, unknown>[]).map(updateEvent) };
+        if (Array.isArray(obj.events)) return { ...obj, events: (obj.events as Record<string, unknown>[]).map(updateEvent) };
+        if (Array.isArray(obj.items)) return { ...obj, items: (obj.items as Record<string, unknown>[]).map(updateEvent) };
+        if (Array.isArray(obj.results)) return { ...obj, results: (obj.results as Record<string, unknown>[]).map(updateEvent) };
+        return old;
+      });
+
+      return { previousEvents };
     },
     onSuccess: (_data, eventId) => {
       console.log('[Events] RSVP toggled for event:', eventId);
       void queryClient.invalidateQueries({ queryKey: ['events'] });
       void queryClient.invalidateQueries({ queryKey: ['event', eventId] });
     },
-    onError: (error) => {
+    onError: (error, eventId, context) => {
       console.log('[Events] RSVP error:', error.message);
+      if (context?.previousEvents) {
+        queryClient.setQueryData(['events'], context.previousEvents);
+      }
     },
     onSettled: () => {
       setRsvpingId(null);

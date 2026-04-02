@@ -55,12 +55,57 @@ export default function EventDetailScreen() {
 
   const rsvpMutation = useMutation({
     mutationFn: () => api.post(`/events/${id}/rsvp`),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['event', id] });
+      const previousEvent = queryClient.getQueryData(['event', id]);
+
+      queryClient.setQueryData(['event', id], (old: unknown) => {
+        if (!old || typeof old !== 'object') return old;
+        const ev = old as Record<string, unknown>;
+        const wasRsvped = !!ev.is_rsvped;
+        return {
+          ...ev,
+          is_rsvped: !wasRsvped,
+          rsvp_count: ((ev.rsvp_count as number) ?? 0) + (wasRsvped ? -1 : 1),
+        };
+      });
+
+      queryClient.setQueryData(['events'], (old: unknown) => {
+        if (!old) return old;
+        const updateEvent = (event: Record<string, unknown>): Record<string, unknown> => {
+          if (String(event.id) === id) {
+            const wasRsvped = !!event.is_rsvped;
+            return {
+              ...event,
+              is_rsvped: !wasRsvped,
+              rsvp_count: ((event.rsvp_count as number) ?? 0) + (wasRsvped ? -1 : 1),
+            };
+          }
+          return event;
+        };
+        if (Array.isArray(old)) return old.map(updateEvent);
+        const obj = old as Record<string, unknown>;
+        if (Array.isArray(obj.data)) return { ...obj, data: (obj.data as Record<string, unknown>[]).map(updateEvent) };
+        if (Array.isArray(obj.events)) return { ...obj, events: (obj.events as Record<string, unknown>[]).map(updateEvent) };
+        if (Array.isArray(obj.items)) return { ...obj, items: (obj.items as Record<string, unknown>[]).map(updateEvent) };
+        if (Array.isArray(obj.results)) return { ...obj, results: (obj.results as Record<string, unknown>[]).map(updateEvent) };
+        return old;
+      });
+
+      return { previousEvent };
+    },
     onSuccess: () => {
       console.log('[EventDetail] RSVP toggled');
       void queryClient.invalidateQueries({ queryKey: ['event', id] });
       void queryClient.invalidateQueries({ queryKey: ['events'] });
     },
-    onError: (error) => Alert.alert('Error', error.message),
+    onError: (error, _vars, context) => {
+      Alert.alert('Error', error.message);
+      if (context?.previousEvent) {
+        queryClient.setQueryData(['event', id], context.previousEvent);
+      }
+      void queryClient.invalidateQueries({ queryKey: ['events'] });
+    },
   });
 
   const event = eventQuery.data;
