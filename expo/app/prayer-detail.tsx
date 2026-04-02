@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,8 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
-  Keyboard,
-  Animated,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack } from 'expo-router';
@@ -32,30 +31,6 @@ export default function PrayerDetailScreen() {
   const styles = createStyles(theme, insets.bottom);
   const [responseText, setResponseText] = useState('');
   const scrollRef = useRef<ScrollView>(null);
-  const keyboardPadding = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-    const onShow = Keyboard.addListener(showEvent, (e) => {
-      Animated.timing(keyboardPadding, {
-        toValue: e.endCoordinates.height - insets.bottom,
-        duration: Platform.OS === 'ios' ? 250 : 100,
-        useNativeDriver: false,
-      }).start();
-      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
-    });
-    const onHide = Keyboard.addListener(hideEvent, () => {
-      Animated.timing(keyboardPadding, {
-        toValue: 0,
-        duration: Platform.OS === 'ios' ? 250 : 100,
-        useNativeDriver: false,
-      }).start();
-    });
-
-    return () => { onShow.remove(); onHide.remove(); };
-  }, [insets.bottom, keyboardPadding]);
 
   const prayerQuery = useQuery({
     queryKey: ['prayer', id],
@@ -156,7 +131,11 @@ export default function PrayerDetailScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+    >
       <Stack.Screen
         options={{
           title: '',
@@ -170,6 +149,7 @@ export default function PrayerDetailScreen() {
         ref={scrollRef}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
       >
         <View style={styles.badgeRow}>
           <Badge label={categoryLabels[prayer.category] ?? 'General'} variant="accent" />
@@ -246,7 +226,7 @@ export default function PrayerDetailScreen() {
         </View>
       </ScrollView>
 
-      <Animated.View style={[styles.inputBar, { paddingBottom: Animated.add(keyboardPadding, insets.bottom || 12) }]}> 
+      <View style={styles.inputBar}>
         <TextInput
           style={styles.responseInput}
           value={responseText}
@@ -254,6 +234,7 @@ export default function PrayerDetailScreen() {
           placeholder="Write a response..."
           placeholderTextColor={theme.colors.textTertiary}
           multiline
+          onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300)}
         />
         <TouchableOpacity
           style={[styles.sendBtn, !responseText.trim() && styles.sendBtnDisabled]}
@@ -266,8 +247,8 @@ export default function PrayerDetailScreen() {
             <Send size={18} color={responseText.trim() ? theme.colors.accent : theme.colors.textTertiary} />
           )}
         </TouchableOpacity>
-      </Animated.View>
-    </View>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
