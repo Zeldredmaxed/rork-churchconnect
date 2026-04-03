@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation } from '@tanstack/react-query';
 import createContextHook from '@nkzw/create-context-hook';
-import { api } from '@/utils/api';
 
 const SAVED_STORAGE_KEY = 'shepherd_saved_items';
 
@@ -21,16 +20,6 @@ export interface SavedItemData {
   thumbnail_url?: string;
 }
 
-interface BackendSavedItem {
-  id: number | string;
-  content_type: string;
-  content_id: string;
-  title?: string;
-  thumbnail_url?: string;
-  subtitle?: string;
-  saved_at: string;
-}
-
 export const [SavedProvider, useSaved] = createContextHook(() => {
   return useSavedValue();
 });
@@ -38,6 +27,7 @@ export const [SavedProvider, useSaved] = createContextHook(() => {
 function useSavedValue() {
   const [savedItems, setSavedItems] = useState<SavedItemData[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -46,29 +36,6 @@ function useSavedValue() {
           const parsed = JSON.parse(stored) as SavedItemData[];
           setSavedItems(parsed);
           console.log('[Saved] Loaded', parsed.length, 'local saved items');
-        }
-
-        try {
-          const backendItems = await api.get<BackendSavedItem[] | { data: BackendSavedItem[] }>('/saved');
-          const arr = Array.isArray(backendItems) ? backendItems : (backendItems as { data: BackendSavedItem[] })?.data ?? [];
-          if (arr.length > 0) {
-            const mapped: SavedItemData[] = arr.map((item) => ({
-              id: String(item.id),
-              item_id: String(item.content_id),
-              item_type: (item.content_type || 'post') as SavedItemType,
-              title: item.title || '',
-              preview: item.subtitle || '',
-              author_name: item.subtitle || '',
-              author_id: '',
-              saved_at: item.saved_at,
-              thumbnail_url: item.thumbnail_url ?? undefined,
-            }));
-            setSavedItems(mapped);
-            await AsyncStorage.setItem(SAVED_STORAGE_KEY, JSON.stringify(mapped));
-            console.log('[Saved] Synced', mapped.length, 'items from backend');
-          }
-        } catch (e) {
-          console.log('[Saved] Backend sync failed, using local:', e);
         }
       } catch (e) {
         console.log('[Saved] Failed to load saved items:', e);
@@ -89,17 +56,6 @@ function useSavedValue() {
 
   const saveMutation = useMutation({
     mutationFn: async (params: { itemId: string; itemType: SavedItemType; title: string; preview: string; authorName: string; authorId: string; mediaUrl?: string; thumbnailUrl?: string }) => {
-      try {
-        await api.post('/saved', {
-          content_type: params.itemType,
-          content_id: params.itemId,
-          title: params.title,
-          thumbnail_url: params.thumbnailUrl,
-          subtitle: params.authorName,
-        });
-      } catch {
-        console.log('[Saved] API save failed, saving locally only');
-      }
       return params;
     },
     onSuccess: (params) => {
@@ -124,15 +80,6 @@ function useSavedValue() {
 
   const unsaveMutation = useMutation({
     mutationFn: async (params: { itemId: string; itemType: SavedItemType }) => {
-      const matchingItem = savedItems.find((i) => i.item_id === params.itemId && i.item_type === params.itemType);
-      const backendId = matchingItem?.id;
-      try {
-        if (backendId && !backendId.startsWith('local_')) {
-          await api.delete(`/saved/${backendId}`);
-        }
-      } catch {
-        console.log('[Saved] API unsave failed, removing locally only');
-      }
       return params;
     },
     onSuccess: (params) => {

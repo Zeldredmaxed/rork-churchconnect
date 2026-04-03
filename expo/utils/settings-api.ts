@@ -1,5 +1,3 @@
-import { api } from '@/utils/api';
-
 export interface UserSettings {
   id?: number | string;
   user_id?: string;
@@ -67,69 +65,94 @@ export interface ArchiveItem {
   archived_at?: string;
 }
 
+const DEFAULT_SETTINGS: UserSettings = {
+  is_private_account: false,
+  theme_mode: 'system',
+  allow_tags_from: 'everyone',
+  allow_mentions: true,
+  allow_comments_from: 'everyone',
+  hide_offensive_comments: true,
+  hide_spam_comments: true,
+  allow_sharing_to_messages: true,
+  allow_resharing_to_stories: true,
+  limit_interactions: false,
+  hide_like_counts: false,
+  hide_share_counts: false,
+  autoplay_wifi: true,
+  autoplay_cellular: false,
+  high_quality_uploads: true,
+  data_saver: false,
+  save_original_photos: false,
+  save_posted_videos: false,
+  auto_captions: true,
+  larger_text: false,
+  reduce_motion: false,
+  auto_translate: false,
+  language: 'English',
+  hide_offensive_words: true,
+  show_suggested_posts: true,
+};
+
+let localSettings = { ...DEFAULT_SETTINGS };
+
 export const settingsApi = {
   getSettings: async (): Promise<UserSettings> => {
-    const raw = await api.get<{ data: UserSettings } | UserSettings>('/settings');
-    if (raw && typeof raw === 'object' && 'data' in raw && (raw as Record<string, unknown>).data) {
-      return (raw as { data: UserSettings }).data;
-    }
-    return raw as UserSettings;
+    console.log('[Settings-Mock] getSettings');
+    return { ...localSettings };
   },
 
   updateSettings: async (updates: Partial<UserSettings>): Promise<UserSettings> => {
-    const raw = await api.put<{ data: UserSettings } | UserSettings>('/settings', updates as Record<string, unknown>);
-    if (raw && typeof raw === 'object' && 'data' in raw && (raw as Record<string, unknown>).data) {
-      return (raw as { data: UserSettings }).data;
-    }
-    return raw as UserSettings;
+    console.log('[Settings-Mock] updateSettings', Object.keys(updates));
+    localSettings = { ...localSettings, ...updates };
+    return { ...localSettings };
   },
 
-  getBlocked: () =>
-    api.get<SocialBoundaryUser[]>('/settings/blocked'),
-  blockUser: (userId: string) =>
-    api.post<SocialBoundaryUser>(`/settings/blocked/${userId}`),
-  unblockUser: (userId: string) =>
-    api.delete<void>(`/settings/blocked/${userId}`),
+  getBlocked: async () => {
+    console.log('[Settings-Mock] getBlocked');
+    return [] as SocialBoundaryUser[];
+  },
+  blockUser: async (_userId: string) => ({} as SocialBoundaryUser),
+  unblockUser: async (_userId: string) => {},
 
-  getRestricted: () =>
-    api.get<SocialBoundaryUser[]>('/settings/restricted'),
-  restrictUser: (userId: string) =>
-    api.post<SocialBoundaryUser>(`/settings/restricted/${userId}`),
-  unrestrictUser: (userId: string) =>
-    api.delete<void>(`/settings/restricted/${userId}`),
+  getRestricted: async () => {
+    console.log('[Settings-Mock] getRestricted');
+    return [] as SocialBoundaryUser[];
+  },
+  restrictUser: async (_userId: string) => ({} as SocialBoundaryUser),
+  unrestrictUser: async (_userId: string) => {},
 
-  getMuted: () =>
-    api.get<SocialBoundaryUser[]>('/settings/muted'),
-  muteUser: (userId: string, mutePosts = true, muteStories = true) =>
-    api.post<SocialBoundaryUser>(`/settings/muted/${userId}?mute_posts=${mutePosts}&mute_stories=${muteStories}`),
-  unmuteUser: (userId: string) =>
-    api.delete<void>(`/settings/muted/${userId}`),
+  getMuted: async () => {
+    console.log('[Settings-Mock] getMuted');
+    return [] as SocialBoundaryUser[];
+  },
+  muteUser: async (_userId: string, _mutePosts = true, _muteStories = true) => ({} as SocialBoundaryUser),
+  unmuteUser: async (_userId: string) => {},
 
-  getCloseFriends: () =>
-    api.get<SocialBoundaryUser[]>('/settings/close-friends'),
-  addCloseFriend: (userId: string) =>
-    api.post<SocialBoundaryUser>(`/settings/close-friends/${userId}`),
-  removeCloseFriend: (userId: string) =>
-    api.delete<void>(`/settings/close-friends/${userId}`),
+  getCloseFriends: async () => {
+    console.log('[Settings-Mock] getCloseFriends');
+    return [] as SocialBoundaryUser[];
+  },
+  addCloseFriend: async (_userId: string) => ({} as SocialBoundaryUser),
+  removeCloseFriend: async (_userId: string) => {},
 
-  getFavourites: () =>
-    api.get<SocialBoundaryUser[]>('/settings/favourites'),
-  addFavourite: (userId: string) =>
-    api.post<SocialBoundaryUser>(`/settings/favourites/${userId}`),
-  removeFavourite: (userId: string) =>
-    api.delete<void>(`/settings/favourites/${userId}`),
+  getFavourites: async () => {
+    console.log('[Settings-Mock] getFavourites');
+    return [] as SocialBoundaryUser[];
+  },
+  addFavourite: async (_userId: string) => ({} as SocialBoundaryUser),
+  removeFavourite: async (_userId: string) => {},
 
-  getHiddenWords: () =>
-    api.get<HiddenWord[]>('/settings/hidden-words'),
-  addHiddenWord: (word: string) =>
-    api.post<HiddenWord>('/settings/hidden-words', { word }),
-  removeHiddenWord: (wordId: string) =>
-    api.delete<void>(`/settings/hidden-words/${wordId}`),
+  getHiddenWords: async () => {
+    console.log('[Settings-Mock] getHiddenWords');
+    return [] as HiddenWord[];
+  },
+  addHiddenWord: async (_word: string) => ({ id: `hw_${Date.now()}`, word: _word, created_at: new Date().toISOString() } as HiddenWord),
+  removeHiddenWord: async (_wordId: string) => {},
 
-  getArchive: (type?: 'post' | 'clip' | 'story') =>
-    api.get<ArchiveItem[]>(`/settings/archive${type ? `?type=${type}` : ''}`),
-  archiveContent: (contentId: string, contentType: 'post' | 'clip' | 'story') =>
-    api.post<ArchiveItem>('/settings/archive', { content_id: contentId, content_type: contentType }),
-  unarchiveContent: (archiveId: string) =>
-    api.delete<void>(`/settings/archive/${archiveId}`),
+  getArchive: async (_type?: 'post' | 'clip' | 'story') => {
+    console.log('[Settings-Mock] getArchive');
+    return [] as ArchiveItem[];
+  },
+  archiveContent: async (_contentId: string, _contentType: 'post' | 'clip' | 'story') => ({} as ArchiveItem),
+  unarchiveContent: async (_archiveId: string) => {},
 };

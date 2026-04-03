@@ -1,7 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 
-const BASE_URL = 'https://anti-gravity-church-app-backend-production.up.railway.app';
-const API_URL = `${BASE_URL}/api/v1`;
+const BASE_URL = '';
+const API_URL = '';
 
 async function getToken(): Promise<string | null> {
   try {
@@ -15,7 +15,6 @@ async function setTokens(access: unknown, refresh: unknown): Promise<void> {
   try {
     const accessStr = typeof access === 'string' ? access : (access != null ? JSON.stringify(access) : '');
     const refreshStr = typeof refresh === 'string' ? refresh : (refresh != null ? JSON.stringify(refresh) : '');
-    console.log('[SecureStore] Storing tokens, access length:', accessStr.length, 'refresh length:', refreshStr.length);
     await SecureStore.setItemAsync('access_token', accessStr);
     await SecureStore.setItemAsync('refresh_token', refreshStr);
   } catch (e) {
@@ -33,27 +32,6 @@ async function clearTokens(): Promise<void> {
   }
 }
 
-async function refreshAccessToken(): Promise<string | null> {
-  try {
-    const refreshToken = await SecureStore.getItemAsync('refresh_token');
-    if (!refreshToken) return null;
-
-    const res = await fetch(`${API_URL}/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    });
-
-    if (!res.ok) return null;
-
-    const data = await res.json();
-    await setTokens(data.access_token, data.refresh_token);
-    return data.access_token;
-  } catch {
-    return null;
-  }
-}
-
 interface RequestOptions {
   method?: string;
   body?: Record<string, unknown> | FormData;
@@ -61,63 +39,9 @@ interface RequestOptions {
   noAuth?: boolean;
 }
 
-async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, headers = {}, noAuth = false } = options;
-
-  const requestHeaders: Record<string, string> = {
-    ...headers,
-  };
-
-  if (!(body instanceof FormData)) {
-    requestHeaders['Content-Type'] = 'application/json';
-  }
-
-  if (!noAuth) {
-    const token = await getToken();
-    if (token) {
-      requestHeaders['Authorization'] = `Bearer ${token}`;
-    }
-  }
-
-  const config: RequestInit = {
-    method,
-    headers: requestHeaders,
-  };
-
-  if (body) {
-    config.body = body instanceof FormData ? body : JSON.stringify(body);
-  }
-
-  console.log(`[API] ${method} ${endpoint}`);
-
-  let res = await fetch(`${API_URL}${endpoint}`, config);
-
-  if (res.status === 401 && !noAuth) {
-    console.log('[API] Token expired, attempting refresh...');
-    const newToken = await refreshAccessToken();
-    if (newToken) {
-      requestHeaders['Authorization'] = `Bearer ${newToken}`;
-      config.headers = requestHeaders;
-      res = await fetch(`${API_URL}${endpoint}`, config);
-    } else {
-      await clearTokens();
-      throw new Error('SESSION_EXPIRED');
-    }
-  }
-
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    console.log(`[API] Error ${res.status}:`, JSON.stringify(errorData));
-    const msg = errorData.message || errorData.detail || errorData.error;
-    const errorMessage = typeof msg === 'string' ? msg : (msg ? JSON.stringify(msg) : `Request failed: ${res.status}`);
-    throw new Error(errorMessage);
-  }
-
-  if (res.status === 204) {
-    return {} as T;
-  }
-
-  return res.json();
+async function apiRequest<T>(endpoint: string, _options: RequestOptions = {}): Promise<T> {
+  console.log(`[API-Mock] ${_options.method ?? 'GET'} ${endpoint} (no backend connected)`);
+  return [] as unknown as T;
 }
 
 export const api = {
@@ -139,7 +63,6 @@ function extractArray<T>(raw: unknown): T[] {
     if (Array.isArray(obj.items)) return obj.items as T[];
     if (Array.isArray(obj.results)) return obj.results as T[];
   }
-  console.log('[API] extractArray: could not parse', JSON.stringify(raw).slice(0, 200));
   return [];
 }
 
