@@ -26,7 +26,6 @@ import {
   Shield,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { api } from '@/utils/api';
 
 const { width } = Dimensions.get('window');
 
@@ -118,19 +117,18 @@ export default function RegisterScreen() {
       return;
     }
     setIsSearching(true);
-    try {
-      const results = await api.get<ChurchSearchResult[]>(`/churches/?search=${encodeURIComponent(query)}`, { noAuth: true });
-      console.log('[Register] Church search results:', results?.length ?? 0);
-      const activeChurches = (Array.isArray(results) ? results : []).filter(c => c.is_active !== false);
-      setChurches(activeChurches);
-      setShowDropdown(activeChurches.length > 0);
-    } catch (e) {
-      console.log('[Register] Church search error:', e);
-      setChurches([]);
-      setShowDropdown(false);
-    } finally {
-      setIsSearching(false);
-    }
+    await new Promise(resolve => setTimeout(resolve, 400));
+    const fakeChurch: ChurchSearchResult = {
+      id: 1,
+      name: query.trim() || 'Community Church',
+      subdomain: query.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z-]/g, '') || 'community-church',
+      logo_url: null,
+      is_active: true,
+    };
+    console.log('[Register] Returning fake church for query:', query);
+    setChurches([fakeChurch]);
+    setShowDropdown(true);
+    setIsSearching(false);
   }, []);
 
   const handleChurchQueryChange = useCallback((text: string) => {
